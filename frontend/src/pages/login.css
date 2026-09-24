@@ -1,0 +1,226 @@
+body {
+  margin: 0;
+}
+
+.login-page,
+.login-page * {
+  box-sizing: border-box;
+}
+
+.login-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  color: #153941;
+  background: #fffefa;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Mobile and tablet: image behind the card */
+.login-content {
+  min-width: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px 100px;
+  background: #fffefa url("../assets/auth_mobile.png")
+    center bottom / cover no-repeat;
+}
+
+.login-card {
+  width: min(100%, 440px);
+  padding: clamp(24px, 5vw, 38px);
+  border: 1px solid rgb(22 71 63 / 9%);
+  border-radius: 22px;
+  background: rgb(255 255 253 / 96%);
+  box-shadow: 0 18px 55px rgb(18 61 52 / 11%);
+}
+
+.login-brand {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.login-brand > svg {
+  display: block;
+  margin: 0 auto 8px;
+  color: #123b43;
+}
+
+.login-brand h1 {
+  margin: 0;
+  font-size: clamp(29px, 5vw, 36px);
+  line-height: 1.12;
+  letter-spacing: -0.04em;
+}
+
+.login-brand p {
+  margin: 7px 0 0;
+  color: #587077;
+  font-size: 14px;
+}
+
+.login-form {
+  display: grid;
+  gap: 17px;
+}
+
+.login-field label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.login-input {
+  min-width: 0;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 14px;
+  border: 1px solid #ccd9d8;
+  border-radius: 10px;
+  background: white;
+  color: #496b70;
+}
+
+.login-input:focus-within {
+  border-color: #236854;
+  box-shadow: 0 0 0 3px rgb(35 104 84 / 14%);
+}
+
+.login-input > svg {
+  flex: none;
+}
+
+.login-input input {
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #153941;
+  font: inherit;
+  font-size: 16px;
+}
+
+.login-input input::placeholder {
+  color: #839697;
+}
+
+/* Hide Edge's built-in password reveal button; use our custom toggle. */
+.login-input input::-ms-reveal {
+  display: none;
+}
+
+.login-password-toggle {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-right: -7px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #496b70;
+  cursor: pointer;
+}
+
+.login-password-toggle:hover {
+  background: #eef5f2;
+}
+
+.login-error {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: #fff2ef;
+  color: #9c302d;
+  font-size: 14px;
+}
+
+.login-submit {
+  min-height: 42px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 0;
+  border-radius: 10px;
+  background: #176849;
+  color: white;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.login-submit:hover:not(:disabled) {
+  background: #10583d;
+}
+
+.login-submit:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.login-register {
+  margin: 30px 0 0;
+  text-align: center;
+  font-size: 14px;
+}
+
+.login-register a {
+  color: #145e48;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.login-register a:hover {
+  text-decoration: underline;
+}
+
+.login-page button:focus-visible,
+.login-page a:focus-visible {
+  outline: 3px solid #77b9a4;
+  outline-offset: 3px;
+}
+
+.login-art {
+  display: none;
+}
+
+/* Larger tablet: more room around the card */
+@media (min-width: 768px) {
+  .login-content {
+    padding-inline: 32px;
+  }
+}
+
+/* Desktop: form on left, illustration on right */
+@media (min-width: 1024px) {
+  .login-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: clamp(24px, 4vw, 64px);
+  }
+
+  .login-content {
+    padding: 40px;
+    background: #fffefa;
+  }
+
+  .login-art {
+    display: block;
+    min-width: 0;
+    height: 100vh;
+    height: 100dvh;
+    align-self: center;
+    background: #fffefa url("../assets/auth_desktop.png")
+      center bottom / cover no-repeat;
+  }
+}

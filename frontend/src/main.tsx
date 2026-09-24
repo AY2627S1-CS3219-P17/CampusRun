@@ -1,0 +1,20 @@
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import Login from './pages/login.tsx'
+import Register from './pages/register.tsx'
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<Login onLogin={async () => {}} />} />
+        <Route
+          path="/register"
+          element={<Register onRegister={async () => {}} />}
+        />
+      </Routes>
+    </BrowserRouter>
+  </StrictMode>,
+)

@@ -39,7 +39,7 @@ Then, at the root level (CampusRun), set VSCode project settings
 Everything lies under `frontend/src`
 1. `api` -> API calls to various BE services 
 2. `assets` -> UI images
-3. `components` -> Reusable React components across multiple pages 
+3. `components` -> Reusable React components  
 4. `pages` -> React Router pages 
 5. `types` -> Reusable types 
 6. `utils` -> Reusable helper functions 

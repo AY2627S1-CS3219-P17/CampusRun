@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { DropdownMenu } from 'radix-ui'
 import { LogOut, MessageCircle, Plus, Store, UserRound } from 'lucide-react'
-import EditInfoDialog from './edit-info'
+import EditInfoDialog from './edit-user-info'
 import './header.css'
 
 const sections = ['Explore', 'My Tasks', 'My Requests'] as const
@@ -48,13 +48,13 @@ export default function Header({ initialSection }: HeaderProps) {
           <MessageCircle size={20} strokeWidth={1.8} aria-hidden="true" />
         </button>
 
-        <button
+        <Link
+          to="/suppliers"
           className="header-icon-button header-secondary-action"
-          type="button"
           aria-label="Supplier"
         >
           <Store size={20} strokeWidth={1.8} aria-hidden="true" />
-        </button>
+        </Link>
 
         <button
           className="header-icon-button header-create"
@@ -101,9 +101,14 @@ export default function Header({ initialSection }: HeaderProps) {
                 Messages
               </DropdownMenu.Item>
 
-              <DropdownMenu.Item className="header-menu-item header-mobile-action">
-                <Store size={18} aria-hidden="true" />
-                Supplier
+              <DropdownMenu.Item
+                className="header-menu-item header-mobile-action"
+                asChild
+              >
+                <Link to="/suppliers">
+                  <Store size={18} aria-hidden="true" />
+                  Suppliers
+                </Link>
               </DropdownMenu.Item>
 
               <DropdownMenu.Separator className="header-menu-separator" />

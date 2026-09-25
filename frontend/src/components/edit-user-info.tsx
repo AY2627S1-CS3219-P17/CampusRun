@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router'
 import { Dialog } from 'radix-ui'
 import { Eye, EyeOff, LockKeyhole, Plus, UserRound, X } from 'lucide-react'
 import { updateUser } from '../api/user'
-import './edit-info.css'
+import './edit-user-info.css'
 
 type EditInfoDialogProps = {
   onClose: () => void
@@ -63,7 +63,7 @@ export default function EditInfoDialog({
 
     setLoading(true)
     try {
-      // Probably should send the actual current password, or have proper BE side handling
+      // Probably should send the actual current password (if no new password is provided)
       await updateUser({
         username,
         password: newPassword,

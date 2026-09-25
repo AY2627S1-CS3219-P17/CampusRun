@@ -1,3 +1,8 @@
+# AI Assistance Disclosure:
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
+# Scope: AI added the pydantic-settings dependency (via 'uv add pydantic-settings'); rest of file authored by the team.
+# Author review: <to be completed by author>
+
 [project]
 name = "user-service"
 version = "0.1.0"
@@ -10,6 +15,7 @@ requires-python = ">=3.14.7"
 dependencies = [
     "asyncpg>=0.31.0",
     "fastapi[standard-no-fastapi-cloud-cli]>=0.141.1",
+    "pydantic-settings>=2.15.0",
     "sqlalchemy[asyncio]>=2.1.0",
 ]
 

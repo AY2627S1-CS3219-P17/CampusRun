@@ -1,0 +1,40 @@
+# AI Assistance Disclosure:
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
+# Scope: AI-generated local development Compose setup for the user service and its Postgres database.
+# Author review: <to be completed by author>
+
+# Local development / demo only; cloud deployments are configured separately.
+# Values in ${...} are read from the root .env file.
+
+services:
+  user-db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: ${USER_DB_USER:-user_service}
+      POSTGRES_PASSWORD: ${USER_DB_PASSWORD:?set USER_DB_PASSWORD in .env}
+      POSTGRES_DB: ${USER_DB_NAME:-user_service}
+    volumes:
+      # Postgres 18+ images keep data under /var/lib/postgresql (not .../data)
+      - user-db-data:/var/lib/postgresql
+    ports:
+      # Bound to localhost only, for running the API or Alembic on the host
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  user-service:
+    build: ./user-service
+    environment:
+      # Hostname is the Compose service name, resolved on the project's private network
+      DATABASE_URL: postgresql+asyncpg://${USER_DB_USER:-user_service}:${USER_DB_PASSWORD:?set USER_DB_PASSWORD in .env}@user-db:5432/${USER_DB_NAME:-user_service}
+    ports:
+      - "8001:8000"
+    depends_on:
+      user-db:
+        condition: service_healthy
+
+volumes:
+  user-db-data:

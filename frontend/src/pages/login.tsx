@@ -1,32 +1,19 @@
 import { useState, type SubmitEvent } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { Label } from 'radix-ui'
-import {
-  ArrowRight,
-  Eye,
-  EyeOff,
-  Footprints,
-  LockKeyhole,
-  Mail,
-} from 'lucide-react'
+import { loginUser } from '../api/user'
+
+import { Eye, EyeOff, Footprints, LockKeyhole, Mail } from 'lucide-react'
 import './login.css'
 
-export type LoginCredentials = {
-  email: string
-  password: string
-}
-
-type LoginPageProps = {
-  onLogin: (credentials: LoginCredentials) => Promise<void>
-}
-
-export default function LoginPage({ onLogin }: LoginPageProps) {
-  // const navigate = useNavigate()
+export default function LoginPage() {
+  const navigate = useNavigate()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  // Note this is BE error
   const [error, setError] = useState('')
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
@@ -37,8 +24,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     setLoading(true)
 
     try {
-      // Pass to user service
-      await onLogin({
+      await loginUser({
         email: email.trim(),
         password,
       })
@@ -46,7 +32,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       setEmail('')
       setPassword('')
 
-      // await navigate('/explore', { replace: true })
+      await navigate('/explore', { replace: true })
     } catch {
       setError('Could not log in. Check your details and try again.')
     } finally {
@@ -130,7 +116,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
             <button className="login-submit" type="submit" disabled={loading}>
               <span>{loading ? 'Logging in…' : 'Log in'}</span>
-              {!loading && <ArrowRight size={18} aria-hidden="true" />}
             </button>
           </form>
 

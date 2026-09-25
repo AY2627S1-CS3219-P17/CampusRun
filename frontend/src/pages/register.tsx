@@ -1,58 +1,117 @@
-import { useState, type SubmitEvent } from 'react'
-import { Link } from 'react-router'
 import {
-  ArrowRight,
+  validateUsername,
+  validatePassword,
+  validateEmail,
+  validateConfirmPassword,
+} from '../utils/validation'
+import { useState, type SubmitEvent } from 'react'
+import { Link, useNavigate } from 'react-router'
+import { registerUser } from '../api/user'
+import type { RegisterUserValues } from '../types/user'
+import {
   Eye,
   EyeOff,
   Footprints,
   LockKeyhole,
   Mail,
+  UserRound,
 } from 'lucide-react'
+
 import './login.css'
+import './register.css'
 
-export type RegisterCredentials = {
-  email: string
-  password: string
+const emptyValues: RegisterUserValues = {
+  username: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
 }
 
-type RegisterPageProps = {
-  onRegister: (credentials: RegisterCredentials) => Promise<void>
+const fields = [
+  {
+    name: 'username',
+    label: 'Username',
+    icon: <UserRound size={20} aria-hidden="true" />,
+    autoComplete: 'username',
+  },
+  {
+    name: 'email',
+    label: 'Email',
+    icon: <Mail size={20} aria-hidden="true" />,
+    autoComplete: 'email',
+  },
+  {
+    name: 'password',
+    label: 'Password',
+    icon: <LockKeyhole size={20} aria-hidden="true" />,
+    autoComplete: 'new-password',
+  },
+  {
+    name: 'confirmPassword',
+    label: 'Confirm Password',
+    icon: <LockKeyhole size={20} aria-hidden="true" />,
+    autoComplete: 'new-password',
+  },
+] as const
+
+function validateRegistration(
+  values: RegisterUserValues,
+): Record<keyof RegisterUserValues, string> {
+  return {
+    username: validateUsername(values.username),
+    email: validateEmail(values.email),
+    password: validatePassword(values.password),
+    confirmPassword: validateConfirmPassword(
+      values.password,
+      values.confirmPassword,
+    ),
+  }
 }
 
-export default function RegisterPage({ onRegister }: RegisterPageProps) {
-  // const navigate = useNavigate()
+export default function RegisterPage() {
+  const navigate = useNavigate()
 
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
+  const [values, setValues] = useState(emptyValues)
+  const [touched, setTouched] = useState<
+    Partial<Record<keyof RegisterUserValues, boolean>>
+  >({})
 
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [visiblePasswords, setVisiblePasswords] = useState({
+    password: false,
+    confirmPassword: false,
+  })
+
   const [loading, setLoading] = useState(false)
+  // Note this is BE error
   const [error, setError] = useState('')
 
-  const passwordMismatch =
-    confirmPassword.length > 0 && password !== confirmPassword
+  const errors = validateRegistration(values)
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (loading || passwordMismatch) return
+    if (loading) return
 
+    // Set submited = true, then reveal the field-side errors
     setError('')
+    setSubmitted(true)
+    if (Object.values(errors).some(Boolean)) return
+
     setLoading(true)
 
     try {
-      // Pass to user service
-      await onRegister({
-        email: email.trim(),
-        password,
+      await registerUser({
+        username: values.username,
+        email: values.email.trim(),
+        password: values.password,
       })
 
-      setEmail('')
-      setPassword('')
-      setConfirmPassword('')
+      setValues(emptyValues)
+      setTouched({})
+      setSubmitted(false)
+      setVisiblePasswords({ password: false, confirmPassword: false })
 
-      // await navigate('/login', { replace: true })
+      await navigate('/login', { replace: true })
     } catch {
       setError('Could not create your account. Please try again.')
     } finally {
@@ -72,99 +131,93 @@ export default function RegisterPage({ onRegister }: RegisterPageProps) {
 
           <form
             className="login-form"
+            noValidate
             onSubmit={(event) => {
               void handleSubmit(event)
             }}
           >
-            <div className="login-input">
-              <Mail size={20} aria-hidden="true" />
+            {fields.map(({ name, label, icon, autoComplete }) => {
+              const isPassword =
+                name === 'password' || name === 'confirmPassword'
+              const visible = isPassword && visiblePasswords[name]
 
-              <input
-                id="register-email"
-                name="email"
-                aria-label="Email"
-                type="email"
-                autoComplete="email"
-                placeholder="Email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-              />
-            </div>
+              // Visible error on submit/blur
+              const fieldError = submitted || touched[name] ? errors[name] : ''
 
-            <div className="login-input">
-              <LockKeyhole size={20} aria-hidden="true" />
+              return (
+                <div className="register-field" key={name}>
+                  <div className="login-input">
+                    {icon}
 
-              <input
-                id="register-password"
-                name="password"
-                aria-label="Password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="new-password"
-                placeholder="Password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-              />
+                    <input
+                      id={`register-${name}`}
+                      name={name}
+                      aria-label={label}
+                      type={
+                        isPassword
+                          ? visible
+                            ? 'text'
+                            : 'password'
+                          : name === 'email'
+                            ? 'email'
+                            : 'text'
+                      }
+                      autoComplete={autoComplete}
+                      placeholder={label}
+                      value={values[name]}
+                      disabled={loading}
+                      aria-invalid={Boolean(fieldError)}
+                      aria-describedby={
+                        fieldError ? `register-${name}-error` : undefined
+                      }
+                      onBlur={() =>
+                        setTouched((current) => ({ ...current, [name]: true }))
+                      }
+                      onChange={(event) => {
+                        setValues((current) => ({
+                          ...current,
+                          [name]: event.target.value,
+                        }))
+                        setError('')
+                      }}
+                      required
+                    />
 
-              <button
-                className="login-password-toggle"
-                type="button"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                aria-pressed={showPassword}
-                onClick={() => setShowPassword((current) => !current)}
-              >
-                {showPassword ? (
-                  <EyeOff size={20} aria-hidden="true" />
-                ) : (
-                  <Eye size={20} aria-hidden="true" />
-                )}
-              </button>
-            </div>
+                    {isPassword && (
+                      <button
+                        className="login-password-toggle"
+                        type="button"
+                        aria-label={`${visible ? 'Hide' : 'Show'} ${label.toLowerCase()}`}
+                        aria-pressed={visible}
+                        onClick={() =>
+                          setVisiblePasswords((current) => ({
+                            ...current,
+                            [name]: !current[name],
+                          }))
+                        }
+                      >
+                        {visible ? (
+                          <EyeOff size={20} aria-hidden="true" />
+                        ) : (
+                          <Eye size={20} aria-hidden="true" />
+                        )}
+                      </button>
+                    )}
+                  </div>
 
-            <div className="login-input">
-              <LockKeyhole size={20} aria-hidden="true" />
+                  {fieldError && (
+                    <p
+                      className="register-field-error"
+                      id={`register-${name}-error`}
+                      aria-live="polite"
+                    >
+                      {fieldError}
+                    </p>
+                  )}
+                </div>
+              )
+            })}
 
-              <input
-                id="register-confirm-password"
-                name="confirmPassword"
-                aria-label="Confirm password"
-                type={showConfirmPassword ? 'text' : 'password'}
-                autoComplete="new-password"
-                placeholder="Confirm Password"
-                value={confirmPassword}
-                aria-invalid={passwordMismatch}
-                aria-describedby={
-                  passwordMismatch ? 'password-mismatch' : undefined
-                }
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                required
-              />
-
-              <button
-                className="login-password-toggle"
-                type="button"
-                aria-label={
-                  showConfirmPassword
-                    ? 'Hide confirm password'
-                    : 'Show confirm password'
-                }
-                aria-pressed={showConfirmPassword}
-                onClick={() => setShowConfirmPassword((current) => !current)}
-              >
-                {showConfirmPassword ? (
-                  <EyeOff size={20} aria-hidden="true" />
-                ) : (
-                  <Eye size={20} aria-hidden="true" />
-                )}
-              </button>
-            </div>
-
-            {passwordMismatch && (
-              <p className="login-error" id="password-mismatch">
-                Passwords do not match.
-              </p>
-            )}
             {error && (
               <p className="login-error" role="alert">
                 {error}
@@ -173,7 +226,6 @@ export default function RegisterPage({ onRegister }: RegisterPageProps) {
 
             <button className="login-submit" type="submit" disabled={loading}>
               <span>{loading ? 'Registering…' : 'Register'}</span>
-              {!loading && <ArrowRight size={18} aria-hidden="true" />}
             </button>
           </form>
 

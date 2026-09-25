@@ -1,0 +1,34 @@
+# AI Assistance Disclosure:
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
+# Scope: AI-generated async SQLAlchemy engine factory and per-request transaction dependency.
+# Author review: <to be completed by author>
+
+from collections.abc import AsyncIterator
+from typing import Annotated
+
+from fastapi import Depends, Request
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
+
+from user_service.config import Settings
+
+
+def create_engine(settings: Settings) -> AsyncEngine:
+    return create_async_engine(
+        settings.database_url.get_secret_value(),
+        pool_pre_ping=True,
+    )
+
+
+def get_engine(request: Request) -> AsyncEngine:
+    return request.app.state.engine
+
+
+async def get_connection(
+    engine: Annotated[AsyncEngine, Depends(get_engine)],
+) -> AsyncIterator[AsyncConnection]:
+    # One transaction per request: commits on success, rolls back on error
+    async with engine.begin() as conn:
+        yield conn
+
+
+Connection = Annotated[AsyncConnection, Depends(get_connection)]

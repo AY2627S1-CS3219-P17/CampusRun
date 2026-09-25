@@ -1,0 +1,22 @@
+# AI Assistance Disclosure:
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
+# Scope: AI-generated pydantic-settings Settings class reading DATABASE_URL.
+# Author review: <to be completed by author>
+
+from functools import lru_cache
+
+from pydantic import SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    # Real environment variables (e.g. injected by Compose) take priority over .env
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    # SecretStr so the password in the URL is masked if settings are ever logged
+    database_url: SecretStr
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

@@ -24,31 +24,13 @@ Every submission using AI must include:
 - Source & mode: which tool(s), how it was used (generate/refactor/debug/explain).
 - Prompts: the exact prompts + key responses.
 - Location(s):
-  - place the attribution comment at the top of each AI-influenced file (see below) as a comment,
-  - a consolidated disclosure in your project README as the last section. Add a link to the README in the slide deck
-  - a usage log file in the project repository
+  - Place the attribution comment at the top of each AI-influenced file (see below) as a comment.
+  - A consolidated disclosure in your project README as the last section. Add new points whenever there is a significantly new AI use.
+  - A usage log file in the project repository. Keep this updated constantly without being asked.
 
 ### Example: Short File-Header Attribution (in each affected file)
-AI Assistance Disclosure:
-Tool: ChatGPT (model: GPT-5.6 Luna Light), date: 2026-08-11
-Scope: Generated initial implementation of modules X and Y; suggested test cases for Z.
-Author review: I validated correctness, edited for style, and added boundary checks.
-
-### Example: Project-Level Disclosure
-(put in README and add link to the README in submission slide deck)
-AI Use Summary
-Tools: ChatGPT (GPT-5.6 Luna Light), GitHub Copilot
-Prohibited phases avoided: requirements elicitation; architecture/design decisions.
-Used for:
-- Generating boilerplate for Express server and Jest config.
-- Getting suggestions for refactoring; for data parsing function; I retained A, rejected B
-(explanation below).
-- Generating unit tests for edge cases (I added two additional tests). Verification: All AI
-outputs reviewed, edited, and tested by the authors. Prompts/Key Exchanges: See
-/ai/usage-log.md at the end of this segment.
-### Example: Logging
-- Maintain a log, /ai/usage-log.md, in the repository with timestamps, prompts, and
-usage scenarios.
-- Mark any pasted AI code blocks with comments like:
-// AI-generated (edited by <name>).
-- Add all your SKILLS.md/AGENTS.md to the repository before the final submission.
+```
+# AI Assistance Disclosure:
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
+# Scope: AI-generated async SQLAlchemy engine factory and per-request transaction dependency.
+# Author review: <to be completed by author>

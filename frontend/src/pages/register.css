@@ -1,0 +1,11 @@
+.register-field {
+  display: grid;
+  gap: 6px;
+}
+
+.register-field-error {
+  margin: 0;
+  color: #9c302d;
+  font-size: 13px;
+  line-height: 1.4;
+}

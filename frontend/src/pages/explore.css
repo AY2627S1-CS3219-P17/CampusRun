@@ -1,0 +1,24 @@
+.explore-page,
+.explore-page * {
+  box-sizing: border-box;
+}
+
+.explore-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #f5faf8;
+  color: #153941;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.explore-content {
+  display: grid;
+  place-items: center;
+  min-height: 240px;
+  padding: 48px 24px;
+  color: #587077;
+}
+
+.explore-content p {
+  margin: 0;
+}

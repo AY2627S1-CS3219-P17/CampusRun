@@ -149,3 +149,68 @@ update compose.yaml
 ```
 
 **Key response:** Generated the root `compose.yaml` with `user-db` (Postgres 18, a named volume, a healthcheck, and a port bound to `127.0.0.1:5433`) and `user-service` (built from `./user-service`, with `DATABASE_URL` pointing at `user-db`, on port 8001). Left out `user-migrate` until Alembic is set up. Added the `USER_DB_*` placeholders to the root `.env.example`. Validated with `docker compose config`: it fails with a clear message when `USER_DB_PASSWORD` is unset and interpolates correctly when it is set. The containers were not started, because the Docker daemon was not running.
+
+---
+
+## Session 2 — 2026-09-25 — user and admin tables
+
+- **Tool:** Claude Code (model: Claude Opus 5.5)
+- **Author:** nathantew14
+- **Modes:** explain, generate
+- **Timestamps:** only the date was recorded for this session; individual prompt times were not captured.
+- **Summary:** Settled the admin table design, generated the `users` and `admins` table definitions, explained the naming convention and index names, and added email verification to the schema.
+
+### 1. Admin table design (explain)
+
+```text
+should i have a separate admin table
+```
+
+**Key response:** Pointed out that the team had already chosen a separate table, so the open question was its shape. Recommended separate admin accounts with their own credentials rather than a role table referencing `users.id`, because `user-service/README.md` describes admins as their own kind of account. Reasons given: `user_id` in other services always means a student, a compromised student account can't be escalated to admin, and admins can be created without public registration. Costs noted: a second login path, and ids that overlap between the two tables, so tokens need a role claim.
+
+### 2. Table definitions (generate)
+
+```text
+i updated ai attribution instructions in @AGENTS.md ; take a look
+
+next, generate the user and admin tables
+
+user: Identity() PK, email address, username, password hash, an optional profile picture, created_at, updated_at
+admin: Identity() PK, username, password hash, created_at, updated_at
+```
+
+**Key response:** Generated `src/user_service/tables.py`: a `MetaData` with a naming convention, and the `users` and `admins` tables as specified. Choices the AI made: case-insensitive unique indexes on `lower(email)` and `lower(username)`, `String(254)` for email and `String(32)` for username, a nullable `profile_picture_url` (a URL or storage key, not the image), and timezone-aware timestamps defaulting to `now()`. Verified by compiling the tables to Postgres SQL; not yet run against a database. Updated step 3 of `docs/user-service-setup.md` and the AI Use Summary in `README.md`.
+
+### 3. Naming convention (explain)
+
+```text
+explain these lines
+```
+
+(Selected: the `MetaData(naming_convention=...)` block in `tables.py`.)
+
+**Key response:** The convention makes constraint and index names fixed and known in advance, so Alembic migrations can refer to them by name. It needs to be set before the first migration. Explained each template (`ix`, `uq`, `ck`, `fk`, `pk`). Noted that only `pk` currently applies, because the unique indexes are named explicitly.
+
+### 4. Explicit index names (explain)
+
+```text
+why do the three lower unique indexes have explicit names instead of using the defined convention?
+```
+
+**Key response:** Confirmed by test that the convention would work, producing names like `ix_users_email`. Explicit names were chosen because a unique `Index` gets the `ix` template rather than `uq`, so the name wouldn't show that it enforces uniqueness on `lower(email)`. Also, a later plain index on `email` would get the same name. Postgres unique constraints can't contain expressions, so a unique index is required. Offered to drop the names for consistency.
+
+### 5. Email domain restriction (explain)
+
+```text
+we want to enforce that the email addresses have a certain domain ("@u.nus.edu"). would that be done in the schema, or just a restriction upon registration?
+```
+
+**Key response:** Recommended checking at registration: Pydantic gives a clear 422 error, the allowed domain can be a config setting that changes without a migration, and the user service is the only thing that writes emails. Pointed out that a domain check doesn't prove ownership, so email verification is needed, which means an `email_verified_at` column. A `CheckConstraint` was offered as an optional extra safeguard in the database.
+
+### 6. Email verification column (generate)
+
+```text
+yes, add email_verified_at
+```
+
+**Key response:** Added a nullable, timezone-aware `email_verified_at` column to `users` and updated `docs/user-service-setup.md`. Verified by recompiling the table to Postgres SQL.

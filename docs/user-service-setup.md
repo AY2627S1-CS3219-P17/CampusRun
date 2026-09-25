@@ -8,7 +8,7 @@ Last updated: 2026-09-25
 | --- | --- | --- |
 | 1 | Docker & Compose | Done, except `user-migrate` (waits on step 4) |
 | 2 | Environment variables | Done |
-| 3 | Table definitions | Not started (admin table design still open) |
+| 3 | Table definitions | Done (not yet migrated) |
 | 4 | Alembic | Not started |
 | 5 | FastAPI wiring | Done |
 | 6 | Endpoints & tests | `GET /health` done; `POST /users` and tests not started |
@@ -33,10 +33,10 @@ Not yet verified against a real database. Docker wasn't running, so no container
 - [x] `src/user_service/config.py`: `pydantic-settings` `Settings` with `database_url: SecretStr`, `env_file=".env"` and `extra="ignore"`. Real env vars beat `.env` by default.
 - [ ] Pass `JWT_SECRET` / `LOG_LEVEL` to the container once the code reads them.
 
-### 3. Table definitions (`src/user_service/db/tables.py` or similar)
-- [ ] SQLAlchemy Core `MetaData` with a naming convention, set before the first migration.
-- [ ] `users`: `Identity()` integer primary key, unique email, password hash, timestamps.
-- [ ] `admins`: **open decision.** Either separate accounts with their own credentials, or a role table with `admins.user_id` as a foreign key to `users.id`.
+### 3. Table definitions (`src/user_service/tables.py`)
+- [x] SQLAlchemy Core `MetaData` with a naming convention, set before the first migration.
+- [x] `users`: `Identity()` integer primary key, email, nullable `email_verified_at` (null until the user confirms their email), username, password hash, nullable `profile_picture_url`, `created_at`/`updated_at`. Email and username are unique regardless of case (unique indexes on `lower(...)`).
+- [x] `admins`: separate accounts with their own credentials (no foreign key to `users`). `Identity()` integer primary key, username (unique regardless of case), password hash, timestamps. Ids overlap with `users.id`, so tokens need a role claim.
 
 ### 4. Alembic
 - [ ] `uv add alembic`, then `alembic init -t async migrations`.
@@ -59,12 +59,12 @@ Not yet verified against a real database. Docker wasn't running, so no container
 
 ## Decisions
 - **FastAPI + SQLAlchemy Core,** an auto-increment integer `users.id`, and a separate admin table. These were decided by the team.
+- **Admins are separate accounts,** not a role on `users`. Other services' `user_id` always means a student, and a compromised student account can't become an admin.
 - **Migrations run as a separate one-off step,** not on app start. This is a common pattern but isn't officially documented as a recommendation. It maps directly onto a Cloud Run job later.
 - **No hostnames or secrets in code or the image.** Only `compose.yaml` mentions `user-db`.
 - **`compose.yaml` is for local development and demos only.** Cloud Run (Cloud SQL, Secret Manager, a Cloud Run job for migrations, the injected `PORT`) will be configured separately later.
 - **Keep the app cloud-ready:** config from env, listen on `$PORT`, no local disk state, migrations as a separate command.
 
 ## Open items
-- [ ] Admin table design (step 3).
 - [ ] Fill in "Author review" in each AI Assistance Disclosure header and the verification `TODO(author)` in the root README.
 - [ ] Decide whether to keep `__init__.py`'s placeholder `main()` and `[project.scripts]` in `pyproject.toml`.

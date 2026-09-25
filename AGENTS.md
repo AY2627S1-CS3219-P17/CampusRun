@@ -26,7 +26,7 @@ Every submission using AI must include:
 - Location(s):
   - Place the attribution comment at the top of each AI-influenced file (see below) as a comment.
   - A consolidated disclosure in your project README as the last section. Add new points whenever there is a significantly new AI use.
-  - A usage log file in the project repository. Keep this updated constantly without being asked.
+  - A usage log file in the project repository. Update this upon request, summarising conversations. Don't update it after every prompt.
 
 ### Example: Short File-Header Attribution (in each affected file)
 ```

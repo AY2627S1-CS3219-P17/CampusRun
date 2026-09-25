@@ -19,4 +19,5 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    # Fields are populated from the environment, which Pyright can't see
+    return Settings()  # pyright: ignore[reportCallIssue]

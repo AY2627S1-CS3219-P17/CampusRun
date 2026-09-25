@@ -3,7 +3,7 @@
 # Scope: AI-generated FastAPI app with engine lifespan and GET /health endpoint.
 # Author review: <to be completed by author>
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Annotated
 
@@ -18,7 +18,7 @@ from user_service.db import create_engine, get_engine
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     app.state.engine = create_engine(get_settings())
     yield
     await app.state.engine.dispose()

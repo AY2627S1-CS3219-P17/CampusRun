@@ -6,6 +6,7 @@ import Register from './pages/register.tsx'
 import Explore from './pages/explore.tsx'
 import MyTasks from './pages/my-tasks.tsx'
 import MyRequests from './pages/my-requests.tsx'
+import Suppliers from './pages/suppliers.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -14,7 +15,10 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/explore" element={<Explore />} />
         <Route path="/my-tasks" element={<MyTasks />} />
         <Route path="/my-requests" element={<MyRequests />} />
+        <Route path="/suppliers" element={<Suppliers />} />
+
         <Route path="/" element={<Navigate to="/login" replace />} />
+
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
       </Routes>

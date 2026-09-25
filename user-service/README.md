@@ -7,3 +7,10 @@ uv is the package manager of choice, optionally with mise for python versioning.
 
 # Getting started
 [Install uv](https://docs.astral.sh/uv/getting-started/installation/) first, then run:
+
+> `mise run serve`
+
+If you're not using `mise`, run
+
+> `fastapi dev src/user_service/main.py`
+

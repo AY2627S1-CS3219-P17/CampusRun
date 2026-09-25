@@ -1,2 +1,11 @@
 [tools]
 python = "3.14.7"
+
+# tasks below are for local dev
+[tasks.serve]
+description = "Run the FastAPI server for user-service"
+run = "fastapi dev src/user_service/main.py"
+
+[tasks.user-db]
+description = "Start the database user-service"
+run = "docker compose up -d user-db"

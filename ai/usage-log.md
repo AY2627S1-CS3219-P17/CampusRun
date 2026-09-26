@@ -447,7 +447,65 @@ can we write tests to verify that the admin creation script works
 
 ---
 
-## Session 5 — 2026-09-26 — registration endpoint
+## Session 5 — 2026-09-26 — supplier-service setup
+
+- **Tool:** Claude (claude.ai chat, model: Claude Opus 5.5)
+- **Author:** Aaron
+- **Modes:** explain, review, generate
+- **Timestamps:** only the dates were recorded for this session; individual prompt times were not captured.
+- **Decisions made before the session (by the team, not AI):** FastAPI with SQLAlchemy Core and PostgreSQL; one folder and one database per service; the supplier FRs (F4 to F6, N3) in the D1 backlog.
+
+### 1. Supplier service setup (explain)
+
+```text
+explain the basic structure for the supplier service using the existing user service as the reference, including the database connection, project configuration, supplier models, and initial API structure.
+```
+
+**Key response:** Reviewed the existing user-service/ structure and outlined how the same conventions could be applied to supplier-service/. Covered the PostgreSQL connection, SQLAlchemy Core setup, project configuration, supplier database schema, and initial API structure. Also reviewed the supplier seed data and discussed database support for supplier search, including pg_trgm for keyword matching and SQL-based distance calculations.
+
+### 2. Supplier APIs (explain, review)
+
+```text
+review the supplier API requirements and outline what is needed for CRUD, search, filtering, sorting, pagination, and delivery locations, including the expected authentication and test coverage.
+```
+
+**Key response:** Reviewed the required supplier operations and query behaviour, covering CRUD, search, filtering, sorting, pagination, and distance-based supplier queries. Discussed delivery-location handling alongside supplier records and the expected JWT authentication behaviour, including the distinction between unauthenticated requests (401) and unauthorized requests (403). Reviewed the resulting automated tests under tests/, which covered the supplier API and database behaviour. The backend reached 58 passing tests with 94% coverage.
+
+### 3. Check the frontend integration (explain, review)
+
+```text
+compare the current frontend Supplier type with the supplier backend and identify what the API needs to provide for the supplier page to use real data.
+```
+
+**Key response:** Compared the frontend Supplier type with the backend supplier schema and identified fields and naming that needed to be aligned. Reviewed the API response format against the frontend's camelCase conventions and checked supplier categories such as Food, Drinks, Shopping, and Printing. Also checked frontend fields including startTime, endTime, active, and location. Identified that the existing supplier page was still using mock data and would need to connect to the Supplier Service APIs. The earlier standalone supplier UI was not retained because the team's own frontend had already been added to the main repository.
+
+### 4. Align the service with the existing project (explain)
+
+```text
+review the supplier service against the user service and identify any differences in migrations, configuration, Docker, tasks, and health checks that should be aligned.
+```
+
+**Key response:** Reviewed the Supplier Service against the conventions already established in user-service/. Identified the use of Alembic for database migrations, separate seeding, the existing naming convention, integer IDs, get_settings() configuration pattern, and SecretStr handling. Also reviewed the corresponding Docker and mise task configuration and the service health response. Identified a separate issue in src/user_service/__init__.py, which had been deleted and caused the user service to fail during the build. Configured supplier-db to use host port 5434 to avoid a conflict with the local PostgreSQL instance running on 5432.
+
+### 5. Compose file (generate)
+
+```text
+update compose.yaml
+```
+
+**Key response:** Generated the root `compose.yaml` with `supplier-db` (Postgres 18, a named volume, a healthcheck, and a port bound to `127.0.0.1:5434:5432`) and `supplier-service` (built from `./supplier-service`, with `DATABASE_URL` pointing at `supplier-db`, on port 8002).
+
+### 6. Supplier seed data (generate)
+
+```text
+review the supplier seed data and add on new nus suppliers and delivery locations to the CSV files
+```
+
+**Key response:** Prepared the supplier seed data in supplier-service/seed/suppliers.csv, together with seed/delivery-locations.csv and scripts/demo-supplier.json. Checked that the data matched the expected supplier and delivery-location fields and could be loaded by the service.
+
+---
+
+## Session 6 — 2026-09-26 — registration endpoint
 
 - **Tool:** Claude Code (model: Claude Opus 5.5)
 - **Author:** nathantew14

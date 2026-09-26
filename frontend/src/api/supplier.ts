@@ -1,199 +1,64 @@
+// AI Assistance Disclosure:
+// Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
+// Scope: AI-modified: the mocked calls and hard-coded supplier list are replaced with calls to the Supplier Service.
+// Author review: <to be completed by author>
+
+import { request } from './client'
 import type {
   CreateSupplierPayload,
   EditSupplierPayload,
+  Page,
   Supplier,
+  SupplierQuery,
 } from '../types/supplier'
 
-// All APIs requests to Supplier Service are mocked for now
-export async function createSupplier(
-  createSupplierPayload: CreateSupplierPayload,
+const SUPPLIER_API_URL =
+  (import.meta.env.VITE_SUPPLIER_API_URL as string | undefined) ??
+  'http://localhost:8002'
+
+export function listSuppliers(query: SupplierQuery, signal?: AbortSignal) {
+  const params = new URLSearchParams({
+    active: String(query.active),
+    sort: query.sort,
+    page: String(query.page),
+    pageSize: String(query.pageSize),
+  })
+  if (query.q.trim()) params.set('q', query.q.trim())
+  if (query.type) params.set('type', query.type)
+  return request<Page<Supplier>>(`${SUPPLIER_API_URL}/suppliers?${params}`, {
+    signal,
+  })
+}
+
+export function getSupplier(id: number, signal?: AbortSignal) {
+  return request<Supplier>(`${SUPPLIER_API_URL}/suppliers/${id}`, { signal })
+}
+
+export function createSupplier(createSupplierPayload: CreateSupplierPayload) {
+  return request<Supplier>(`${SUPPLIER_API_URL}/suppliers`, {
+    method: 'POST',
+    body: JSON.stringify(createSupplierPayload),
+  })
+}
+
+export function editSupplier(
+  id: number,
+  editSupplierPayload: EditSupplierPayload,
 ) {
-  console.log(createSupplierPayload)
-  await new Promise<void>((resolve) => setTimeout(resolve, 500))
-  return
+  return request<Supplier>(`${SUPPLIER_API_URL}/suppliers/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(editSupplierPayload),
+  })
 }
 
-export async function editSupplier(editSupplierPayload: EditSupplierPayload) {
-  console.log(editSupplierPayload)
-  await new Promise<void>((resolve) => setTimeout(resolve, 500))
-  return
+// Activate/Deactivate. Deactivated suppliers are hidden from students but kept.
+export function toggleSupplier(id: number, isActive: boolean) {
+  return editSupplier(id, { active: isActive })
 }
 
-// Toggle Activate/Deactivate (soft-delete)
-export async function toggleSupplier(isActive: boolean) {
-  console.log(isActive)
-  await new Promise<void>((resolve) => setTimeout(resolve, 500))
-  return
+// Removes the supplier for everyone. The service keeps the record for past errands.
+export function deleteSupplier(id: number) {
+  return request<void>(`${SUPPLIER_API_URL}/suppliers/${id}`, {
+    method: 'DELETE',
+  })
 }
-
-// Mock data from supplier-seed-data.csv
-export const initialSuppliers: Supplier[] = [
-  {
-    name: 'Anna x Soup Union',
-    location: 'Central Library, Floor 1',
-    startTime: '09:00',
-    endTime: '18:00',
-    type: 'Food',
-    active: true,
-  },
-  {
-    name: 'NUS Co-op',
-    location: 'Central Library, Floor 1',
-    startTime: '09:00',
-    endTime: '16:00',
-    type: 'Shopping',
-    active: true,
-  },
-  {
-    name: 'Printer @ Com 2',
-    location: 'Com 2, Floor 1',
-    startTime: '00:00',
-    endTime: '23:59',
-    type: 'Printing',
-    active: true,
-  },
-  {
-    name: 'Cool Spot',
-    location: 'Com2, Floor 1',
-    startTime: '09:00',
-    endTime: '21:30',
-    type: 'Food',
-    active: true,
-  },
-  {
-    name: 'InstaChef',
-    location: 'Terrace, Floor 1',
-    startTime: '00:00',
-    endTime: '23:59',
-    type: 'Food',
-    active: true,
-  },
-  {
-    name: 'Cafe+ Robot Cafe',
-    location: 'Central Library, Floor 1',
-    startTime: '00:00',
-    endTime: '23:59',
-    type: 'Drinks',
-    active: true,
-  },
-  {
-    name: 'A Hot Hideout',
-    location: 'Prince George Park, Floor 2',
-    startTime: '11:00',
-    endTime: '21:30',
-    type: 'Food',
-    active: true,
-  },
-  {
-    name: 'Arise and Shine',
-    location: 'Engineering Block E4, Floor 4',
-    startTime: '08:00',
-    endTime: '18:00',
-    type: 'Food',
-    active: true,
-  },
-  {
-    name: 'Bakehaus / Aurea',
-    location: 'The Ridge, Floor 1',
-    startTime: '08:00',
-    endTime: '21:00',
-    type: 'Food',
-    active: true,
-  },
-  {
-    name: 'Central Square @ YIH',
-    location: 'Yusof Ishak House, Floor 1',
-    startTime: '08:00',
-    endTime: '20:00',
-    type: 'Food',
-    active: true,
-  },
-  {
-    name: 'Pasta Express',
-    location: 'Frontier, Floor 1',
-    startTime: '09:30',
-    endTime: '19:30',
-    type: 'Food',
-    active: true,
-  },
-  {
-    name: 'TOMORO COFFEE',
-    location: 'Hon Sui Sen Memorial Library, Floor 2',
-    startTime: '08:15',
-    endTime: '18:00',
-    type: 'Drinks',
-    active: true,
-  },
-  {
-    name: 'Octobox',
-    location: 'Prince George Park, Floor 2',
-    startTime: '00:00',
-    endTime: '23:59',
-    type: 'Shopping',
-    active: true,
-  },
-  {
-    name: 'Smooy',
-    location: 'COM3, Floor 1',
-    startTime: '11:00',
-    endTime: '21:00',
-    type: 'Food',
-    active: true,
-  },
-  {
-    name: 'Goh Bros E-Print Pte Ltd',
-    location: 'Yusof Ishak House, Floor 5',
-    startTime: '09:00',
-    endTime: '18:00',
-    type: 'Printing',
-    active: true,
-  },
-  {
-    name: 'Cheers Unmanned Convenience Store',
-    location: 'Engineering Block E3, Floor 4',
-    startTime: '00:00',
-    endTime: '23:59',
-    type: 'Shopping',
-    active: true,
-  },
-  {
-    name: 'Nami',
-    location: 'innovation4.0, Floor 1',
-    startTime: '08:00',
-    endTime: '17:30',
-    type: 'Food',
-    active: true,
-  },
-  {
-    name: 'Supersnacks',
-    location: 'Prince George Park, Floor 1',
-    startTime: '11:00',
-    endTime: '02:00',
-    type: 'Food',
-    active: true,
-  },
-  {
-    name: 'Good Day Cafe',
-    location: 'Medicine+Science Library, Floor 1',
-    startTime: '07:30',
-    endTime: '18:30',
-    type: 'Drinks',
-    active: true,
-  },
-  {
-    name: 'The Coffee Roaster',
-    location: 'Blk AS8, Floor 1',
-    startTime: '08:00',
-    endTime: '17:30',
-    type: 'Drinks',
-    active: true,
-  },
-  {
-    name: 'he by He Brews',
-    location: 'Engineering Block EA, Floor 1',
-    startTime: '08:00',
-    endTime: '17:00',
-    type: 'Drinks',
-    active: true,
-  },
-]

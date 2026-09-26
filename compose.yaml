@@ -3,6 +3,11 @@
 # Scope: AI-generated local development Compose setup for the user service, its Postgres database and its one-off migration step.
 # Author review: reviewed by Nathan
 
+# AI Assistance Disclosure:
+# Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
+# Scope: AI-generated local development Compose setup for the supplier service, its Postgres database and its one-off migration and seed step.
+# Author review: <to be completed by author>
+
 # Local development / demo only; cloud deployments are configured separately.
 # Values in ${...} are read from the root .env file.
 
@@ -50,6 +55,46 @@ services:
       # Start only after migrations have finished successfully
       user-migrate:
         condition: service_completed_successfully
+      
+  supplier-db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: ${SUPPLIER_DB_USER:-supplier_service}
+      POSTGRES_PASSWORD: ${SUPPLIER_DB_PASSWORD:?set SUPPLIER_DB_PASSWORD in .env}
+      POSTGRES_DB: ${SUPPLIER_DB_NAME:-supplier_service}
+    volumes:
+      # Postgres 18+ images keep data under /var/lib/postgresql (not .../data)
+      - supplier-db-data:/var/lib/postgresql
+    ports:
+      # Bound to localhost only; 5434 because user-db already uses 5433
+      - "127.0.0.1:5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  
+  supplier-migrate:
+    build: ./supplier-service
+    command: ["sh", "-c", "alembic upgrade head && python -m supplier_service.seed"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${SUPPLIER_DB_USER:-supplier_service}:${SUPPLIER_DB_PASSWORD:?set SUPPLIER_DB_PASSWORD in .env}@supplier-db:5432/${SUPPLIER_DB_NAME:-supplier_service}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+    depends_on:
+      supplier-db:
+        condition: service_healthy
+  
+  supplier-service:
+    build: ./supplier-service
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${SUPPLIER_DB_USER:-supplier_service}:${SUPPLIER_DB_PASSWORD:?set SUPPLIER_DB_PASSWORD in .env}@supplier-db:5432/${SUPPLIER_DB_NAME:-supplier_service}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      CORS_ORIGINS: http://localhost:5173
+    ports:
+      - "8002:8000"
+    depends_on:
+      supplier-migrate:
+        condition: service_completed_successfully
 
   # Public entry point: routes /api/<service>/... to each service on the private network
   gateway:
@@ -63,3 +108,4 @@ services:
 
 volumes:
   user-db-data:
+  supplier-db-data:

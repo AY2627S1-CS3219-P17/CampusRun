@@ -19,3 +19,4 @@ __pycache__
 .vscode/
 # Local agent plans
 .claude/plans/
+*.code-workspace

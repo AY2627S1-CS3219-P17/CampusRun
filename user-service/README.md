@@ -106,7 +106,7 @@ Make sure Docker is running, then:
 mise run test
 ```
 
-Or without mise, `uv run pytest`. The tests start a throwaway Postgres 18 container (via Testcontainers) and create fresh tables for each test, so they never touch your local development database.
+Or without mise, `uv run pytest`. The tests start a throwaway Postgres 18 container (via Testcontainers), build the schema by running the Alembic migrations, and empty the tables before each test, so they never touch your local development database. They also fail if `tables.py` and the migrations drift apart, so generate a migration whenever you change a table.
 
 ## Interactive API docs
 

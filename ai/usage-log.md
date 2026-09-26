@@ -224,7 +224,7 @@ yes, add email_verified_at
 - **Modes:** explain, generate, debug
 - **Timestamps:** only the date was recorded for this session; individual prompt times were not captured.
 - **Before the session (by the author, not AI):** ran Alembic's async template to create `user-service/alembic.ini` and `user-service/migrations/`.
-- **Summary:** Connected Alembic to the service's `DATABASE_URL` and table metadata, fixed two Pylance warnings, explained the autogenerate workflow and image rebuilds, added the `user-migrate` Compose service, and reviewed the author's mise tasks and `user-service/README.md`.
+- **Summary:** Connected Alembic to the service's `DATABASE_URL` and table metadata, fixed two Pylance warnings, explained the autogenerate workflow and image rebuilds, added the `user-migrate` Compose service, reviewed the author's mise tasks and `user-service/README.md` over several rounds, and added an interactive API docs section to that README.
 
 ### 1. Database URL in `alembic.ini` (explain)
 
@@ -346,3 +346,49 @@ added the tasks myself. help me do a quick check, look over @user-service/README
 ```
 
 **Key response:** Reviewed the author's `mise.toml` tasks (`start-db`, `migrate`, `serve`) and `user-service/README.md`, and suggested fixes. Main findings: `start-db` lacks `--wait`, so `migrate` can race Postgres startup; the "Without mise" README steps skip migrations and `.env` setup; `serve` uses bare `fastapi` while `migrate` uses `uv run`. Made no edits to either file. Updated this log and the README AI Use Summary.
+
+### 15. `[project.scripts]`, port 8001, README second review (explain, review)
+
+```text
+what is the [project.scripts] table for?
+
+where is port 8001 from? mine seems to be running it on 8000.
+
+vet the readme again.
+```
+
+**Key response:** `[project.scripts]` defines command-line commands created when the package is installed. The old entry called the placeholder `main()`, and the now-empty table does nothing. Port 8000 is the `fastapi dev` default on the host. 8001 is the host port Compose maps to the container's 8000; the AI chose it when generating `compose.yaml`, so the container doesn't clash with a host server. README findings: 2b lacked `--wait`, a broken `user-service/` link, `.env` links that break on GitHub because the file is git-ignored, and no local port or docs URL.
+
+### 16. mise vs. `[project.scripts]`, container port, docs, README third review (explain, review)
+
+```text
+are mise tasks and uv project.scripts accomplishing the same thing?
+
+port: i ran the entire compose and still got port 8000:
+
+<pasted docker compose up --build output, ending with "Uvicorn running on http://0.0.0.0:8000">
+
+what's the interactive docs thing?
+
+vet again.
+```
+
+**Key response:** `[project.scripts]` makes a Python function an installable command for anyone who installs the package; mise tasks are development shortcuts that run any shell command and can chain. uv has no task runner. The 8000 in the log is the port inside the container, published on the host as 8001. The log also showed `user-migrate` exiting with code 0 before `user-service` started. Explained FastAPI's generated `/docs` (Swagger UI), `/redoc` and `/openapi.json`. README findings: one remaining `.env` link, ambiguous "copy to `.env`" wording, and the position of the local port line.
+
+### 17. Interactive docs section (generate, review)
+
+```text
+write a short section describing the live docs, then vet again
+```
+
+**Key response:** Added an "Interactive API docs" section to `user-service/README.md` covering `/docs`, `/redoc` and `/openapi.json` on port 8000 (host) or 8001 (Compose). Replaced the author's "What can the docs do?" placeholder with a link to it, and updated the README's attribution header. Remaining findings: the project-level `.env` wording, a missing period, and a suggested note that "Try it out" sends real requests to the connected database.
+
+### 18. Docs in production (explain)
+
+```text
+will the production server have the live docs
+
+update the ai usage log
+```
+
+**Key response:** Yes by default: `fastapi run` serves `/docs`, `/redoc` and `/openapi.json` too (the Compose log printed "Documentation at http://0.0.0.0:8000/docs"). Production mode only turns off auto-reload. Recommended turning them off in deployed environments with a setting that passes `docs_url=None, redoc_url=None, openapi_url=None` to `FastAPI(...)`, because a public schema lists every endpoint, including admin ones. No code was changed. Updated this log and the README AI Use Summary.

@@ -2,8 +2,11 @@
 ## React + Radix UI + React Router + Vite 
 
 ### Set Up 🤩
+Requires Node 24.18.0 (pinned in `mise.toml`, `.nvmrc` and `package.json` `engines`).
+
 ```
 cd frontend 
+mise install   # or: nvm use
 npm install
 
 # Starts local vite server at :5173

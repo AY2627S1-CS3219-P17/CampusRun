@@ -1,6 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
-# Scope: AI added the pydantic-settings dependency (via 'uv add pydantic-settings'); rest of file authored by the team.
+# Scope: AI added the pydantic-settings and pwdlib[argon2] dependencies (via 'uv add') and the create-initial-admin
+#        project script; rest of file authored by the team.
 # Author review: <to be completed by author>
 
 [project]
@@ -16,9 +17,13 @@ dependencies = [
     "alembic>=1.20.0",
     "asyncpg>=0.31.0",
     "fastapi[standard-no-fastapi-cloud-cli]>=0.141.1",
+    "pwdlib[argon2]>=0.3.1",
     "pydantic-settings>=2.15.0",
     "sqlalchemy[asyncio]>=2.1.0",
 ]
+
+[project.scripts]
+create-initial-admin = "user_service.scripts.create_admin:main"
 
 [build-system]
 requires = ["uv_build>=0.12.7,<0.13.0"]

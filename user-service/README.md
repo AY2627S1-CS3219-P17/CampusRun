@@ -1,7 +1,7 @@
 <!--
 AI Assistance Disclosure:
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
-Scope: AI-assisted Markdown formatting, environment variable setup instructions, the full-stack build step, and the interactive API docs section (including the ENABLE_DOCS note).
+Scope: AI-assisted Markdown formatting, environment variable setup instructions, the full-stack build step, the interactive API docs section (including the ENABLE_DOCS note), and the initial admin setup section.
 Author review: Originally written and then verified by Nathan
 -->
 
@@ -79,6 +79,24 @@ docker compose up --build
 ```
 
 The `--build` flag rebuilds the images so your latest code changes are included. The API is then served at http://localhost:8001, with interactive docs similarly at http://localhost:8001/docs.
+
+## Creating the initial admin
+
+The `create-initial-admin` command creates the first admin account from `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD`. It only runs against an empty `admins` table, so it's safe to re-run and does nothing once any admin exists. Run it after migrations.
+
+- **Local development:** set both variables in `user-service/.env`, then run:
+
+  ```sh
+  mise run create-admin
+  ```
+
+  This starts the database and applies migrations first. Without mise, run `uv run create-initial-admin` once migrations are applied.
+
+- **Full stack (Compose):** the variables aren't passed to the containers, so provide them on the command line. This reuses the one-off `user-migrate` container, so the password never enters the long-running server's environment:
+
+  ```sh
+  docker compose run --rm -e INITIAL_ADMIN_USERNAME=<username> -e INITIAL_ADMIN_PASSWORD=<password> user-migrate create-initial-admin
+  ```
 
 ## Interactive API docs
 

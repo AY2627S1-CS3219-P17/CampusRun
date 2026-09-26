@@ -1,6 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
-# Scope: AI-generated SQLAlchemy Core MetaData naming convention and users/admins table definitions.
+# Scope: AI-generated SQLAlchemy Core MetaData naming convention and users/admins table definitions;
+#        AI-added USERNAME_MAX_LENGTH constant.
 # Author review: Reviewed and added email_verified_at
 
 from sqlalchemy import (
@@ -15,6 +16,9 @@ from sqlalchemy import (
     Text,
     func,
 )
+
+# Shared by the users and admins tables, and by input validation
+USERNAME_MAX_LENGTH = 32
 
 # Deterministic constraint names, so Alembic migrations can refer to them
 metadata = MetaData(
@@ -54,7 +58,7 @@ users = Table(
     Column("email", String(254), nullable=False),
     # Null until the user confirms they own the email address
     Column("email_verified_at", DateTime(timezone=True), nullable=True),
-    Column("username", String(32), nullable=False),
+    Column("username", String(USERNAME_MAX_LENGTH), nullable=False),
     Column("password_hash", Text, nullable=False),
     # URL or object-storage key; the image itself lives outside the database
     Column("profile_picture_url", Text, nullable=True),
@@ -65,7 +69,7 @@ admins = Table(
     "admins",
     metadata,
     Column("id", Integer, Identity(), primary_key=True),
-    Column("username", String(32), nullable=False),
+    Column("username", String(USERNAME_MAX_LENGTH), nullable=False),
     Column("password_hash", Text, nullable=False),
     *_timestamps(),
 )

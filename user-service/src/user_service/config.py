@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     # SecretStr so the password in the URL is masked if settings are ever logged
     database_url: SecretStr
 
+    # Only read by the create-initial-admin script; the server runs without them
+    initial_admin_username: str | None = None
+    initial_admin_password: SecretStr | None = None
+
     # Off by default so deployed services don't publish their API schema
     enable_docs: bool = False
 

@@ -1,6 +1,6 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
-# Scope: AI-generated pydantic-settings Settings class reading DATABASE_URL; AI-added Pyright ignore on Settings().
+# Scope: AI-generated pydantic-settings Settings class reading DATABASE_URL and ENABLE_DOCS; AI-added Pyright ignore on Settings().
 # Author review: <to be completed by author>
 
 from functools import lru_cache
@@ -15,6 +15,9 @@ class Settings(BaseSettings):
 
     # SecretStr so the password in the URL is masked if settings are ever logged
     database_url: SecretStr
+
+    # Off by default so deployed services don't publish their API schema
+    enable_docs: bool = False
 
 
 @lru_cache

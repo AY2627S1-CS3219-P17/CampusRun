@@ -1,6 +1,6 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
-# Scope: AI-generated FastAPI app with engine lifespan and GET /health endpoint; AI-updated lifespan return type to AsyncGenerator.
+# Scope: AI-generated FastAPI app with engine lifespan and GET /health endpoint; AI-updated lifespan return type to AsyncGenerator and made API docs depend on ENABLE_DOCS.
 # Author review: <to be completed by author>
 
 from collections.abc import AsyncGenerator
@@ -24,7 +24,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     await app.state.engine.dispose()
 
 
-app = FastAPI(title="CampusRun User Service", lifespan=lifespan)
+settings = get_settings()
+
+app = FastAPI(
+    title="CampusRun User Service",
+    lifespan=lifespan,
+    # None turns each docs page off
+    docs_url="/docs" if settings.enable_docs else None,
+    redoc_url="/redoc" if settings.enable_docs else None,
+    openapi_url="/openapi.json" if settings.enable_docs else None,
+)
 
 
 @app.get("/health")

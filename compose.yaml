@@ -40,6 +40,8 @@ services:
     environment:
       # Hostname is the Compose service name, resolved on the project's private network
       DATABASE_URL: postgresql+asyncpg://${USER_DB_USER:-user_service}:${USER_DB_PASSWORD:?set USER_DB_PASSWORD in .env}@user-db:5432/${USER_DB_NAME:-user_service}
+      # Local only: deployed environments leave this unset, so the docs are off
+      ENABLE_DOCS: "true"
     ports:
       - "8001:8000"
     depends_on:

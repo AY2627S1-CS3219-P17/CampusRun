@@ -1,7 +1,7 @@
 <!--
 AI Assistance Disclosure:
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
-Scope: AI-assisted Markdown formatting, environment variable setup instructions, the full-stack build step, and the interactive API docs section.
+Scope: AI-assisted Markdown formatting, environment variable setup instructions, the full-stack build step, and the interactive API docs section (including the ENABLE_DOCS note).
 Author review: Originally written and then verified by Nathan
 -->
 
@@ -82,7 +82,7 @@ The `--build` flag rebuilds the images so your latest code changes are included.
 
 ## Interactive API docs
 
-FastAPI generates live documentation from the code, so it always matches the running server. It's served on whichever port you're using (`8000` locally, `8001` with Compose):
+FastAPI generates live documentation from the code, so it always matches the running server. It's served on whichever port you're using (`8000` locally, `8001` with Compose) as long as `ENABLE_DOCS=true` is set. It's set in `.env.example` and `compose.yaml`, and off by default, so deployed environments don't publish the API schema:
 
 - **`/docs`:** Swagger UI. Lists every endpoint with its parameters and response shapes. Use **Try it out** to send real requests to the running server, which is useful for testing endpoints without writing `curl` commands.
 - **`/redoc`:** the same information as read-only reference documentation.

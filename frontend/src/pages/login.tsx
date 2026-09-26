@@ -1,7 +1,14 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
+// Scope: AI-wired the form to the User Service's login and saved the returned access token.
+// Author review: <to be completed by author>
+
 import { useState, type SubmitEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Label } from 'radix-ui'
+import { ApiError } from '../api/client'
 import { loginUser } from '../api/user'
+import { saveToken } from '../utils/session'
 
 import { Eye, EyeOff, Footprints, LockKeyhole, Mail } from 'lucide-react'
 import './login.css'
@@ -24,17 +31,24 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      await loginUser({
+      const token = await loginUser({
         email: email.trim(),
         password,
       })
+      // Only fails if the token isn't one the app understands (e.g. a different claim format)
+      if (!saveToken(token)) throw new Error('Unrecognised access token')
 
       setEmail('')
       setPassword('')
 
       await navigate('/explore', { replace: true })
-    } catch {
-      setError('Could not log in. Check your details and try again.')
+    } catch (error) {
+      // e.g. "Incorrect login or password", or that the service can't be reached
+      setError(
+        error instanceof ApiError
+          ? error.message
+          : 'Could not log in. Check your details and try again.',
+      )
     } finally {
       setLoading(false)
     }

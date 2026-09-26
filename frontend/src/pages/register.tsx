@@ -1,3 +1,8 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
+// Scope: AI-wired the form to the User Service's registration and showed its error messages.
+// Author review: <to be completed by author>
+
 import {
   validateUsername,
   validatePassword,
@@ -6,6 +11,7 @@ import {
 } from '../utils/validation'
 import { useState, type SubmitEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { ApiError } from '../api/client'
 import { registerUser } from '../api/user'
 import type { RegisterUserValues } from '../types/user'
 import {
@@ -112,8 +118,13 @@ export default function RegisterPage() {
       setVisiblePasswords({ password: false, confirmPassword: false })
 
       await navigate('/login', { replace: true })
-    } catch {
-      setError('Could not create your account. Please try again.')
+    } catch (error) {
+      // e.g. "Username or email is already in use"
+      setError(
+        error instanceof ApiError
+          ? error.message
+          : 'Could not create your account. Please try again.',
+      )
     } finally {
       setLoading(false)
     }

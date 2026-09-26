@@ -1,9 +1,18 @@
+// AI Assistance Disclosure:
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
+// Scope: AI-wired the dialog to the User Service: loads the current username, sends only changed fields,
+//        and keeps Save disabled until something has changed.
+// Author review: <to be completed by author>
+
 import { validateUsername, validatePassword } from '../utils/validation'
-import { useState, type SubmitEvent } from 'react'
+import { useEffect, useState, type SubmitEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { Dialog } from 'radix-ui'
 import { Eye, EyeOff, LockKeyhole, Plus, UserRound, X } from 'lucide-react'
-import { updateUser } from '../api/user'
+import { ApiError } from '../api/client'
+import { getCurrentUser, updateUser } from '../api/user'
+import type { UpdateUserPayload } from '../types/user'
+import { clearSession } from '../utils/session'
 import './edit-user-info.css'
 
 type EditInfoDialogProps = {
@@ -17,8 +26,9 @@ export default function EditInfoDialog({
 }: EditInfoDialogProps) {
   const navigate = useNavigate()
 
-  // Username should be prefilled from BE
-  const [username, setUsername] = useState('CampusRunner')
+  // The saved username, from GET /users/me; null until it has loaded
+  const [savedUsername, setSavedUsername] = useState<string | null>(null)
+  const [username, setUsername] = useState('')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
@@ -34,9 +44,35 @@ export default function EditInfoDialog({
     newPassword: false,
   })
 
-  // Should also check that current password is correct, if present
+  useEffect(() => {
+    const controller = new AbortController()
+    getCurrentUser(controller.signal)
+      .then((user) => {
+        setSavedUsername(user.username)
+        setUsername(user.username)
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        setError(
+          error instanceof ApiError
+            ? error.message
+            : 'Could not load your details. Please try again.',
+        )
+      })
+    return () => controller.abort()
+  }, [])
+
+  // The service trims the username too, so surrounding spaces aren't a change
+  const usernameChanged =
+    savedUsername !== null && username.trim() !== savedUsername
+  // Save stays disabled until something would actually change
+  const hasChanges = usernameChanged || Boolean(newPassword)
+  const loaded = savedUsername !== null
+
+  // The service checks the current password, since only it knows the stored one
   const errors = {
-    username: validateUsername(username),
+    // Only a changed username is checked, so an older username that predates these rules can't block a password change
+    username: usernameChanged ? validateUsername(username.trim()) : '',
     currentPassword:
       newPassword && !currentPassword ? 'Enter your current password.' : '',
     newPassword: !newPassword
@@ -61,20 +97,34 @@ export default function EditInfoDialog({
     setSubmitted(true)
     if (Object.values(errors).some(Boolean)) return
 
+    if (!hasChanges) return
+
+    // Only the changed fields, so a success response always means something changed
+    const payload: UpdateUserPayload = {}
+    if (usernameChanged) payload.username = username.trim()
+    if (newPassword) {
+      payload.current_password = currentPassword
+      payload.new_password = newPassword
+    }
+
     setLoading(true)
     try {
-      // Probably should send the actual current password (if no new password is provided)
-      await updateUser({
-        username,
-        password: newPassword,
-      })
+      await updateUser(payload)
 
       onClose()
       if (newPassword) {
+        // Sign in again with the new password. The old token would keep working
+        // until it expires, since the service can't revoke it.
+        clearSession()
         await navigate('/login', { replace: true })
       }
-    } catch {
-      setError('Could not save changes. Please try again.')
+    } catch (error) {
+      // e.g. "Current password is incorrect" or "Username is already in use"
+      setError(
+        error instanceof ApiError
+          ? error.message
+          : 'Could not save changes. Please try again.',
+      )
     } finally {
       setLoading(false)
     }
@@ -145,7 +195,7 @@ export default function EditInfoDialog({
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
                   required
-                  disabled={loading}
+                  disabled={loading || !loaded}
                 />
               </div>
               {fieldErrors.username && (
@@ -183,7 +233,7 @@ export default function EditInfoDialog({
                   value={currentPassword}
                   onChange={(event) => setCurrentPassword(event.target.value)}
                   required={Boolean(newPassword)}
-                  disabled={loading}
+                  disabled={loading || !loaded}
                 />
                 <button
                   className="edit-info-password-toggle"
@@ -236,7 +286,7 @@ export default function EditInfoDialog({
                   autoComplete="new-password"
                   value={newPassword}
                   onChange={(event) => setNewPassword(event.target.value)}
-                  disabled={loading}
+                  disabled={loading || !loaded}
                 />
                 <button
                   className="edit-info-password-toggle"
@@ -273,7 +323,11 @@ export default function EditInfoDialog({
               </p>
             )}
 
-            <button className="edit-info-save" type="submit" disabled={loading}>
+            <button
+              className="edit-info-save"
+              type="submit"
+              disabled={loading || !hasChanges}
+            >
               {loading ? 'Saving…' : 'Save'}
             </button>
           </form>

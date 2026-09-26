@@ -1,6 +1,7 @@
 // AI Assistance Disclosure:
 // Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
-// Scope: AI-generated request helper that sends the access token and turns error responses into ApiError.
+// Scope: AI-generated request helper that sends the access token and turns error responses into ApiError;
+//        AI-added form bodies and FastAPI's default 422 format (Claude Code, 2026-09-27).
 // Author review: <to be completed by author>
 
 import { clearSession, getSession } from '../utils/session'
@@ -24,7 +25,24 @@ export class ApiError extends Error {
   }
 }
 
-type ErrorBody = { detail?: string; errors?: Record<string, string> }
+// FastAPI's default 422 body lists each problem instead of giving one message (the User Service uses it)
+type ValidationIssue = { loc?: (string | number)[]; msg?: string }
+type ErrorBody = {
+  detail?: string | ValidationIssue[]
+  errors?: Record<string, string>
+}
+
+function readIssues(issues: ValidationIssue[]) {
+  const fieldErrors: Record<string, string> = {}
+  for (const { loc, msg } of issues) {
+    if (!msg) continue
+    // Pydantic prefixes messages from custom validators with "Value error, "
+    const message = msg.replace(/^Value error, /, '')
+    fieldErrors[String(loc?.at(-1) ?? '')] ??= message
+  }
+  const first = Object.values(fieldErrors)[0]
+  return { message: first ? `${first}.` : undefined, fieldErrors }
+}
 
 export async function request<T>(
   url: string,
@@ -32,7 +50,9 @@ export async function request<T>(
 ): Promise<T> {
   const session = getSession()
   const headers: Record<string, string> = { Accept: 'application/json' }
-  if (init.body) headers['Content-Type'] = 'application/json'
+  // Other bodies (e.g. URLSearchParams for the login form) let fetch set their own type
+  if (typeof init.body === 'string')
+    headers['Content-Type'] = 'application/json'
   if (session) headers.Authorization = `Bearer ${session.token}`
 
   let response: Response
@@ -53,10 +73,13 @@ export async function request<T>(
     if (response.status === 401) clearSession()
     if (response.status >= 502 && !error.detail)
       throw new ApiError(response.status, UNREACHABLE)
+    const { message, fieldErrors } = Array.isArray(error.detail)
+      ? readIssues(error.detail)
+      : { message: error.detail, fieldErrors: error.errors ?? {} }
     throw new ApiError(
       response.status,
-      error.detail ?? 'Something went wrong. Try again in a moment.',
-      error.errors ?? {},
+      message ?? 'Something went wrong. Try again in a moment.',
+      fieldErrors,
     )
   }
   return body as T

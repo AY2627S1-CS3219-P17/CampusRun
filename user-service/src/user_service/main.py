@@ -11,16 +11,17 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
-from sqlalchemy import text
+from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from user_service.config import get_settings
+from user_service.config import Settings, get_settings
 from user_service.db import Connection, create_engine, get_engine
-from user_service.schemas import RegisterRequest, UserResponse
-from user_service.security import password_hash
-from user_service.tables import users
+from user_service.schemas import PASSWORD_MAX_LENGTH, RegisterRequest, TokenResponse, UserResponse
+from user_service.security import DUMMY_HASH, create_access_token, password_hash
+from user_service.tables import users, admins
 
 
 @asynccontextmanager
@@ -31,6 +32,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
 
 settings = get_settings()
+SettingsDep = Annotated[Settings, Depends(get_settings)]
+LoginForm = Annotated[OAuth2PasswordRequestForm, Depends()]
 
 app = FastAPI(
     title="CampusRun User Service",
@@ -41,6 +44,23 @@ app = FastAPI(
     redoc_url="/redoc" if settings.enable_docs else None,
     openapi_url="/openapi.json" if settings.enable_docs else None,
 )
+
+
+def login_failed() -> HTTPException:
+    # One message for unknown account and wrong password, so it doesn't reveal which accounts exist
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Incorrect login or password",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+async def check_password(password: str, stored_hash: str | None) -> bool:
+    # The form doesn't enforce RegisterRequest's limit, so cap the hashing work here too
+    if len(password) > PASSWORD_MAX_LENGTH:
+        return False
+    # Always run one Argon2 verify, even for unknown accounts, so timing doesn't reveal them
+    return await run_in_threadpool(password_hash.verify, password, stored_hash or DUMMY_HASH)
 
 
 @app.get("/health")
@@ -82,3 +102,39 @@ async def register(body: RegisterRequest, conn: Connection) -> UserResponse:
             detail="Username or email is already in use",
         )
     return UserResponse.model_validate(created, from_attributes=True)
+
+
+@app.post("/auth/login")
+async def login(form: LoginForm, conn: Connection, settings: SettingsDep) -> TokenResponse:
+    # Usernames can't contain "@", so an email and a username never match the same input
+    identifier = form.username.strip().lower()
+    row = (
+        await conn.execute(
+            select(users.c.id, users.c.password_hash).where(
+                or_(func.lower(users.c.email) == identifier, func.lower(users.c.username) == identifier)
+            )
+        )
+    ).one_or_none()
+
+    # Check the password before testing row, so unknown accounts still pay for a hash
+    valid = await check_password(form.password, row.password_hash if row else None)
+    if row is None or not valid:
+        raise login_failed()
+    return TokenResponse(access_token=create_access_token(row.id, "user", settings))
+
+
+@app.post("/auth/admin/login")
+async def admin_login(form: LoginForm, conn: Connection, settings: SettingsDep) -> TokenResponse:
+    row = (
+        await conn.execute(
+            select(admins.c.id, admins.c.password_hash).where(
+                func.lower(admins.c.username) == form.username.strip().lower()
+            )
+        )
+    ).one_or_none()
+
+    # Check the password before testing row, so unknown accounts still pay for a hash
+    valid = await check_password(form.password, row.password_hash if row else None)
+    if row is None or not valid:
+        raise login_failed()
+    return TokenResponse(access_token=create_access_token(row.id, "admin", settings))

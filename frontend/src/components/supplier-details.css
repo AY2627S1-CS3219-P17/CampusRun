@@ -1,0 +1,81 @@
+/* AI Assistance Disclosure: Claude (claude.ai chat, model: Claude Opus 5.5), 2026-09-26.
+   Scope: AI-generated styles for the supplier details dialog.
+   Author review: <to be completed by author> */
+.supplier-dialog.supplier-details {
+  width: min(560px, calc(100% - 32px));
+}
+.supplier-details h2 {
+  overflow-wrap: anywhere;
+}
+.supplier-details-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 18px;
+}
+.supplier-details-inactive {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #eef1f0;
+  color: #607a80;
+  font-size: 12px;
+  font-weight: 700;
+}
+.supplier-details-location,
+.supplier-details-hours {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: #34575c;
+  line-height: 1.5;
+}
+.supplier-details-location svg,
+.supplier-details-hours svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+  color: #607a80;
+}
+.supplier-details-location strong {
+  color: #153941;
+}
+.supplier-details-map {
+  display: block;
+  width: 100%;
+  height: 220px;
+  margin-top: 6px;
+  border: 1px solid #dce7e3;
+  border-radius: 10px;
+  background: #eef5f2;
+}
+.supplier-details-maps-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  color: #176849;
+  font-weight: 600;
+}
+.supplier-details-photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  margin-top: 16px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #eef5f2;
+}
+.supplier-dialog-footer button.supplier-details-primary {
+  border-color: #218563;
+  background: #218563;
+  color: white;
+}
+@media (max-width: 420px) {
+  .supplier-details .supplier-dialog-footer {
+    flex-wrap: wrap;
+  }
+  .supplier-details .supplier-dialog-footer button {
+    flex: 1;
+  }
+}

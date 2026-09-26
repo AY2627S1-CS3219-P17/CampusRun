@@ -1,0 +1,11 @@
+{
+  "name": "Demo Kiosk",
+  "type": "Food",
+  "building": "COM3",
+  "floor": "1",
+  "locationDescription": "Level 1 lobby, next to the lifts",
+  "latitude": 1.2949,
+  "longitude": 103.7744,
+  "startTime": "08:00",
+  "endTime": "20:00"
+}

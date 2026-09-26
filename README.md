@@ -25,7 +25,7 @@ For cloud deployments, separate configuration will be required.
 | Name | Role |
 | ----- | ----- |
 | Nathan Tew | User Service |
-| Your Name | Your ownership |
+| Aaron Rodrigues | Supplier Service |
 | Your Name | Your ownership |
 
 ---
@@ -73,6 +73,21 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 - **Generating** tests for the admin seeding script (`user-service/tests/`), using pytest with a throwaway Postgres container (Testcontainers) so tests never touch development data, plus a `test` mise task.
 
 **Verification:** `GET /health` and settings loading were checked in-process against an unreachable database and a missing `DATABASE_URL`. <!-- TODO(author): describe your own review and testing of the AI outputs -->
+
+### Supplier Service (Aaron)
+
+**Tools:** Claude (claude.ai chat, model: Claude Opus 5.5)
+
+**Decisions made by the team before AI assistance:** FastAPI with SQLAlchemy Core and PostgreSQL; one service per folder with its own database; the user-service conventions (Alembic, config, Dockerfile); and the web client's supplier fields and types.
+
+**Used for:**
+- **Suggesting** Implementation support and code review for the supplier service, including:
+- **Preparing** the supplier seed data in supplier-service/seed/suppliers.csv, as well as seed/delivery-locations.csv and scripts/demo-supplier.json. These files do not contain header comments.
+- **Reviewing** and aligning the supplier service after the web client and user service were added, particularly around shared conventions and interfaces.
+- **Debugging** and verification of transaction behaviour. Testing showed that FastAPI 0.141 can send a response before a yield dependency's transaction is committed; the service therefore uses Depends(..., scope="function") so that the transaction is committed before the response is returned.
+- **Clarifying** and documenting design decisions recorded in supplier-service/DESIGN.md.
+
+**Verification:** The service was tested against PostgreSQL, including 58 automated tests with 94% coverage, and the API was exercised end-to-end over HTTP after migrating and seeding a fresh database. Docker image builds were not performed because Docker was unavailable. <!-- TODO(author): describe your own review and testing -->
 
 **Files affected:** each carries an "AI Assistance Disclosure" header comment.
 

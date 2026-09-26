@@ -138,3 +138,40 @@
 .supplier-dialog-option[data-highlighted] {
   background: #eef5f2;
 }
+
+/* AI Assistance Disclosure: Claude (claude.ai chat, model: Claude Opus 5.5), 2026-09-26.
+   Scope: AI-added styles below for field errors, hints and the delete confirmation.
+   Author review: <to be completed by author> */
+.supplier-dialog label.has-error input {
+  border-color: #b42318;
+}
+.supplier-dialog-field-error {
+  color: #b42318;
+  font-weight: 400;
+  font-size: 13px;
+}
+.supplier-dialog-hint {
+  margin: -4px 0 4px;
+  color: #607a80;
+  font-size: 13px;
+}
+.supplier-dialog-footer button.supplier-dialog-danger {
+  border-color: #b42318;
+  background: #b42318;
+  color: white;
+}
+.supplier-dialog-token {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #cfdeda;
+  border-radius: 8px;
+  font:
+    12px ui-monospace,
+    Consolas,
+    monospace;
+  resize: vertical;
+}
+.supplier-dialog code {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}

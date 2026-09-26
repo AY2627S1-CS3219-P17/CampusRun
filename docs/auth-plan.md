@@ -688,7 +688,7 @@ These are for later milestones and other services. Not needed for D2.
 - **Token storage:** keep the token in memory plus `sessionStorage`/`localStorage`, and attach it as `Authorization: Bearer ...` on every API call. On any 401, clear it and redirect to login.
 - **Logout** = delete the stored token.
 - **Requester/courier toggle** is a UI mode only, and nothing is sent to the backend.
-- **Serving:** once built, serve the frontend from the gateway (`location / { root ...; try_files $uri /index.html; }`, replacing the `return 404`) so it's the same origin as the API.
+- **Serving:** done. The gateway's `location /` forwards to a `frontend` container that serves the built app with a fallback to `index.html`, so the page is the same origin as the API.
 
 ### Revoking sessions
 

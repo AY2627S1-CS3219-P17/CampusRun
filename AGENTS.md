@@ -20,7 +20,7 @@ All application services and supporting components should be containerized using
 | Peak load | 10,000 total user accounts, 500 concurrent active users and 2,000 errands per day. |
 
 # Gateway and Service Conventions
-- All browser traffic enters through the nginx gateway (`gateway/nginx.conf`, published at `localhost:8080`). It's the only container with a public port; services talk to each other on the Compose private network by service name (e.g. `http://user-service:8000`).
+- All browser traffic enters through the nginx gateway (`gateway/nginx.conf`, published at `localhost:8080`), which also serves the web app from the `frontend` container at `/`. The frontend calls the API with relative `/api/...` URLs, never a hard-coded host. The gateway is the only container with a public port; services talk to each other on the Compose private network by service name (e.g. `http://user-service:8000`).
 - The gateway routes `/api/<service>/...` to each service and strips the prefix. Define routes relative to the service root, and don't repeat the service name as a route prefix (supplier-service uses `/{id}`, not `/suppliers/{id}`).
 - Every FastAPI service reads `ROOT_PATH` (the gateway prefix, e.g. `/api/users`) into `FastAPI(root_path=...)`. Any absolute URL a service returns, such as a `Location` header, must start with it. It stays empty when a service runs directly on the host.
 - API docs (`/docs`, `/redoc`, `/openapi.json`) are opt-in with `ENABLE_DOCS=true`, which is set only in `compose.yaml` and `.env.example` files. Deployed services leave it unset.

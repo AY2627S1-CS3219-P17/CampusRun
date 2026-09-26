@@ -1,0 +1,12 @@
+# AI Assistance Disclosure:
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
+# Scope: AI-generated ignore list to keep local dependencies, build output and .env files out of the image.
+# Author review: <to be completed by author>
+
+node_modules
+dist
+.env
+.env.*
+!.env.example
+*.local
+.DS_Store

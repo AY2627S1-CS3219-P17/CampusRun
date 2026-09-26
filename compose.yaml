@@ -1,6 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
 # Scope: AI-generated local development Compose setup for the user service, its Postgres database and its one-off migration step.
+#        AI-added the gateway, the supplier-service ROOT_PATH/ENABLE_DOCS settings and the frontend service (2026-09-27).
 # Author review: reviewed by Nathan
 
 # AI Assistance Disclosure:
@@ -97,7 +98,11 @@ services:
       supplier-migrate:
         condition: service_completed_successfully
 
-  # Public entry point: routes /api/<service>/... to each service on the private network
+  # The built web app, served by nginx; reached only through the gateway
+  frontend:
+    build: ./frontend
+
+  # Public entry point: routes /api/<service>/... to each service on the private network, and everything else to the frontend
   gateway:
     image: nginx:stable-alpine
     volumes:
@@ -107,6 +112,7 @@ services:
     depends_on:
       - user-service
       - supplier-service
+      - frontend
 
 volumes:
   user-db-data:

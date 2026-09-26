@@ -54,6 +54,9 @@ Under `npm run dev`, the Vite dev server forwards `/api` to `VITE_API_PROXY_TARG
 
 Start the gateway and the services first with `docker compose up --build` from the repo root.
 
+### Running in Docker
+`docker compose up --build` from the repo root also builds this app (`Dockerfile`) and serves it with nginx (`nginx.conf`) behind the gateway, at http://localhost:8080. That runs the built files, so rebuild to see changes; use `npm run dev` while developing.
+
 Every call sends the access token stored in the browser (`src/utils/session.ts`). Until the User Service login is connected, the supplier page offers **Use a development token** (in `npm run dev` only):
 1. Make a token in `supplier-service` with `uv run python scripts/make_token.py --type admin`, or `--type student`.
 2. Paste it into that dialog.

@@ -13,6 +13,8 @@ services:
       POSTGRES_USER: ${USER_DB_USER:-user_service}
       POSTGRES_PASSWORD: ${USER_DB_PASSWORD:?set USER_DB_PASSWORD in .env}
       POSTGRES_DB: ${USER_DB_NAME:-user_service}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      JWT_ACCESS_TOKEN_TTL: ${JWT_ACCESS_TOKEN_TTL:-60}
     volumes:
       # Postgres 18+ images keep data under /var/lib/postgresql (not .../data)
       - user-db-data:/var/lib/postgresql
@@ -31,6 +33,7 @@ services:
     command: ["alembic", "upgrade", "head"]
     environment:
       DATABASE_URL: postgresql+asyncpg://${USER_DB_USER:-user_service}:${USER_DB_PASSWORD:?set USER_DB_PASSWORD in .env}@user-db:5432/${USER_DB_NAME:-user_service}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
     depends_on:
       user-db:
         condition: service_healthy

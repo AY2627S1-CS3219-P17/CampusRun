@@ -5,7 +5,7 @@
 
 from functools import lru_cache
 
-from pydantic import SecretStr
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,6 +15,11 @@ class Settings(BaseSettings):
 
     # SecretStr so the password in the URL is masked if settings are ever logged
     database_url: SecretStr
+    
+    # Signs and verifies access tokens; at least 32 characters so HS256 isn't brute-forceable
+    jwt_secret: SecretStr = Field(min_length=32)
+    # Minutes an access token stays valid
+    jwt_access_token_ttl: int = 60
 
     # Only read by the create-initial-admin script; the server runs without them
     initial_admin_username: str | None = None
@@ -25,7 +30,7 @@ class Settings(BaseSettings):
 
     # Path prefix the gateway serves this service under, e.g. "/api/users"; empty when accessed directly
     root_path: str = ""
-    
+
 
 @lru_cache
 def get_settings() -> Settings:

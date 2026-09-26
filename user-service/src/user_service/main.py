@@ -1,7 +1,8 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
 # Scope: AI-generated FastAPI app with engine lifespan and GET /health endpoint; AI-updated lifespan return type to AsyncGenerator and made API docs depend on ENABLE_DOCS;
-#        AI-completed the POST /auth/register endpoint from the author's draft; AI-renamed the user token type to "student" (Claude Code, 2026-09-27).
+#        AI-completed the POST /auth/register endpoint from the author's draft; AI-renamed the user token type to "student" (Claude Code, 2026-09-27);
+#        AI-generated the PATCH /users/me endpoint (2026-09-27).
 # Author review: reviewed by Nathan
 
 from collections.abc import AsyncGenerator
@@ -12,16 +13,23 @@ from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy import func, or_, select, text
+from sqlalchemy import func, or_, select, text, update
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from user_service.auth import CurrentAdmin, CurrentUser, credentials_error
 from user_service.auth import CurrentUser
 from user_service.config import Settings, get_settings
 from user_service.db import Connection, create_engine, get_engine
-from user_service.schemas import PASSWORD_MAX_LENGTH, AdminResponse, RegisterRequest, TokenResponse, UserResponse
+from user_service.schemas import (
+    PASSWORD_MAX_LENGTH,
+    AdminResponse,
+    RegisterRequest,
+    TokenResponse,
+    UpdateUserRequest,
+    UserResponse,
+)
 from user_service.security import DUMMY_HASH, create_access_token, password_hash
 from user_service.tables import users, admins
 
@@ -155,6 +163,44 @@ async def read_current_user(account: CurrentUser, conn: Connection) -> UserRespo
             ).where(users.c.id == account.id)
         )
     ).one_or_none()
+    # The token can outlive the account, e.g. if the user was deleted after logging in
+    if row is None:
+        raise credentials_error()
+    return UserResponse.model_validate(row, from_attributes=True)
+
+
+@app.patch("/users/me")
+async def update_current_user(body: UpdateUserRequest, account: CurrentUser, conn: Connection) -> UserResponse:
+    changes: dict[str, str] = {}
+    if body.username is not None:
+        changes["username"] = body.username
+    if body.new_password is not None:
+        # FOR UPDATE, so a concurrent password change can't land between the check and the update
+        stored_hash = await conn.scalar(
+            select(users.c.password_hash).where(users.c.id == account.id).with_for_update()
+        )
+        if stored_hash is None:
+            raise credentials_error()
+        if not await check_password(body.current_password or "", stored_hash):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
+        # Tokens issued before the change stay valid until they expire; see "Revoking sessions" in docs/auth-plan.md
+        changes["password_hash"] = await run_in_threadpool(password_hash.hash, body.new_password)
+
+    columns = (users.c.id, users.c.email, users.c.username, users.c.email_verified_at, users.c.created_at)
+    if changes:
+        try:
+            row = (
+                await conn.execute(
+                    update(users).where(users.c.id == account.id).values(**changes).returning(*columns)
+                )
+            ).one_or_none()
+        except IntegrityError as exc:
+            # Relies on the case-insensitive unique index, so concurrent renames can't both succeed
+            if "uq_users_username_lower" not in str(exc.orig):
+                raise
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username is already in use") from None
+    else:
+        row = (await conn.execute(select(*columns).where(users.c.id == account.id))).one_or_none()
     # The token can outlive the account, e.g. if the user was deleted after logging in
     if row is None:
         raise credentials_error()

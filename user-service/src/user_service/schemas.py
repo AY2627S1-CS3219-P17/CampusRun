@@ -1,12 +1,13 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
-# Scope: AI-generated registration request and user response models with NUS email, username and password validation.
+# Scope: AI-generated registration request and user response models with NUS email, username and password validation;
+#        AI-added the profile update request model (2026-09-27).
 # Author review: reviewed by Nathan
 
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, EmailStr, StringConstraints, field_validator
+from pydantic import BaseModel, EmailStr, StringConstraints, field_validator, model_validator
 
 from user_service.tables import USERNAME_MAX_LENGTH
 
@@ -47,6 +48,34 @@ class RegisterRequest(BaseModel):
         if domain not in ALLOWED_EMAIL_DOMAINS:
             raise ValueError("must be an NUS email address (@u.nus.edu or @nus.edu.sg)")
         return email
+
+
+class UpdateUserRequest(BaseModel):
+    # Omitted fields are left unchanged
+    username: Username | None = None
+    # Not length-checked here: check_password caps it, so a wrong password gets 400 rather than 422
+    current_password: str | None = None
+    new_password: Password | None = None
+
+    @field_validator("username", mode="before")
+    @classmethod
+    def reject_null_username(cls, username: object) -> object:
+        # Only runs when the field is sent, so an explicit null is an error rather than "no change"
+        if username is None:
+            raise ValueError("must not be null")
+        return username
+
+    @model_validator(mode="after")
+    def check_passwords(self) -> "UpdateUserRequest":
+        if self.new_password is None:
+            return self
+        if not self.current_password:
+            raise ValueError("current_password is required to set a new password")
+        # Otherwise the user asked for a change and "succeeds" with nothing changed.
+        # Compares the two inputs only, so it reveals nothing about the stored password.
+        if self.new_password == self.current_password:
+            raise ValueError("new_password must be different from current_password")
+        return self
 
 
 class UserResponse(BaseModel):

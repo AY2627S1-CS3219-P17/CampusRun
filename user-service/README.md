@@ -1,7 +1,7 @@
 <!--
 AI Assistance Disclosure:
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
-Scope: AI-assisted Markdown formatting, environment variable setup instructions, the full-stack build step, the interactive API docs section (including the ENABLE_DOCS note), and the initial admin setup section.
+Scope: AI-assisted Markdown formatting, environment variable setup instructions, the full-stack build step, the interactive API docs section (including the ENABLE_DOCS note), the initial admin setup section, and the running tests section.
 Author review: Originally written and then verified by Nathan
 -->
 
@@ -97,6 +97,16 @@ The `create-initial-admin` command creates the first admin account from `INITIAL
   ```sh
   docker compose run --rm -e INITIAL_ADMIN_USERNAME=<username> -e INITIAL_ADMIN_PASSWORD=<password> user-migrate create-initial-admin
   ```
+
+## Running tests
+
+Make sure Docker is running, then:
+
+```sh
+mise run test
+```
+
+Or without mise, `uv run pytest`. The tests start a throwaway Postgres 18 container (via Testcontainers) and create fresh tables for each test, so they never touch your local development database.
 
 ## Interactive API docs
 

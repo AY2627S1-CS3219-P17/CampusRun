@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
-# Scope: AI added the pydantic-settings and pwdlib[argon2] dependencies (via 'uv add') and the create-initial-admin
-#        project script; rest of file authored by the team.
+# Scope: AI added the pydantic-settings and pwdlib[argon2] dependencies and pytest/testcontainers dev dependencies
+#        (via 'uv add'), the create-initial-admin project script and the pytest config; rest of file authored by the team.
 # Author review: <to be completed by author>
 
 [project]
@@ -28,3 +28,12 @@ create-initial-admin = "user_service.scripts.create_admin:main"
 [build-system]
 requires = ["uv_build>=0.12.7,<0.13.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "testcontainers[postgres]>=4.15.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

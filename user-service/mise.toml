@@ -21,3 +21,7 @@ run = "uv run create-initial-admin"
 description = "Run the local FastAPI server for user-service"
 depends = ["migrate"]
 run = "uv run fastapi dev src/user_service/main.py"
+
+[tasks.test]
+description = "Run the test suite (needs Docker running for the throwaway Postgres container)"
+run = "uv run pytest"

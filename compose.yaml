@@ -18,8 +18,6 @@ services:
       POSTGRES_USER: ${USER_DB_USER:-user_service}
       POSTGRES_PASSWORD: ${USER_DB_PASSWORD:?set USER_DB_PASSWORD in .env}
       POSTGRES_DB: ${USER_DB_NAME:-user_service}
-      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
-      JWT_ACCESS_TOKEN_TTL: ${JWT_ACCESS_TOKEN_TTL:-60}
     volumes:
       # Postgres 18+ images keep data under /var/lib/postgresql (not .../data)
       - user-db-data:/var/lib/postgresql
@@ -51,6 +49,8 @@ services:
       # Local only: deployed environments leave this unset, so the docs are off
       ENABLE_DOCS: "true"
       ROOT_PATH: "/api/users"
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      JWT_ACCESS_TOKEN_TTL: ${JWT_ACCESS_TOKEN_TTL:-60}
     depends_on:
       # Start only after migrations have finished successfully
       user-migrate:

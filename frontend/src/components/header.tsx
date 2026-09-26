@@ -1,8 +1,14 @@
+// AI Assistance Disclosure:
+// Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
+// Scope: AI-modified: Logout also forgets the saved access token (clearSession).
+// Author review: <to be completed by author>
+
 import { useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { DropdownMenu } from 'radix-ui'
 import { LogOut, MessageCircle, Plus, Store, UserRound } from 'lucide-react'
 import EditInfoDialog from './edit-user-info'
+import { clearSession } from '../utils/session'
 import './header.css'
 
 const sections = ['Explore', 'My Tasks', 'My Requests'] as const
@@ -113,7 +119,11 @@ export default function Header({ initialSection }: HeaderProps) {
 
               <DropdownMenu.Separator className="header-menu-separator" />
 
-              <DropdownMenu.Item className="header-menu-item" asChild>
+              <DropdownMenu.Item
+                className="header-menu-item"
+                asChild
+                onSelect={clearSession}
+              >
                 <Link to="/login" replace>
                   <LogOut size={18} aria-hidden="true" />
                   Logout

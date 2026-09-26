@@ -1,0 +1,28 @@
+# AI Assistance Disclosure:
+# Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
+# Scope: Local development tasks, following user-service/mise.toml.
+# Author review: <to be completed by author>
+
+[tools]
+python = "3.14.7"
+
+# tasks below are for local dev
+[tasks.supplier-db]
+description = "Start the database for supplier-service"
+run = "docker compose up -d supplier-db"
+
+[tasks.migrate]
+description = "Apply database migrations"
+run = "uv run alembic upgrade head"
+
+[tasks.seed]
+description = "Load seed/*.csv into empty tables"
+run = "uv run python -m supplier_service.seed"
+
+[tasks.serve]
+description = "Run the FastAPI server for supplier-service on port 8002"
+run = "uv run fastapi dev src/supplier_service/main.py --port 8002"
+
+[tasks.test]
+description = "Run the tests (needs supplier-db running)"
+run = "uv run pytest --cov=supplier_service"

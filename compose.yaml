@@ -1,6 +1,6 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
-# Scope: AI-generated local development Compose setup for the user service and its Postgres database.
+# Scope: AI-generated local development Compose setup for the user service, its Postgres database and its one-off migration step.
 # Author review: <to be completed by author>
 
 # Local development / demo only; cloud deployments are configured separately.
@@ -25,6 +25,16 @@ services:
       timeout: 5s
       retries: 10
 
+  # One-off: applies Alembic migrations, then exits
+  user-migrate:
+    build: ./user-service
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${USER_DB_USER:-user_service}:${USER_DB_PASSWORD:?set USER_DB_PASSWORD in .env}@user-db:5432/${USER_DB_NAME:-user_service}
+    depends_on:
+      user-db:
+        condition: service_healthy
+
   user-service:
     build: ./user-service
     environment:
@@ -33,8 +43,9 @@ services:
     ports:
       - "8001:8000"
     depends_on:
-      user-db:
-        condition: service_healthy
+      # Start only after migrations have finished successfully
+      user-migrate:
+        condition: service_completed_successfully
 
 volumes:
   user-db-data:

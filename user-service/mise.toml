@@ -2,10 +2,17 @@
 python = "3.14.7"
 
 # tasks below are for local dev
-[tasks.serve]
-description = "Run the FastAPI server for user-service"
-run = "fastapi dev src/user_service/main.py"
 
-[tasks.user-db]
-description = "Start the database user-service"
-run = "docker compose up -d user-db"
+[tasks.start-db]
+description = "Start the local user-service database"
+run = "docker compose up -d --wait user-db"
+
+[tasks.migrate]
+description = "Apply Alembic migrations to the local database"
+depends = ["start-db"]
+run = "uv run alembic upgrade head"
+
+[tasks.serve]
+description = "Run the local FastAPI server for user-service"
+depends = ["migrate"]
+run = "uv run fastapi dev src/user_service/main.py"

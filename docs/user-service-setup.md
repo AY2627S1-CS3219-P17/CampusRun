@@ -1,15 +1,15 @@
 # User Service Setup Plan
 
-Last updated: 2026-09-25
+Last updated: 2026-09-26
 
 ## Status
 
 | # | Step | Status |
 | --- | --- | --- |
-| 1 | Docker & Compose | Done, except `user-migrate` (waits on step 4) |
+| 1 | Docker & Compose | Done (not yet run end to end) |
 | 2 | Environment variables | Done |
 | 3 | Table definitions | Done (not yet migrated) |
-| 4 | Alembic | Not started |
+| 4 | Alembic | In progress: first migration generated, not yet reviewed or applied |
 | 5 | FastAPI wiring | Done |
 | 6 | Endpoints & tests | `GET /health` done; `POST /users` and tests not started |
 
@@ -22,8 +22,8 @@ Not yet verified against a real database. Docker wasn't running, so no container
 - [x] `user-service/.dockerignore`: `.venv`, `__pycache__`, `*.pyc`, `.env`, `.env.*`, `.DS_Store`, `.pytest_cache`.
 - [x] Root `compose.yaml`:
   - `user-db`: Postgres 18 with the named volume at `/var/lib/postgresql`, a `pg_isready` healthcheck, and the port bound to `127.0.0.1:5433`.
-  - `user-service`: built from `./user-service`, served on host port 8001, starts after `user-db` is healthy.
-- [ ] Add `user-migrate` once Alembic exists. It uses the same image, `command: ["alembic", "upgrade", "head"]`, and waits for `user-db` to be healthy. Then change `user-service` to depend on it with `condition: service_completed_successfully`.
+  - `user-migrate`: the same image, runs `alembic upgrade head` once after `user-db` is healthy, then exits.
+  - `user-service`: built from `./user-service`, served on host port 8001, starts only after `user-migrate` completes successfully.
 - Write each service's `environment:` block out in full; don't use YAML anchors.
 
 ### 2. Environment variables
@@ -39,10 +39,10 @@ Not yet verified against a real database. Docker wasn't running, so no container
 - [x] `admins`: separate accounts with their own credentials (no foreign key to `users`). `Identity()` integer primary key, username (unique regardless of case), password hash, timestamps. Ids overlap with `users.id`, so tokens need a role claim.
 
 ### 4. Alembic
-- [ ] `uv add alembic`, then `alembic init -t async migrations`.
-- [ ] `env.py`: `target_metadata = metadata`; read the URL from `Settings`.
-- [ ] Autogenerate the first migration, review it, then apply it.
-- [ ] Add the `user-migrate` Compose service (see step 1).
+- [x] `uv add alembic`, then `alembic init -t async migrations`.
+- [x] `env.py`: `target_metadata = metadata`; read the URL from `Settings`.
+- [ ] Autogenerate the first migration, review it, then apply it. (Generated as `717eccffe95a_create_users_and_admins.py`; review and apply are still to do.)
+- [x] Add the `user-migrate` Compose service (see step 1).
 
 ### 5. FastAPI wiring
 - [x] `src/user_service/db.py`: `create_engine(settings)` (with `pool_pre_ping`), `get_engine`, and a `Connection` dependency that gives one transaction per request via `engine.begin()`.

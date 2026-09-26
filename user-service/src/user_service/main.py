@@ -17,9 +17,11 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from user_service.auth import CurrentAdmin, CurrentUser, credentials_error
+from user_service.auth import CurrentUser
 from user_service.config import Settings, get_settings
 from user_service.db import Connection, create_engine, get_engine
-from user_service.schemas import PASSWORD_MAX_LENGTH, RegisterRequest, TokenResponse, UserResponse
+from user_service.schemas import PASSWORD_MAX_LENGTH, AdminResponse, RegisterRequest, TokenResponse, UserResponse
 from user_service.security import DUMMY_HASH, create_access_token, password_hash
 from user_service.tables import users, admins
 
@@ -138,3 +140,34 @@ async def admin_login(form: LoginForm, conn: Connection, settings: SettingsDep) 
     if row is None or not valid:
         raise login_failed()
     return TokenResponse(access_token=create_access_token(row.id, "admin", settings))
+
+# Useing the CurrentUser type annotation for the endpoint parameter makes FastAPI run require_user first, which returns 401/403 before the endpoint runs; the parameter name doesn't matter.
+@app.get("/users/me")
+async def read_current_user(account: CurrentUser, conn: Connection) -> UserResponse:
+    row = (
+        await conn.execute(
+            select(
+                users.c.id,
+                users.c.email,
+                users.c.username,
+                users.c.email_verified_at,
+                users.c.created_at,
+            ).where(users.c.id == account.id)
+        )
+    ).one_or_none()
+    # The token can outlive the account, e.g. if the user was deleted after logging in
+    if row is None:
+        raise credentials_error()
+    return UserResponse.model_validate(row, from_attributes=True)
+
+
+@app.get("/admins/me")
+async def read_current_admin(account: CurrentAdmin, conn: Connection) -> AdminResponse:
+    row = (
+        await conn.execute(
+            select(admins.c.id, admins.c.username, admins.c.created_at).where(admins.c.id == account.id)
+        )
+    ).one_or_none()
+    if row is None:
+        raise credentials_error()
+    return AdminResponse.model_validate(row, from_attributes=True)

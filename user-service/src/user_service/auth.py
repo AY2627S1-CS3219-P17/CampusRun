@@ -61,6 +61,6 @@ async def require_admin(
 ) -> Account:
     return _require(_account_from_token(token, settings), "admin")
 
-
+# Adding this as an endpoint parameter makes FastAPI run require_user first, which returns 401/403 before the endpoint runs; the parameter name doesn't matter.
 CurrentUser = Annotated[Account, Depends(require_user)]
 CurrentAdmin = Annotated[Account, Depends(require_admin)]

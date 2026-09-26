@@ -1,7 +1,7 @@
 <!--
 AI Assistance Disclosure:
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
-Scope: AI-assisted Markdown formatting, environment variable setup instructions, the full-stack build step, the interactive API docs section (including the ENABLE_DOCS note), the initial admin setup section, and the running tests section.
+Scope: AI-assisted Markdown formatting, environment variable setup instructions, the full-stack build step, the interactive API docs section (including the ENABLE_DOCS note), the initial admin setup section, the running tests section, and the protecting an endpoint section (2026-09-27).
 Author review: Originally written and then verified by Nathan
 -->
 
@@ -97,6 +97,26 @@ The `create-initial-admin` command creates the first admin account from `INITIAL
   ```sh
   docker compose run --rm -e INITIAL_ADMIN_USERNAME=<username> -e INITIAL_ADMIN_PASSWORD=<password> user-migrate create-initial-admin
   ```
+
+## Protecting an endpoint
+
+To require a login, add a `CurrentUser` or `CurrentAdmin` parameter (from `user_service.auth`) to the endpoint:
+
+```python
+@app.get("/users/me")
+async def read_current_user(account: CurrentUser, conn: Connection) -> UserResponse:
+    ...  # account.id is the authenticated user's ID
+```
+
+FastAPI looks at the parameter's **type**, not its name, so `account` could be called anything. `CurrentUser` is `Annotated[Account, Depends(require_user)]`, which makes FastAPI run `require_user` before the endpoint. `require_user` reads the `Authorization: Bearer <token>` header and checks the JWT:
+
+- A missing, invalid or expired token gets a `401`.
+- A valid token for the wrong kind of account (e.g. an admin token on a `CurrentUser` route) gets a `403`.
+- Otherwise the endpoint runs, with `account` set to the decoded `Account(id, type)`.
+
+`CurrentAdmin` works the same way for admin tokens.
+
+> **Warning:** nothing marks an endpoint as public. **If you leave out the parameter, anyone can call the endpoint.** Only login, registration, password-recovery start and `/health` should be unprotected.
 
 ## Running tests
 

@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
 # Scope: AI-modified Alembic env to read DATABASE_URL from app settings and target the tables metadata;
 #        AI-added support for a caller-supplied connection (used by the tests).
-# Author review: <to be completed by author>
+# Author review: reviewed by Nathan
 
 import asyncio
 from logging.config import fileConfig

@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated create-initial-admin script that seeds the first admin from INITIAL_ADMIN_* settings.
-# Author review: <to be completed by author>
+# Author review: reviewed by Nathan
 
 import asyncio
 import sys

@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated tests for the POST /auth/register endpoint.
-# Author review: <to be completed by author>
+# Author review: reviewed by Nathan
 
 import asyncio
 
@@ -35,7 +35,9 @@ async def test_creates_user_with_hashed_password(client: AsyncClient, engine: As
     assert "password" not in body and "password_hash" not in body
 
     async with engine.connect() as conn:
-        stored_hash = await conn.scalar(select(users.c.password_hash).where(users.c.id == body["id"]))
+        stored_hash = (
+            await conn.execute(select(users.c.password_hash).where(users.c.id == body["id"]))
+        ).scalar_one()
     assert stored_hash != VALID["password"]
     assert password_hash.verify(VALID["password"], stored_hash)
 

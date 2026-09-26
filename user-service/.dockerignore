@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
 # Scope: AI-generated ignore list to keep the local .venv, .env files and caches out of the image.
-# Author review: <to be completed by author>
+# Author review: reviewed by Nathan
 
 .venv
 __pycache__

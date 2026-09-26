@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
 # Scope: AI-generated FastAPI app with engine lifespan and GET /health endpoint; AI-updated lifespan return type to AsyncGenerator and made API docs depend on ENABLE_DOCS;
 #        AI-completed the POST /auth/register endpoint from the author's draft.
-# Author review: <to be completed by author>
+# Author review: reviewed by Nathan
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager

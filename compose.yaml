@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
 # Scope: AI-generated local development Compose setup for the user service, its Postgres database and its one-off migration step.
-# Author review: <to be completed by author>
+# Author review: reviewed by Nathan
 
 # Local development / demo only; cloud deployments are configured separately.
 # Values in ${...} are read from the root .env file.

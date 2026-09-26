@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated check that the Alembic migrations match the table definitions.
-# Author review: <to be completed by author>
+# Author review: reviewed by Nathan
 
 import pytest
 from alembic.autogenerate import compare_metadata

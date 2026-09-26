@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated registration request and user response models with NUS email, username and password validation.
-# Author review: <to be completed by author>
+# Author review: reviewed by Nathan
 
 from datetime import datetime
 from typing import Annotated

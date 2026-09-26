@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
 # Scope: AI-generated async SQLAlchemy engine factory and per-request transaction dependency;
 #        AI-scoped the transaction to the endpoint so it commits before the response is sent.
-# Author review: <to be completed by author>
+# Author review: reviewed by Nathan
 
 from collections.abc import AsyncIterator
 from typing import Annotated

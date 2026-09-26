@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated pytest fixtures: a disposable Postgres container migrated with Alembic, per-test empty tables,
 #        and an HTTP client for the app wired to the test database.
-# Author review: <to be completed by author>
+# Author review: reviewed by Nathan
 
 import os
 from collections.abc import AsyncIterator, Iterator

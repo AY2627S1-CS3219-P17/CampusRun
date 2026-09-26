@@ -2,7 +2,8 @@
 AI Assistance Disclosure:
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 Scope: AI-generated step-by-step guide for the nginx gateway and JWT authentication in the user service,
-       based on design decisions discussed with the team.
+       based on design decisions discussed with the team; AI-added the session revocation options and
+       renamed the user token type to "student" (2026-09-27).
 Author review: <to be completed by author>
 -->
 
@@ -37,8 +38,8 @@ browser ──:8080──►  gateway (nginx) ──/api/users/*──►  user-
 | Entry point | One nginx container; the only service with a published port | The frontend uses one origin, so no CORS setup. The services stay unreachable from outside. |
 | Credential | JWT access token in `Authorization: Bearer <token>` | Any service can verify it locally with no call to user-service. |
 | Signing | HS256 with a shared `JWT_SECRET` | Simplest option. Trade-off: every service holding the secret could also mint tokens. That's acceptable for this project. |
-| Token claims | `sub` (account id, as a string), `type` (`"user"` or `"admin"`), `iat`, `exp` | `users` and `admins` are separate tables and **both have ids starting at 1**. Without `type`, admin #1 and user #1 look the same. |
-| Lifetime | 60 minutes, no refresh tokens | Keeps the scope small. Logout = the frontend discards the token. |
+| Token claims | `sub` (account id, as a string), `type` (`"student"` or `"admin"`), `iat`, `exp` | `users` and `admins` are separate tables and **both have ids starting at 1**. Without `type`, admin #1 and user #1 look the same. |
+| Lifetime | 60 minutes, no refresh tokens | Keeps the scope small. Logout = the frontend discards the token. Tokens can't be revoked early; see [Revoking sessions](#revoking-sessions). |
 | Login input | `OAuth2PasswordRequestForm` (form-encoded `username` + `password`) | Makes Swagger's **Authorize** button work. The `username` field accepts **email or username**. |
 | Requester/courier toggle | Frontend UI mode only; not stored and not in the token | Every user can do both. Order-service enforces rules per errand, e.g. "can't accept your own". |
 
@@ -250,7 +251,7 @@ from user_service.config import Settings
 
 ALGORITHM = "HS256"
 
-AccountType = Literal["user", "admin"]
+AccountType = Literal["student", "admin"]
 
 # Verified against when the account doesn't exist, so a failed login takes the same time either way
 DUMMY_HASH = password_hash.hash("dummy-password-for-timing")
@@ -357,7 +358,7 @@ async def require_user(
     token: Annotated[str, Depends(user_scheme)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> Account:
-    return _require(_account_from_token(token, settings), "user")
+    return _require(_account_from_token(token, settings), "student")
 
 
 async def require_admin(
@@ -417,7 +418,7 @@ async def login(form: LoginForm, conn: Connection, settings: SettingsDep) -> Tok
     valid = await check_password(form.password, row.password_hash if row else None)
     if row is None or not valid:
         raise login_failed()
-    return TokenResponse(access_token=create_access_token(row.id, "user", settings))
+    return TokenResponse(access_token=create_access_token(row.id, "student", settings))
 
 
 @app.post("/auth/admin/login")
@@ -535,7 +536,7 @@ def bearer(token: str) -> dict[str, str]:
 
 
 def make_token(secret: str | None = None, **overrides) -> str:
-    claims = {"sub": "1", "type": "user", "exp": datetime.now(UTC) + timedelta(minutes=5), **overrides}
+    claims = {"sub": "1", "type": "student", "exp": datetime.now(UTC) + timedelta(minutes=5), **overrides}
     # exp=None means "leave the claim out"
     claims = {key: value for key, value in claims.items() if value is not None}
     return jwt.encode(claims, secret or get_settings().jwt_secret.get_secret_value(), algorithm=ALGORITHM)
@@ -550,7 +551,7 @@ async def test_login_accepts_email_or_username(client: AsyncClient, user: dict, 
     assert body["token_type"] == "bearer"
     claims = jwt.decode(body["access_token"], options={"verify_signature": False})
     assert claims["sub"] == str(user["id"])
-    assert claims["type"] == "user"
+    assert claims["type"] == "student"
 
 
 @pytest.mark.parametrize(
@@ -689,11 +690,25 @@ These are for later milestones and other services. Not needed for D2.
 - **Requester/courier toggle** is a UI mode only, and nothing is sent to the backend.
 - **Serving:** once built, serve the frontend from the gateway (`location / { root ...; try_files $uri /index.html; }`, replacing the `return 404`) so it's the same origin as the API.
 
+### Revoking sessions
+
+Access tokens are stateless: every service verifies them locally with `JWT_SECRET` and never asks user-service. That keeps services independent, but **nothing can cancel a token before its `exp`**. A stolen token, or one issued before a password change, logout or suspension, keeps working for up to `JWT_ACCESS_TOKEN_TTL` (60 minutes by default).
+
+Revocation has to be added on top. The options:
+
+| Option | How it works | Trade-off |
+| --- | --- | --- |
+| **Short access token + refresh token** (recommended) | Access tokens last ~10–15 minutes. Login also returns a long-lived refresh token, stored **hashed** in a user-service table (one row per session). The frontend exchanges it for a new access token when the old one expires. Logout, password change and suspension delete the account's refresh-token rows. | Services stay stateless and unchanged. A revoked session can still act for up to one access-token TTL. Adds a table, a `POST /auth/refresh` endpoint and refresh handling in the frontend. |
+| **Gateway check on every request** | nginx's `auth_request` sends each API request's token to a user-service endpoint (e.g. `GET /auth/verify`) that checks it against the database (e.g. a per-account `tokens_valid_after` timestamp compared with `iat`). | Immediate revocation, no change to other services. Every request makes an extra hop to user-service, which becomes a single point of failure for the whole API. |
+| **Shared denylist** | Tokens carry a `jti` (unique id). Revoked `jti`s go into a shared store such as Redis, with an expiry equal to the token's remaining lifetime; every service checks it. | Immediate revocation. Adds infrastructure, and every service must implement the check correctly. |
+
+If you adopt refresh tokens, `PATCH /users/me` is the natural place to revoke on a password change, and `/auth/logout` would delete the current session's row.
+
 ### Nice-to-haves that build on this
 
-- **User suspension (N1):** add a `suspended_at` column and reject suspended users in `/auth/login`. Existing tokens stay valid until they expire (≤60 min). If that's not acceptable, also check the column in user-service's protected routes, or add refresh tokens.
+- **User suspension (N1):** add a `suspended_at` column and reject suspended users in `/auth/login`. Existing tokens stay valid until they expire (≤60 min). If that's not acceptable, see [Revoking sessions](#revoking-sessions).
 - **Login audit logs (N1):** record successes and failures in the login endpoints. To log the real client IP, start the service with `--forwarded-allow-ips` set to the gateway, so FastAPI trusts the gateway's `X-Forwarded-For`.
-- **Refresh tokens:** `JWT_REFRESH_TOKEN_TTL` is already in `.env.example`. If you add them, store refresh tokens in the user DB so they can be revoked. Otherwise remove the variable to avoid confusion.
+- **Refresh tokens:** `JWT_REFRESH_TOKEN_TTL` is already in `.env.example`. If you add them, store refresh tokens in the user DB so they can be revoked (see [Revoking sessions](#revoking-sessions)). Otherwise remove the variable to avoid confusion.
 - **Email verification:** `users.email_verified_at` exists. Decide whether login (or only certain actions) requires a verified email.
 - **Rehashing:** `password_hash.verify_and_update` can upgrade old hashes on login if pwdlib's recommended parameters change.
 

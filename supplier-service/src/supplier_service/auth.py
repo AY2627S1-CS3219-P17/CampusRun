@@ -1,6 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
-# Scope: AI-generated access-token check and student/admin role dependencies.
+# Scope: AI-generated access-token check and student/admin role dependencies;
+#        AI-changed it to read the account type from the "type" claim, matching the User Service (Claude Code, 2026-09-27).
 # Author review: <to be completed by author>
 
 """Identity and role checks.
@@ -10,7 +11,7 @@ never calls the User Service per request: it checks the token's signature with t
 shared JWT_SECRET and reads two claims from it:
 
     sub   the user's id (string)
-    role  "student" or "admin"
+    type  "student" or "admin"
 
 Missing, malformed, expired or wrongly signed token  -> 401 Unauthorized
 Valid token, but the role may not do this             -> 403 Forbidden
@@ -73,7 +74,7 @@ def decode_token(token: str) -> CurrentUser:
         raise _unauthorized("Your session is not valid. Sign in again.")
 
     try:
-        role = Role(claims.get("role"))
+        role = Role(claims.get("type"))
     except ValueError:
         raise _unauthorized("Your session is not valid. Sign in again.")
     return CurrentUser(id=claims["sub"], role=role)

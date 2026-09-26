@@ -1,6 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
-# Scope: AI-generated tests for password login, JWT validation and the /users/me and /admins/me endpoints.
+# Scope: AI-generated tests for password login, JWT validation and the /users/me and /admins/me endpoints;
+#        AI-updated for the "student" token type (Claude Code, 2026-09-27).
 # Author review: <to be completed by author>
 
 from datetime import UTC, datetime, timedelta
@@ -48,7 +49,7 @@ def bearer(token: str) -> dict[str, str]:
 
 
 def make_token(secret: str | None = None, **overrides) -> str:
-    claims = {"sub": "1", "type": "user", "exp": datetime.now(UTC) + timedelta(minutes=5), **overrides}
+    claims = {"sub": "1", "type": "student", "exp": datetime.now(UTC) + timedelta(minutes=5), **overrides}
     # A claim set to None means "leave it out"
     claims = {key: value for key, value in claims.items() if value is not None}
     return jwt.encode(claims, secret or get_settings().jwt_secret.get_secret_value(), algorithm=ALGORITHM)
@@ -63,7 +64,7 @@ async def test_login_accepts_email_or_username(client: AsyncClient, user: dict, 
     assert body["token_type"] == "bearer"
     claims = jwt.decode(body["access_token"], options={"verify_signature": False})
     assert claims["sub"] == str(user["id"])
-    assert claims["type"] == "user"
+    assert claims["type"] == "student"
 
 
 @pytest.mark.parametrize(

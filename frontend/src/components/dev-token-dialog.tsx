@@ -1,6 +1,7 @@
 // AI Assistance Disclosure:
 // Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
-// Scope: AI-generated development-only dialog for using a token from make_token.py until the User Service login exists.
+// Scope: AI-generated development-only dialog for using a token from make_token.py until the User Service login exists;
+//        AI-updated the make_token.py flag (Claude Code, 2026-09-27).
 // Author review: <to be completed by author>
 
 import { useState } from 'react'
@@ -32,8 +33,8 @@ export default function DevTokenDialog({ onClose }: Props) {
           <Dialog.Description>
             Login isn&apos;t connected to the User Service yet. In the
             supplier-service folder, run{' '}
-            <code>uv run python scripts/make_token.py --role admin</code> (or{' '}
-            <code>--role student</code>) and paste the token here.
+            <code>uv run python scripts/make_token.py --type admin</code> (or{' '}
+            <code>--type student</code>) and paste the token here.
           </Dialog.Description>
           <form
             onSubmit={(event) => {

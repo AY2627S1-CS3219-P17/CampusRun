@@ -1,3 +1,8 @@
+# AI Assistance Disclosure:
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
+# Scope: AI-generated token-checking dependencies (from docs/auth-plan.md); AI-renamed the user token type from "user" to "student" (Claude Code, 2026-09-27).
+# Author review: <to be completed by author>
+
 from dataclasses import dataclass
 from typing import Annotated
 
@@ -52,7 +57,7 @@ async def require_user(
     token: Annotated[str, Depends(user_scheme)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> Account:
-    return _require(_account_from_token(token, settings), "user")
+    return _require(_account_from_token(token, settings), "student")
 
 
 async def require_admin(

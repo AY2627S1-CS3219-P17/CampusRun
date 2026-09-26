@@ -1,6 +1,7 @@
 // AI Assistance Disclosure:
 // Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
-// Scope: AI-assisted review and debugging for storage of the access token and the signed-in user's role.
+// Scope: AI-assisted review and debugging for storage of the access token and the signed-in user's role;
+//        AI-changed it to read the "type" claim (Claude Code, 2026-09-27).
 // Author review: <to be completed by author>
 
 import { useSyncExternalStore } from 'react'
@@ -19,7 +20,8 @@ export type Session = {
   expiresAt: number
 }
 
-type Claims = { sub?: unknown; role?: unknown; exp?: unknown }
+// The User Service puts the account type in the "type" claim
+type Claims = { sub?: unknown; type?: unknown; exp?: unknown }
 
 function decode(token: string): Session | null {
   try {
@@ -27,13 +29,13 @@ function decode(token: string): Session | null {
     const claims = JSON.parse(
       atob(payload.replace(/-/g, '+').replace(/_/g, '/')),
     ) as Claims
-    if (claims.role !== 'student' && claims.role !== 'admin') return null
+    if (claims.type !== 'student' && claims.type !== 'admin') return null
     if (typeof claims.exp !== 'number' || claims.exp * 1000 < Date.now())
       return null
     return {
       token,
       userId: String(claims.sub),
-      role: claims.role,
+      role: claims.type,
       expiresAt: claims.exp * 1000,
     }
   } catch {
@@ -54,7 +56,7 @@ export function getSession(): Session | null {
   return cachedSession
 }
 
-// Returns false if the token is malformed, expired or has no known role
+// Returns false if the token is malformed, expired or has no known account type
 export function saveToken(token: string): boolean {
   const trimmed = token.trim().replace(/^Bearer\s+/i, '')
   if (!decode(trimmed)) return false

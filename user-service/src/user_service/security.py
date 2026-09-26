@@ -1,6 +1,6 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
-# Scope: AI-generated shared Argon2 password hasher (pwdlib).
+# Scope: AI-generated shared Argon2 password hasher (pwdlib); AI-renamed the user token type from "user" to "student" (Claude Code, 2026-09-27).
 # Author review: reviewed by Nathan
 
 from datetime import UTC, datetime, timedelta
@@ -16,7 +16,7 @@ password_hash = PasswordHash.recommended()
 
 ALGORITHM = "HS256"
 
-AccountType = Literal["user", "admin"]
+AccountType = Literal["student", "admin"]
 
 # Verified against when the account doesn't exist, so a failed login takes the same time
 DUMMY_HASH = password_hash.hash("dummy-password-for-timing")

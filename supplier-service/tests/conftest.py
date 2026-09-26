@@ -1,6 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
-# Scope: AI-generated test fixtures: a migrated test database, a test client and token helpers.
+# Scope: AI-generated test fixtures: a migrated test database, a test client and token helpers;
+#        AI-changed tokens to carry the "type" claim (Claude Code, 2026-09-27).
 # Author review: <to be completed by author>
 
 """Tests run against a real Postgres, migrated with Alembic.
@@ -94,7 +95,7 @@ async def client(engine):
 
 def make_token(role: str = "student", sub: str = "user-1", *, expires_in: int = 3600, secret: str = TEST_SECRET) -> str:
     now = int(time.time())
-    return jwt.encode({"sub": sub, "role": role, "iat": now, "exp": now + expires_in}, secret, algorithm="HS256")
+    return jwt.encode({"sub": sub, "type": role, "iat": now, "exp": now + expires_in}, secret, algorithm="HS256")
 
 
 def auth(role: str = "student", sub: str | None = None) -> dict[str, str]:

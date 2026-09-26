@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
 # Scope: AI-generated FastAPI app with engine lifespan and GET /health endpoint; AI-updated lifespan return type to AsyncGenerator and made API docs depend on ENABLE_DOCS;
-#        AI-completed the POST /auth/register endpoint from the author's draft.
+#        AI-completed the POST /auth/register endpoint from the author's draft; AI-renamed the user token type to "student" (Claude Code, 2026-09-27).
 # Author review: reviewed by Nathan
 
 from collections.abc import AsyncGenerator
@@ -122,7 +122,7 @@ async def login(form: LoginForm, conn: Connection, settings: SettingsDep) -> Tok
     valid = await check_password(form.password, row.password_hash if row else None)
     if row is None or not valid:
         raise login_failed()
-    return TokenResponse(access_token=create_access_token(row.id, "user", settings))
+    return TokenResponse(access_token=create_access_token(row.id, "student", settings))
 
 
 @app.post("/auth/admin/login")

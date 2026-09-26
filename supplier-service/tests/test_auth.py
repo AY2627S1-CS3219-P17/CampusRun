@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-assisted review for tests for access control (401 vs 403) and the health check;
-#        AI-updated paths after the /suppliers prefix was removed (Claude Code, 2026-09-27).
+#        AI-updated paths after the /suppliers prefix was removed, and tokens for the "type" claim (Claude Code, 2026-09-27).
 # Author review: <to be completed by author>
 
 import jwt
@@ -31,9 +31,11 @@ async def test_no_token_is_401_with_bearer_challenge(client):
         "not-a-jwt",
         make_token(secret="some-other-secret-that-is-also-long-enough-000"),
         make_token(role="superuser"),
-        jwt.encode({"sub": "x", "role": "admin", "exp": 9999999999}, None, algorithm="none"),
+        jwt.encode({"sub": "x", "type": "admin", "exp": 9999999999}, None, algorithm="none"),
+        # The old claim name, before the User Service's "type" claim was adopted
+        jwt.encode({"sub": "x", "role": "admin", "exp": 9999999999}, TEST_SECRET, algorithm="HS256"),
     ],
-    ids=["garbage", "wrong-secret", "unknown-role", "alg-none"],
+    ids=["garbage", "wrong-secret", "unknown-type", "alg-none", "role-claim"],
 )
 async def test_invalid_tokens_are_401(client, token):
     response = await client.get("/", headers={"Authorization": f"Bearer {token}"})
@@ -47,7 +49,7 @@ async def test_expired_token_says_session_expired(client):
 
 
 async def test_token_without_expiry_is_rejected(client):
-    token = jwt.encode({"sub": "x", "role": "admin"}, TEST_SECRET, algorithm="HS256")
+    token = jwt.encode({"sub": "x", "type": "admin"}, TEST_SECRET, algorithm="HS256")
     response = await client.get("/", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 401
 

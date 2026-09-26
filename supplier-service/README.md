@@ -39,10 +39,10 @@ http://localhost:8080/api/suppliers, with docs at http://localhost:8080/api/supp
 
 ## Signing in
 Every endpoint except `/health` needs `Authorization: Bearer <token>`: a JWT from the User Service with `sub`,
-`role` (`student` or `admin`) and `exp`. Until the User Service can sign users in, make one here:
+`type` (`student` or `admin`) and `exp`. Until the User Service can sign users in, make one here:
 
 ```
-uv run python scripts/make_token.py --role admin      # or --role student
+uv run python scripts/make_token.py --type admin      # or --type student
 ```
 
 In Swagger (`/docs`), click **Authorize** and paste the token.
@@ -77,7 +77,7 @@ Paths are relative to the service. Behind the gateway they're under `/api/suppli
 | `DELETE /{id}` | admin | Soft delete |
 | `/delivery-locations` and `/delivery-locations/{id}` | same as above | Delivery locations (`q`, `active`, `page`, `pageSize`) |
 
-A request with no token, or an invalid one, gets 401; a request whose role isn't allowed gets 403. Validation errors
+A request with no token, or an invalid one, gets 401; a request whose account type isn't allowed gets 403. Validation errors
 return 422 with `{"detail": "...", "errors": {"fieldName": "message"}}`.
 
 # Configuration

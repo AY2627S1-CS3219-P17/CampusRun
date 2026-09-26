@@ -50,5 +50,5 @@ The supplier page calls the Supplier Service through the gateway at `http://loca
 Start the gateway and the services first with `docker compose up --build` from the repo root.
 
 Every call sends the access token stored in the browser (`src/utils/session.ts`). Until the User Service login is connected, the supplier page offers **Use a development token** (in `npm run dev` only):
-1. Make a token in `supplier-service` with `uv run python scripts/make_token.py --role admin`, or `--role student`.
+1. Make a token in `supplier-service` with `uv run python scripts/make_token.py --type admin`, or `--type student`.
 2. Paste it into that dialog.

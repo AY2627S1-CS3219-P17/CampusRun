@@ -43,9 +43,9 @@ For cloud deployments, separate configuration will be required.
 
 | Name | Role |
 | ----- | ----- |
-| Nathan Tew | User Service, Gateway |
+| Nathan Tew | User Service, Integration |
 | Aaron Rodrigues | Supplier Service |
-| Your Name | Your ownership |
+| Yang Qifeng | Frontend |
 
 ---
 

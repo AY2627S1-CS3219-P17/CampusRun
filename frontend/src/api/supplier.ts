@@ -1,7 +1,7 @@
 // AI Assistance Disclosure:
 // Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 // Scope: AI-modified: the mocked calls and hard-coded supplier list are replaced with calls to the Supplier Service;
-//        AI-pointed the calls at the gateway's /api/suppliers (Claude Code, 2026-09-27).
+//        AI-pointed the calls at the gateway's relative /api/suppliers (Claude Code, 2026-09-27).
 // Author review: <to be completed by author>
 
 import { request } from './client'
@@ -13,10 +13,8 @@ import type {
   SupplierQuery,
 } from '../types/supplier'
 
-// Through the gateway, which forwards /api/suppliers/... to the Supplier Service
-const SUPPLIER_API_URL =
-  (import.meta.env.VITE_SUPPLIER_API_URL as string | undefined) ??
-  'http://localhost:8080/api/suppliers'
+// Relative, so it's same-origin behind the gateway; the Vite dev server proxies it (see vite.config.ts)
+const SUPPLIER_API_URL = '/api/suppliers'
 
 export function listSuppliers(query: SupplierQuery, signal?: AbortSignal) {
   const params = new URLSearchParams({

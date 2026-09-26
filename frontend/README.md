@@ -45,7 +45,9 @@ Everything lies under `frontend/src`
 6. `utils` -> Reusable helper functions
 
 ### Connecting to the services
-The supplier page calls the Supplier Service through the gateway at `http://localhost:8080/api/suppliers`. To use another address, create `frontend/.env.local` with `VITE_SUPPLIER_API_URL=...`.
+The app calls the services with relative URLs (`/api/users/...`, `/api/suppliers/...`), so behind the gateway they're the same origin as the page.
+
+Under `npm run dev`, the Vite dev server forwards `/api` to `VITE_API_PROXY_TARGET`. It's required: copy `.env.example` to `.env` (it points at the gateway, `http://localhost:8080`), and the dev server refuses to start without it.
 
 Start the gateway and the services first with `docker compose up --build` from the repo root.
 

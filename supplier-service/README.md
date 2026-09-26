@@ -1,7 +1,7 @@
 <!--
 AI Assistance Disclosure:
 Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
-Scope: AI-generated service README.
+Scope: AI-generated service README; AI-updated paths, Docker access and settings for the gateway (Claude Code, 2026-09-27).
 Author review: <to be completed by author>
 -->
 
@@ -34,7 +34,8 @@ The design and the reasons for it are in [DESIGN.md](DESIGN.md).
 | `mise run test` | `uv run pytest --cov=supplier_service` | Tests, in a separate `supplier_service_test` database |
 
 To run everything in Docker instead, run `docker compose up --build` from the repo root. `supplier-migrate` migrates
-and seeds, then `supplier-service` starts on port 8002.
+and seeds, then `supplier-service` starts. It isn't published on a host port: reach it through the gateway at
+http://localhost:8080/api/suppliers, with docs at http://localhost:8080/api/suppliers/docs.
 
 ## Signing in
 Every endpoint except `/health` needs `Authorization: Bearer <token>`: a JWT from the User Service with `sub`,
@@ -61,16 +62,19 @@ a migration by hand.
 # API
 JSON uses camelCase (`startTime`, `locationDescription`), matching `frontend/src/types/supplier.ts`.
 
+Paths are relative to the service. Behind the gateway they're under `/api/suppliers`, so `GET /{id}` is
+`GET /api/suppliers/{id}`.
+
 | Method and path | Who | What |
 |---|---|---|
 | `GET /health` | anyone | Liveness and database check |
 | `GET /meta` | signed in | Supplier types and the served-area bounds |
-| `GET /suppliers` | signed in | Query options: `q`, `type` (repeatable), `building`, `openNow`, `active` (`false` for admins only), `nearLat` + `nearLng` (+ `radius`, in metres), `sort` (`name`, `-name`, `type`, `-createdAt`, `-updatedAt`, `distance`), `page`, `pageSize` |
-| `GET /suppliers/buildings` | signed in | Building names, for the location filter |
-| `GET /suppliers/{id}` | signed in | One supplier |
-| `POST /suppliers` | admin | Create |
-| `PATCH /suppliers/{id}` | admin | Change any fields; `{"active": false}` deactivates and `{"active": true}` reactivates |
-| `DELETE /suppliers/{id}` | admin | Soft delete |
+| `GET /` | signed in | Query options: `q`, `type` (repeatable), `building`, `openNow`, `active` (`false` for admins only), `nearLat` + `nearLng` (+ `radius`, in metres), `sort` (`name`, `-name`, `type`, `-createdAt`, `-updatedAt`, `distance`), `page`, `pageSize` |
+| `GET /buildings` | signed in | Building names, for the location filter |
+| `GET /{id}` | signed in | One supplier |
+| `POST /` | admin | Create |
+| `PATCH /{id}` | admin | Change any fields; `{"active": false}` deactivates and `{"active": true}` reactivates |
+| `DELETE /{id}` | admin | Soft delete |
 | `/delivery-locations` and `/delivery-locations/{id}` | same as above | Delivery locations (`q`, `active`, `page`, `pageSize`) |
 
 A request with no token, or an invalid one, gets 401; a request whose role isn't allowed gets 403. Validation errors
@@ -83,5 +87,7 @@ return 422 with `{"detail": "...", "errors": {"fieldName": "message"}}`.
 | `JWT_SECRET` | none, required (32+ characters) | Shared with the User Service |
 | `JWT_ALGORITHM` | `HS256` | Must match the User Service |
 | `CORS_ORIGINS` | empty | Comma-separated browser origins allowed to call the service directly |
+| `ENABLE_DOCS` | `false` | Serves `/docs`, `/redoc` and `/openapi.json` |
+| `ROOT_PATH` | empty | Path prefix the gateway serves the service under (`/api/suppliers` in Compose) |
 | `SERVED_AREA_MIN_LAT` … `SERVED_AREA_MAX_LNG` | a box around the NUS Kent Ridge campus | Where suppliers may be placed |
 | `PORT` | `8000` | Port inside the container |

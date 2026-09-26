@@ -1,6 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
-# Scope: AI-generated settings for the supplier service, following user-service/config.py.
+# Scope: AI-generated settings for the supplier service, following user-service/config.py;
+#        AI-added ENABLE_DOCS and ROOT_PATH (Claude Code, 2026-09-27).
 # Author review: <to be completed by author>
 
 from functools import lru_cache
@@ -26,6 +27,12 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
 
     seed_dir: Path = SERVICE_ROOT / "seed"
+
+    # Off by default so deployed services don't publish their API schema
+    enable_docs: bool = False
+
+    # Path prefix the gateway serves this service under, e.g. "/api/suppliers"; empty when accessed directly
+    root_path: str = ""
 
     # Comma-separated browser origins allowed to call this service directly,
     # e.g. "http://localhost:5173". Empty: no cross-origin access.

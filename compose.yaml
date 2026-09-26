@@ -90,8 +90,9 @@ services:
       DATABASE_URL: postgresql+asyncpg://${SUPPLIER_DB_USER:-supplier_service}:${SUPPLIER_DB_PASSWORD:?set SUPPLIER_DB_PASSWORD in .env}@supplier-db:5432/${SUPPLIER_DB_NAME:-supplier_service}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
       CORS_ORIGINS: http://localhost:5173
-    ports:
-      - "8002:8000"
+      # Local only: deployed environments leave this unset, so the docs are off
+      ENABLE_DOCS: "true"
+      ROOT_PATH: "/api/suppliers"
     depends_on:
       supplier-migrate:
         condition: service_completed_successfully
@@ -105,6 +106,7 @@ services:
       - "8080:80"
     depends_on:
       - user-service
+      - supplier-service
 
 volumes:
   user-db-data:

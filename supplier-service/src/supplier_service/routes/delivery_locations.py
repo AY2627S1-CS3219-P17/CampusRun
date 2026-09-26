@@ -1,6 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
-# Scope: AI-assisted review and debugging for delivery location endpoints: list/search, get, create, edit and soft delete.
+# Scope: AI-assisted review and debugging for delivery location endpoints: list/search, get, create, edit and soft delete;
+#        AI-made Location include ROOT_PATH (Claude Code, 2026-09-27).
 # Author review: <to be completed by author>
 
 from math import ceil
@@ -11,6 +12,7 @@ from sqlalchemy import func, insert, or_, select, update
 from sqlalchemy.exc import IntegrityError
 
 from supplier_service.auth import AdminUser, AnyUser
+from supplier_service.config import get_settings
 from supplier_service.db import Connection
 from supplier_service.routes.suppliers import like_pattern
 from supplier_service.schemas import (
@@ -96,7 +98,7 @@ async def create_delivery_location(body: DeliveryLocationCreate, conn: Connectio
         row = (await conn.execute(insert(delivery_locations).values(**values).returning(delivery_locations))).mappings().one()
     except IntegrityError as exc:
         _raise_for_integrity_error(exc, body.name)
-    response.headers["Location"] = f"/delivery-locations/{row['id']}"
+    response.headers["Location"] = f"{get_settings().root_path}/delivery-locations/{row['id']}"
     return DeliveryLocationOut.model_validate(dict(row))
 
 

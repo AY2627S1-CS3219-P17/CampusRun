@@ -1,7 +1,8 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-assisted review and debugging for supplier endpoints, including list/search/filter/sort/paginate, get, create,
-#        edit (including activate/deactivate) and soft delete.
+#        edit (including activate/deactivate) and soft delete;
+#        AI-removed the /suppliers prefix and made Location include ROOT_PATH (Claude Code, 2026-09-27).
 # Author review: <to be completed by author>
 
 from datetime import datetime, time
@@ -29,7 +30,8 @@ from supplier_service.schemas import (
 )
 from supplier_service.tables import supplier_search_text, suppliers
 
-router = APIRouter(prefix="/suppliers", tags=["suppliers"])
+# No prefix: the gateway already serves this service under /api/suppliers
+router = APIRouter(tags=["suppliers"])
 
 EARTH_RADIUS_M = 6_371_000
 NOT_FOUND = "This supplier does not exist or has been deleted."
@@ -96,7 +98,7 @@ def raise_for_integrity_error(exc: IntegrityError, name: str | None) -> None:
 # ------------------------------------------------------------------- queries
 
 
-@router.get("", response_model=Page[SupplierOut], summary="List, search, filter, sort and page through suppliers")
+@router.get("/", response_model=Page[SupplierOut], summary="List, search, filter, sort and page through suppliers")
 async def list_suppliers(
     conn: Connection,
     user: AnyUser,
@@ -212,14 +214,14 @@ async def get_supplier(supplier_id: SupplierId, conn: Connection, user: AnyUser)
 # ----------------------------------------------------------------- commands
 
 
-@router.post("", response_model=SupplierOut, status_code=status.HTTP_201_CREATED, summary="Create a supplier (admin)")
+@router.post("/", response_model=SupplierOut, status_code=status.HTTP_201_CREATED, summary="Create a supplier (admin)")
 async def create_supplier(body: SupplierCreate, conn: Connection, admin: AdminUser, response: Response):
     values = to_db(body) | {"created_by": admin.id, "updated_by": admin.id}
     try:
         row = (await conn.execute(insert(suppliers).values(**values).returning(suppliers))).mappings().one()
     except IntegrityError as exc:
         raise_for_integrity_error(exc, body.name)
-    response.headers["Location"] = f"/suppliers/{row['id']}"
+    response.headers["Location"] = f"{get_settings().root_path}/{row['id']}"
     return to_out(row, campus_time_now())
 
 

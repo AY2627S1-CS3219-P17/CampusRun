@@ -1,6 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
-# Scope: AI-assisted review for tests for supplier CRUD, validation, search, filters, sorting, paging and distance.
+# Scope: AI-assisted review for tests for supplier CRUD, validation, search, filters, sorting, paging and distance;
+#        AI-updated paths after the /suppliers prefix was removed (Claude Code, 2026-09-27).
 # Author review: <to be completed by author>
 
 from datetime import time
@@ -18,7 +19,7 @@ pytestmark = pytest.mark.anyio
 
 
 async def create(client, **overrides) -> dict:
-    response = await client.post("/suppliers", headers=ADMIN, json=supplier_body(**overrides))
+    response = await client.post("/", headers=ADMIN, json=supplier_body(**overrides))
     assert response.status_code == 201, response.text
     return response.json()
 
@@ -27,10 +28,10 @@ async def create(client, **overrides) -> dict:
 
 
 async def test_create_returns_supplier_in_web_client_shape(client):
-    response = await client.post("/suppliers", headers=ADMIN, json=supplier_body())
+    response = await client.post("/", headers=ADMIN, json=supplier_body())
     assert response.status_code == 201
     body = response.json()
-    assert response.headers["location"] == f"/suppliers/{body['id']}"
+    assert response.headers["location"] == f"/{body['id']}"
     assert isinstance(body["id"], int)
     # The fields frontend/src/types/supplier.ts already uses
     assert body["name"] == "Test Kiosk"
@@ -59,7 +60,7 @@ async def test_create_returns_supplier_in_web_client_shape(client):
     ],
 )
 async def test_create_rejects_invalid_input(client, overrides, field):
-    response = await client.post("/suppliers", headers=ADMIN, json=supplier_body(**overrides))
+    response = await client.post("/", headers=ADMIN, json=supplier_body(**overrides))
     assert response.status_code == 422
     body = response.json()
     assert body["detail"] == "Some details need fixing."
@@ -67,7 +68,7 @@ async def test_create_rejects_invalid_input(client, overrides, field):
 
 
 async def test_missing_fields_are_listed(client):
-    response = await client.post("/suppliers", headers=ADMIN, json={})
+    response = await client.post("/", headers=ADMIN, json={})
     assert response.status_code == 422
     assert {"name", "type", "building", "locationDescription", "latitude", "longitude", "startTime", "endTime"} <= set(
         response.json()["errors"]
@@ -76,7 +77,7 @@ async def test_missing_fields_are_listed(client):
 
 async def test_duplicate_name_ignoring_case_is_409(client):
     await create(client)
-    response = await client.post("/suppliers", headers=ADMIN, json=supplier_body(name="test KIOSK"))
+    response = await client.post("/", headers=ADMIN, json=supplier_body(name="test KIOSK"))
     assert response.status_code == 409
     assert "already exists" in response.json()["detail"]
 
@@ -86,13 +87,13 @@ async def test_duplicate_name_ignoring_case_is_409(client):
 
 async def test_get_by_id_and_404(client):
     created = await create(client)
-    assert (await client.get(f"/suppliers/{created['id']}", headers=STUDENT)).json()["id"] == created["id"]
-    assert (await client.get("/suppliers/999999", headers=STUDENT)).status_code == 404
+    assert (await client.get(f"/{created['id']}", headers=STUDENT)).json()["id"] == created["id"]
+    assert (await client.get("/999999", headers=STUDENT)).status_code == 404
 
 
 @pytest.mark.parametrize("bad_id", ["abc", "0"])
 async def test_bad_id_is_422(client, bad_id):
-    response = await client.get(f"/suppliers/{bad_id}", headers=STUDENT)
+    response = await client.get(f"/{bad_id}", headers=STUDENT)
     assert response.status_code == 422
     assert response.json()["errors"]["supplier_id"] == "This id is not valid."
 
@@ -102,7 +103,7 @@ async def test_bad_id_is_422(client, bad_id):
 
 async def test_patch_changes_only_given_fields(client):
     created = await create(client)
-    response = await client.patch(f"/suppliers/{created['id']}", headers=ADMIN, json={"name": "Renamed Kiosk", "floor": None})
+    response = await client.patch(f"/{created['id']}", headers=ADMIN, json={"name": "Renamed Kiosk", "floor": None})
     assert response.status_code == 200
     body = response.json()
     assert body["name"] == "Renamed Kiosk"
@@ -114,7 +115,7 @@ async def test_patch_changes_only_given_fields(client):
 
 async def test_patch_rejects_clearing_required_field_and_empty_body(client):
     created = await create(client)
-    url = f"/suppliers/{created['id']}"
+    url = f"/{created['id']}"
     assert (await client.patch(url, headers=ADMIN, json={"name": None})).status_code == 422
     assert (await client.patch(url, headers=ADMIN, json={"startTime": None})).status_code == 422
     assert (await client.patch(url, headers=ADMIN, json={})).status_code == 422
@@ -123,7 +124,7 @@ async def test_patch_rejects_clearing_required_field_and_empty_body(client):
 async def test_patch_to_taken_name_is_409(client):
     await create(client, name="Alpha")
     beta = await create(client, name="Beta")
-    response = await client.patch(f"/suppliers/{beta['id']}", headers=ADMIN, json={"name": "ALPHA"})
+    response = await client.patch(f"/{beta['id']}", headers=ADMIN, json={"name": "ALPHA"})
     assert response.status_code == 409
 
 
@@ -132,34 +133,34 @@ async def test_patch_to_taken_name_is_409(client):
 
 async def test_deactivated_supplier_hidden_from_students(client):
     created = await create(client)
-    await client.patch(f"/suppliers/{created['id']}", headers=ADMIN, json={"active": False})
+    await client.patch(f"/{created['id']}", headers=ADMIN, json={"active": False})
 
-    assert (await client.get("/suppliers", headers=STUDENT)).json()["total"] == 0
-    assert (await client.get("/suppliers", headers=ADMIN)).json()["total"] == 0
-    deactivated = (await client.get("/suppliers?active=false", headers=ADMIN)).json()
+    assert (await client.get("/", headers=STUDENT)).json()["total"] == 0
+    assert (await client.get("/", headers=ADMIN)).json()["total"] == 0
+    deactivated = (await client.get("/?active=false", headers=ADMIN)).json()
     assert [s["active"] for s in deactivated["items"]] == [False]
     # still readable by id, so old errands can show it
-    assert (await client.get(f"/suppliers/{created['id']}", headers=STUDENT)).json()["active"] is False
+    assert (await client.get(f"/{created['id']}", headers=STUDENT)).json()["active"] is False
 
 
 async def test_student_cannot_list_deactivated(client):
-    assert (await client.get("/suppliers?active=false", headers=STUDENT)).status_code == 403
+    assert (await client.get("/?active=false", headers=STUDENT)).status_code == 403
 
 
 async def test_reactivate(client):
     created = await create(client, active=False)
-    await client.patch(f"/suppliers/{created['id']}", headers=ADMIN, json={"active": True})
-    assert (await client.get("/suppliers", headers=STUDENT)).json()["total"] == 1
+    await client.patch(f"/{created['id']}", headers=ADMIN, json={"active": True})
+    assert (await client.get("/", headers=STUDENT)).json()["total"] == 1
 
 
 async def test_delete_hides_supplier_and_frees_name(client, engine):
     created = await create(client)
-    url = f"/suppliers/{created['id']}"
+    url = f"/{created['id']}"
     assert (await client.delete(url, headers=ADMIN)).status_code == 204
     assert (await client.get(url, headers=ADMIN)).status_code == 404
     assert (await client.delete(url, headers=ADMIN)).status_code == 404
     assert (await client.patch(url, headers=ADMIN, json={"name": "x"})).status_code == 404
-    assert (await client.get("/suppliers?active=false", headers=ADMIN)).json()["total"] == 0
+    assert (await client.get("/?active=false", headers=ADMIN)).json()["total"] == 0
     await create(client)  # the same name is allowed again
 
     async with engine.connect() as conn:  # the row is kept for history
@@ -179,7 +180,7 @@ async def seed_three(client):
 
 
 async def names(client, query: str, headers=STUDENT) -> list[str]:
-    response = await client.get(f"/suppliers?{query}", headers=headers)
+    response = await client.get(f"/?{query}", headers=headers)
     assert response.status_code == 200, response.text
     return [s["name"] for s in response.json()["items"]]
 
@@ -202,7 +203,7 @@ async def test_filter_by_type_and_building(client):
 async def test_buildings_list(client):
     await seed_three(client)
     await create(client, name="Another", building="com2")
-    response = await client.get("/suppliers/buildings", headers=STUDENT)
+    response = await client.get("/buildings", headers=STUDENT)
     assert response.json() == ["Central Library", "COM2", "Medicine+Science Library"]
 
 
@@ -217,29 +218,29 @@ async def test_sorting(client):
 async def test_nearest_first_with_distance(client):
     await seed_three(client)
     # standing at COM3
-    items = (await client.get("/suppliers?sort=distance&nearLat=1.2949&nearLng=103.7744", headers=STUDENT)).json()["items"]
+    items = (await client.get("/?sort=distance&nearLat=1.2949&nearLng=103.7744", headers=STUDENT)).json()["items"]
     assert [s["name"] for s in items] == ["Cool Spot", "NUS Co-op", "Good Day Cafe"]
     assert 100 < items[0]["distanceM"] < 200
     assert await names(client, "nearLat=1.2949&nearLng=103.7744&radius=300") == ["Cool Spot", "NUS Co-op"]
 
 
 async def test_distance_needs_a_point(client):
-    response = await client.get("/suppliers?sort=distance", headers=STUDENT)
+    response = await client.get("/?sort=distance", headers=STUDENT)
     assert response.status_code == 422
     assert "sort" in response.json()["errors"]
-    assert (await client.get("/suppliers?nearLat=1.29", headers=STUDENT)).status_code == 422
+    assert (await client.get("/?nearLat=1.29", headers=STUDENT)).status_code == 422
 
 
 async def test_pagination(client):
     for i in range(25):
         await create(client, name=f"Kiosk {i:02d}")
-    first = (await client.get("/suppliers?pageSize=10", headers=STUDENT)).json()
+    first = (await client.get("/?pageSize=10", headers=STUDENT)).json()
     assert (first["total"], first["totalPages"], first["pageSize"]) == (25, 3, 10)
     assert [s["name"] for s in first["items"]][:2] == ["Kiosk 00", "Kiosk 01"]
-    last = (await client.get("/suppliers?page=3&pageSize=10", headers=STUDENT)).json()
+    last = (await client.get("/?page=3&pageSize=10", headers=STUDENT)).json()
     assert len(last["items"]) == 5
-    assert (await client.get("/suppliers?page=4&pageSize=10", headers=STUDENT)).json()["items"] == []
-    assert (await client.get("/suppliers?pageSize=101", headers=STUDENT)).status_code == 422
+    assert (await client.get("/?page=4&pageSize=10", headers=STUDENT)).json()["items"] == []
+    assert (await client.get("/?pageSize=101", headers=STUDENT)).status_code == 422
 
 
 async def test_open_now_filter(client):

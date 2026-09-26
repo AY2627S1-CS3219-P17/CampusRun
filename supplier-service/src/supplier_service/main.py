@@ -1,6 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
-# Scope: AI-assisted review and debugging for FastAPI app, lifespan and health check, following user-service/main.py.
+# Scope: AI-assisted review and debugging for FastAPI app, lifespan and health check, following user-service/main.py;
+#        AI-added ROOT_PATH and ENABLE_DOCS support and the router order for the gateway (Claude Code, 2026-09-27).
 # Author review: <to be completed by author>
 
 from collections.abc import AsyncGenerator
@@ -27,12 +28,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     await app.state.engine.dispose()
 
 
-app = FastAPI(title="CampusRun Supplier Service", lifespan=lifespan)
+settings = get_settings()
 
-if get_settings().cors_origin_list:
+app = FastAPI(
+    title="CampusRun Supplier Service",
+    lifespan=lifespan,
+    root_path=settings.root_path,  # empty when accessed directly; "/api/suppliers" when behind the gateway
+    # None turns each docs page off
+    docs_url="/docs" if settings.enable_docs else None,
+    redoc_url="/redoc" if settings.enable_docs else None,
+    openapi_url="/openapi.json" if settings.enable_docs else None,
+)
+
+if settings.cors_origin_list:
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=get_settings().cors_origin_list,
+        allow_origins=settings.cors_origin_list,
         allow_methods=["*"],
         allow_headers=["Authorization", "Content-Type"],
     )
@@ -53,6 +64,7 @@ async def health(engine: Annotated[AsyncEngine, Depends(get_engine)]) -> JSONRes
     return JSONResponse(content={"status": "ok", "database": "ok"})
 
 
-app.include_router(suppliers.router)
 app.include_router(delivery_locations.router)
 app.include_router(meta.router)
+# Last: its /{supplier_id} route sits at the root and would otherwise catch /meta and /delivery-locations
+app.include_router(suppliers.router)

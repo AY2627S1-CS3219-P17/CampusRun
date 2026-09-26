@@ -18,7 +18,7 @@ from user_service.tables import admins, users
 
 pytestmark = pytest.mark.anyio
 
-USER = {"email": "alice@u.nus.edu", "username": "alice", "password": "s3cret-pass"}
+USER = {"email": "alice@u.nus.edu", "username": "alice", "password": "S3cret-pass"}
 ADMIN = {"username": "root", "password": "admin-pass"}
 
 

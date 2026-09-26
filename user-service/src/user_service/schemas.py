@@ -1,13 +1,14 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated registration request and user response models with NUS email, username and password validation;
-#        AI-added the profile update request model (2026-09-27).
+#        AI-added the profile update request model, and aligned the username and password rules with the web client (2026-09-27).
 # Author review: reviewed by Nathan
 
+import re
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, EmailStr, StringConstraints, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, EmailStr, StringConstraints, field_validator, model_validator
 
 from user_service.tables import USERNAME_MAX_LENGTH
 
@@ -19,20 +20,37 @@ PASSWORD_MIN_LENGTH = 8
 # Caps the work an attacker can force by sending a huge password to be hashed
 PASSWORD_MAX_LENGTH = 128
 
+# Character rules match the web client's (frontend/src/utils/validation.ts); keep the two in sync
 Username = Annotated[
     str,
     StringConstraints(
         strip_whitespace=True,
         min_length=USERNAME_MIN_LENGTH,
         max_length=USERNAME_MAX_LENGTH,
-        pattern=r"^[A-Za-z0-9_.-]+$",
+        pattern=r"^[A-Za-z0-9_-]+$",
     ),
 ]
+
+# Each must match at least once. Whitespace is allowed but doesn't count as a special character.
+PASSWORD_CHARACTER_CLASSES = (
+    re.compile(r"[A-Z]"),
+    re.compile(r"[a-z]"),
+    re.compile(r"[0-9]"),
+    re.compile(r"[^A-Za-z0-9\s]"),
+)
+
+
+def check_password_characters(password: str) -> str:
+    if not all(character_class.search(password) for character_class in PASSWORD_CHARACTER_CLASSES):
+        raise ValueError("must contain an uppercase letter, a lowercase letter, a number and a special character")
+    return password
+
 
 # Not stripped: spaces are valid password characters
 Password = Annotated[
     str,
     StringConstraints(min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH),
+    AfterValidator(check_password_characters),
 ]
 
 

@@ -1,6 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
-# Scope: AI-generated tests for the PATCH /users/me endpoint (username and password changes).
+# Scope: AI-generated tests for the PATCH /users/me endpoint (username and password changes), including the web
+#        client's username and password rules.
 # Author review: <to be completed by author>
 
 import pytest
@@ -13,8 +14,8 @@ from user_service.tables import admins, users
 
 pytestmark = pytest.mark.anyio
 
-ALICE = {"email": "alice@u.nus.edu", "username": "alice", "password": "s3cret-pass"}
-BOB = {"email": "bob@u.nus.edu", "username": "bob", "password": "b0b-password"}
+ALICE = {"email": "alice@u.nus.edu", "username": "alice", "password": "S3cret-pass"}
+BOB = {"email": "bob@u.nus.edu", "username": "bob", "password": "B0b-password"}
 
 
 async def login(client: AsyncClient, username: str, password: str, path: str = "/auth/login"):
@@ -59,7 +60,7 @@ async def test_rejects_username_taken_by_someone_else(client: AsyncClient, alice
     assert (await client.get("/users/me", headers=alice)).json()["username"] == "alice"
 
 
-@pytest.mark.parametrize("username", ["ab", "has space", "a@b", "x" * 33, None])
+@pytest.mark.parametrize("username", ["ab", "has space", "a@b", "has.dot", "x" * 33, None])
 async def test_rejects_invalid_username(client: AsyncClient, alice: dict, username: str | None) -> None:
     response = await client.patch("/users/me", headers=alice, json={"username": username})
 
@@ -70,23 +71,23 @@ async def test_changes_password(client: AsyncClient, alice: dict) -> None:
     response = await client.patch(
         "/users/me",
         headers=alice,
-        json={"current_password": ALICE["password"], "new_password": "brand-new-pass"},
+        json={"current_password": ALICE["password"], "new_password": "Brand-new-pass1"},
     )
 
     assert response.status_code == 200
     assert (await login(client, "alice", ALICE["password"])).status_code == 401
-    assert (await login(client, "alice", "brand-new-pass")).status_code == 200
+    assert (await login(client, "alice", "Brand-new-pass1")).status_code == 200
 
 
 async def test_changes_username_and_password_together(client: AsyncClient, alice: dict) -> None:
     response = await client.patch(
         "/users/me",
         headers=alice,
-        json={"username": "alice_2", "current_password": ALICE["password"], "new_password": "brand-new-pass"},
+        json={"username": "alice_2", "current_password": ALICE["password"], "new_password": "Brand-new-pass1"},
     )
 
     assert response.status_code == 200
-    assert (await login(client, "alice_2", "brand-new-pass")).status_code == 200
+    assert (await login(client, "alice_2", "Brand-new-pass1")).status_code == 200
 
 
 @pytest.mark.parametrize("current_password", ["wrong-password", "x" * 10_000])
@@ -96,7 +97,7 @@ async def test_wrong_current_password_changes_nothing(
     response = await client.patch(
         "/users/me",
         headers=alice,
-        json={"username": "alice_2", "current_password": current_password, "new_password": "brand-new-pass"},
+        json={"username": "alice_2", "current_password": current_password, "new_password": "Brand-new-pass1"},
     )
 
     assert response.status_code == 400
@@ -106,7 +107,7 @@ async def test_wrong_current_password_changes_nothing(
 
 
 async def test_new_password_requires_current_password(client: AsyncClient, alice: dict) -> None:
-    response = await client.patch("/users/me", headers=alice, json={"new_password": "brand-new-pass"})
+    response = await client.patch("/users/me", headers=alice, json={"new_password": "Brand-new-pass1"})
 
     assert response.status_code == 422
 
@@ -122,9 +123,10 @@ async def test_new_password_must_differ_from_current(client: AsyncClient, alice:
     assert "must be different" in response.text
 
 
-async def test_rejects_short_new_password(client: AsyncClient, alice: dict) -> None:
+@pytest.mark.parametrize("new_password", ["Sh0rt-", "no-upper-1", "NO-LOWER-1", "No-digits-here", "NoSpecial123"])
+async def test_rejects_weak_new_password(client: AsyncClient, alice: dict, new_password: str) -> None:
     response = await client.patch(
-        "/users/me", headers=alice, json={"current_password": ALICE["password"], "new_password": "short"}
+        "/users/me", headers=alice, json={"current_password": ALICE["password"], "new_password": new_password}
     )
 
     assert response.status_code == 422

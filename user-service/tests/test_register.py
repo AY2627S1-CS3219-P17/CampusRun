@@ -1,6 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
-# Scope: AI-generated tests for the POST /auth/register endpoint.
+# Scope: AI-generated tests for the POST /auth/register endpoint; AI-added cases for the web client's username and
+#        password rules (2026-09-27).
 # Author review: reviewed by Nathan
 
 import asyncio
@@ -16,7 +17,7 @@ from user_service.tables import USERNAME_MAX_LENGTH, users
 
 pytestmark = pytest.mark.anyio
 
-VALID = {"email": "alice@u.nus.edu", "username": "alice", "password": "s3cret-pass"}
+VALID = {"email": "alice@u.nus.edu", "username": "alice", "password": "S3cret-pass"}
 
 
 async def count_users(engine: AsyncEngine) -> int:
@@ -97,8 +98,15 @@ async def test_concurrent_registrations_create_exactly_one_user(
         {"username": "a" * (USERNAME_MAX_LENGTH + 1)},
         {"username": "has space"},
         {"username": "emoji😀"},
-        {"password": "short"},
-        {"password": "a" * (PASSWORD_MAX_LENGTH + 1)},
+        {"username": "has.dot"},
+        {"password": "Sh0rt-"},
+        {"password": "no-upper-1"},
+        {"password": "NO-LOWER-1"},
+        {"password": "No-digits-here"},
+        {"password": "NoSpecial123"},
+        # Whitespace isn't a special character
+        {"password": "No Special 123"},
+        {"password": "Aa1-" + "a" * (PASSWORD_MAX_LENGTH - 3)},
     ],
 )
 async def test_rejects_invalid_input(

@@ -4,7 +4,7 @@
 # Author review: reviewed by Nathan
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, EmailStr, StringConstraints, field_validator
 
@@ -55,3 +55,16 @@ class UserResponse(BaseModel):
     username: str
     email_verified_at: datetime | None
     created_at: datetime
+
+
+class AdminResponse(BaseModel):
+    id: int
+    username: str
+    created_at: datetime
+
+
+class TokenResponse(BaseModel):
+    # Field names are fixed by the OAuth2 spec; Swagger's Authorize button reads them
+    access_token: str
+    token_type: Literal["bearer"] = "bearer"
+    

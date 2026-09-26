@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated pytest fixtures: a disposable Postgres container migrated with Alembic, per-test empty tables,
-#        and an HTTP client for the app wired to the test database.
+#        and an HTTP client for the app wired to the test database; AI-added a test JWT_SECRET default (2026-09-27).
 # Author review: reviewed by Nathan
 
 import os
@@ -10,6 +10,8 @@ from pathlib import Path
 
 # main.py reads settings on import; the tests swap in their own engine, so this URL is never used
 os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://unused@localhost/unused")
+# Set before test modules import, since test_auth.py signs tokens at import time
+os.environ.setdefault("JWT_SECRET", "test-secret-that-is-at-least-32-characters-long")
 
 import pytest
 from httpx import ASGITransport, AsyncClient

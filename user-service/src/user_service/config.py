@@ -1,6 +1,6 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
-# Scope: AI-generated pydantic-settings Settings class reading DATABASE_URL.
+# Scope: AI-generated pydantic-settings Settings class reading DATABASE_URL; AI-added Pyright ignore on Settings().
 # Author review: <to be completed by author>
 
 from functools import lru_cache

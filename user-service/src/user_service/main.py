@@ -35,6 +35,7 @@ settings = get_settings()
 app = FastAPI(
     title="CampusRun User Service",
     lifespan=lifespan,
+    root_path=settings.root_path,  # empty when accessed directly; "/api/users" when behind the gateway    
     # None turns each docs page off
     docs_url="/docs" if settings.enable_docs else None,
     redoc_url="/redoc" if settings.enable_docs else None,

@@ -46,6 +46,61 @@ browser ──:8080──►  gateway (nginx) ──/api/users/*──►  user-
 
 ## Part 1: Gateway
 
+<details>
+<summary><strong>Explainer: how a request gets from the browser to user-service and back</strong></summary>
+
+<br>
+
+`http://user-service:8000` is an address that only exists **inside Docker's private network**. The browser never uses it; only nginx does. Here is a Swagger login request, followed all the way through:
+
+```
+Your machine                          Docker (Compose network "campusrun_default")
+─────────────                         ───────────────────────────────────────────────
+Browser
+  │ POST http://localhost:8080/api/users/auth/login
+  ▼
+localhost:8080 ──(port mapping 8080→80)──► gateway container, nginx listening on :80
+                                              │ matches  location /api/users/
+                                              │ rewrites /api/users/auth/login → /auth/login
+                                              │ looks up "user-service" via Docker DNS → e.g. 172.18.0.4
+                                              ▼
+                                           user-service container, FastAPI on :8000
+                                              │ runs the /auth/login route
+                                              ▼
+                                           response goes back to nginx, which returns it to the browser
+```
+
+**1. What the user enters.** The user enters `http://localhost:8080/...`. Locally that's `localhost`; once deployed it would be your public domain. The browser only ever knows this one address, and it never sees `user-service` or port 8000.
+
+**2. Reaching the gateway.** This comes from the gateway's Compose entry:
+
+```yaml
+ports:
+  - "8080:80"
+```
+
+Docker listens on your machine's port 8080 and forwards anything that arrives into the gateway container's port 80, where nginx is listening. No other container has a `ports:` entry (except `user-db`, bound to `127.0.0.1` for host tooling), so the services are unreachable from outside.
+
+**3. nginx picks a route.** nginx checks the path against its `location` blocks. `/api/users/auth/login` starts with `/api/users/`, so it matches:
+
+```nginx
+location /api/users/ {
+    proxy_pass http://user-service:8000/;
+}
+```
+
+Because both the `location` and the `proxy_pass` end in `/`, nginx replaces the matched prefix `/api/users/` with `/`. The request becomes `/auth/login`.
+
+**4. Resolving `user-service`.** `docker compose up` creates a private network and attaches every container to it. Docker runs a small DNS server on that network (at `127.0.0.11` inside each container) that maps **each Compose service name to its container's IP address**. So when nginx looks up `user-service`, it gets something like `172.18.0.4`. The same mechanism lets user-service reach its database as `user-db:5432` in `DATABASE_URL`. Your machine isn't on this network and its DNS has never heard of `user-service`, which is why the browser can't use that address.
+
+**5. Port 8000.** This is the port FastAPI listens on **inside** its container (`fastapi run ... --port ${PORT:-8000}` in the Dockerfile). Containers on the same network can talk on any port, so it doesn't need publishing with `ports:`. Publishing only matters for traffic coming from **outside** Docker.
+
+**6. The response comes back.** FastAPI runs the `/auth/login` route and replies to nginx, and nginx passes that reply back to the browser. From the browser's point of view, `localhost:8080` answered the request itself.
+
+**Where `root_path` fits in (Step 1.2).** User-service receives `/auth/login` with the prefix removed, so it doesn't know the browser actually used `/api/users/auth/login`. That's fine for handling requests. But when it generates URLs for the browser, such as the Swagger page telling the browser to fetch `openapi.json`, it would produce `/openapi.json`. The browser would send that to the gateway, and nginx would 404 it. `ROOT_PATH=/api/users` tells FastAPI to put the prefix back on any URL it hands to the browser.
+
+</details>
+
 ### Step 1.1: Write the nginx config
 
 Create `gateway/nginx.conf`:

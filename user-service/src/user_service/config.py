@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     # Off by default so deployed services don't publish their API schema
     enable_docs: bool = False
 
+    # Path prefix the gateway serves this service under, e.g. "/api/users"; empty when accessed directly
+    root_path: str = ""
+    
 
 @lru_cache
 def get_settings() -> Settings:

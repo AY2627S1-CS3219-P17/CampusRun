@@ -1,6 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
-# Scope: AI-modified Alembic env to read DATABASE_URL from app settings and target the tables metadata.
+# Scope: AI-modified Alembic env to read DATABASE_URL from app settings and target the tables metadata;
+#        AI-added support for a caller-supplied connection (used by the tests).
 # Author review: <to be completed by author>
 
 import asyncio
@@ -86,6 +87,12 @@ async def run_async_migrations() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
+
+    # Callers such as the tests can pass in their own connection, so no URL is read from settings
+    connection = config.attributes.get("connection")
+    if connection is not None:
+        do_run_migrations(connection)
+        return
 
     asyncio.run(run_async_migrations())
 

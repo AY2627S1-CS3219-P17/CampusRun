@@ -61,13 +61,11 @@ def _timestamps() -> list[Column]:
     ]
 
 
-def _audit_and_soft_delete() -> list[Column]:
+def _audit_columns() -> list[Column]:
     return [
         # User id (token "sub") of the admin who created or last changed the row
         Column("created_by", String(64), nullable=True),
         Column("updated_by", String(64), nullable=True),
-        # Soft delete: errands in the Order Service may still refer to this id
-        Column("deleted_at", DateTime(timezone=True), nullable=True),
     ]
 
 
@@ -88,7 +86,7 @@ suppliers = Table(
     Column("image_url", String(500), nullable=True),
     Column("active", Boolean, nullable=False, server_default=true()),
     *_timestamps(),
-    *_audit_and_soft_delete(),
+    *_audit_columns(),
     CheckConstraint(
         f"type IN ({', '.join(repr(t) for t in SUPPLIER_TYPES)})",
         name="type",
@@ -109,7 +107,7 @@ delivery_locations = Table(
     Column("longitude", Double, nullable=False),
     Column("active", Boolean, nullable=False, server_default=true()),
     *_timestamps(),
-    *_audit_and_soft_delete(),
+    *_audit_columns(),
     CheckConstraint(
         "latitude BETWEEN -90 AND 90 AND longitude BETWEEN -180 AND 180",
         name="coordinates",
@@ -127,12 +125,11 @@ supplier_search_text = (
     + suppliers.c.location_description
 )
 
-# F4.1.4: names are unique regardless of case, among rows that are not deleted
+# F4.1.4: names are unique regardless of case.
 Index(
     "uq_suppliers_name_lower",
     func.lower(suppliers.c.name),
     unique=True,
-    postgresql_where=suppliers.c.deleted_at.is_(None),
 )
 Index("ix_suppliers_type", suppliers.c.type)
 Index("ix_suppliers_building_lower", func.lower(suppliers.c.building))
@@ -148,5 +145,4 @@ Index(
     "uq_delivery_locations_name_lower",
     func.lower(delivery_locations.c.name),
     unique=True,
-    postgresql_where=delivery_locations.c.deleted_at.is_(None),
 )

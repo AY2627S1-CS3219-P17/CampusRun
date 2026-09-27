@@ -2,7 +2,7 @@
 // Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 // Scope: AI-modified: the mocked calls and hard-coded supplier list are replaced with calls to the Supplier Service;
 //        AI-pointed the calls at the gateway's relative /api/suppliers (Claude Code, 2026-09-27).
-// Author review: <to be completed by author>
+// Author review: Validated API contracts, query handling, and errors.
 
 import { request } from './client'
 import type {
@@ -23,6 +23,7 @@ export function listSuppliers(query: SupplierQuery, signal?: AbortSignal) {
     page: String(query.page),
     pageSize: String(query.pageSize),
   })
+
   if (query.q.trim()) params.set('q', query.q.trim())
   if (query.type) params.set('type', query.type)
   return request<Page<Supplier>>(`${SUPPLIER_API_URL}?${params}`, {
@@ -51,14 +52,7 @@ export function editSupplier(
   })
 }
 
-// Activate/Deactivate. Deactivated suppliers are hidden from students but kept.
+// Activate / Deactivate
 export function toggleSupplier(id: number, isActive: boolean) {
   return editSupplier(id, { active: isActive })
-}
-
-// Removes the supplier for everyone. The service keeps the record for past errands.
-export function deleteSupplier(id: number) {
-  return request<void>(`${SUPPLIER_API_URL}/${id}`, {
-    method: 'DELETE',
-  })
 }

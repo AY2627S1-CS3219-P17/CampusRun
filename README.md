@@ -115,6 +115,20 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 
 **Verification:** The service was tested against PostgreSQL, including 58 automated tests with 94% coverage, and the API was exercised end-to-end over HTTP after migrating and seeding a fresh database. Docker image builds were not performed because Docker was unavailable. <!-- TODO(author): describe your own review and testing -->
 
+### Frontend Client (Yang Qifeng)
+
+**Tools:** Claude Code (model: Claude Opus 5.5)
+
+**Decisions made by the team before AI assistance:** React and Vite for the existing web client; its supplier UI, user forms, fields, and client-side validation rules; and using the nginx gateway as the application's public entry point.
+
+**Used for:**
+
+- **Wiring** the client to the User and Supplier Services through relative `/api/...` URLs, including a Vite development proxy, typed API clients, token-based session handling, registration, login, profile editing, supplier listing, supplier details, and supplier updates.
+- **Reviewing and aligning** client request and response types, validation, loading states, permissions, pagination, and user-facing API errors with the service contracts.
+- **Generating** the frontend Docker and nginx configuration and adding the frontend Compose service so the built single-page app is served behind the gateway.
+
+**Verification:** `npm run build` and lint passed; nginx configuration was validated with `nginx -t`. <!-- TODO(author): describe your own review and testing -->
+
 **Files affected:** each carries an "AI Assistance Disclosure" header comment.
 
 **Prompts and key exchanges:** see [`ai/usage-log.md`](ai/usage-log.md).

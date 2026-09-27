@@ -2,7 +2,7 @@
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
 // Scope: AI-wired the dialog to the User Service: loads the current username, sends only changed fields,
 //        and keeps Save disabled until something has changed.
-// Author review: <to be completed by author>
+// Author review: Validated changed-field updates and form-state boundaries.
 
 import { validateUsername, validatePassword } from '../utils/validation'
 import { useEffect, useState, type SubmitEvent } from 'react'
@@ -26,7 +26,6 @@ export default function EditInfoDialog({
 }: EditInfoDialogProps) {
   const navigate = useNavigate()
 
-  // The saved username, from GET /users/me; null until it has loaded
   const [savedUsername, setSavedUsername] = useState<string | null>(null)
   const [username, setUsername] = useState('')
   const [currentPassword, setCurrentPassword] = useState('')
@@ -44,6 +43,7 @@ export default function EditInfoDialog({
     newPassword: false,
   })
 
+  // On mount, fetch saved username, and prefil the username field
   useEffect(() => {
     const controller = new AbortController()
     getCurrentUser(controller.signal)
@@ -51,6 +51,7 @@ export default function EditInfoDialog({
         setSavedUsername(user.username)
         setUsername(user.username)
       })
+
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === 'AbortError') return
         setError(
@@ -62,16 +63,15 @@ export default function EditInfoDialog({
     return () => controller.abort()
   }, [])
 
-  // The service trims the username too, so surrounding spaces aren't a change
   const usernameChanged =
     savedUsername !== null && username.trim() !== savedUsername
-  // Save stays disabled until something would actually change
+
   const hasChanges = usernameChanged || Boolean(newPassword)
   const loaded = savedUsername !== null
 
-  // The service checks the current password, since only it knows the stored one
+  // Current password should not be client-side
+  // Rely on BE error to surface if current password is wrong
   const errors = {
-    // Only a changed username is checked, so an older username that predates these rules can't block a password change
     username: usernameChanged ? validateUsername(username.trim()) : '',
     currentPassword:
       newPassword && !currentPassword ? 'Enter your current password.' : '',
@@ -82,6 +82,7 @@ export default function EditInfoDialog({
         : validatePassword(newPassword),
   }
 
+  // Only surface on submit/blur
   const fieldErrors = {
     username: submitted || touched.username ? errors.username : '',
     currentPassword:
@@ -110,8 +111,8 @@ export default function EditInfoDialog({
     setLoading(true)
     try {
       await updateUser(payload)
-
       onClose()
+
       if (newPassword) {
         // Sign in again with the new password. The old token would keep working
         // until it expires, since the service can't revoke it.
@@ -119,7 +120,6 @@ export default function EditInfoDialog({
         await navigate('/login', { replace: true })
       }
     } catch (error) {
-      // e.g. "Current password is incorrect" or "Username is already in use"
       setError(
         error instanceof ApiError
           ? error.message
@@ -153,7 +153,6 @@ export default function EditInfoDialog({
               aria-label="Close"
               disabled={loading}
             >
-              {/* Mocked for now */}
               <X size={20} aria-hidden="true" />
             </Dialog.Close>
           </div>
@@ -172,6 +171,7 @@ export default function EditInfoDialog({
                 type="button"
                 aria-label="Change profile photo"
               >
+                {/* Mocked for now */}
                 <Plus size={18} aria-hidden="true" />
               </button>
             </div>

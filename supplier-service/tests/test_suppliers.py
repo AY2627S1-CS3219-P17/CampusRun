@@ -128,44 +128,32 @@ async def test_patch_to_taken_name_is_409(client):
     assert response.status_code == 409
 
 
-# --------------------------------------------------- deactivate and delete
+# -------------------------------------------------------- deactivate
 
 
-async def test_deactivated_supplier_hidden_from_students(client):
+async def test_deactivated_supplier_hidden_by_default_but_listable(client):
     created = await create(client)
     await client.patch(f"/{created['id']}", headers=ADMIN, json={"active": False})
 
     assert (await client.get("/", headers=STUDENT)).json()["total"] == 0
     assert (await client.get("/", headers=ADMIN)).json()["total"] == 0
-    deactivated = (await client.get("/?active=false", headers=ADMIN)).json()
+    deactivated = (await client.get("/?active=false", headers=STUDENT)).json()
     assert [s["active"] for s in deactivated["items"]] == [False]
     # still readable by id, so old errands can show it
     assert (await client.get(f"/{created['id']}", headers=STUDENT)).json()["active"] is False
 
 
-async def test_student_cannot_list_deactivated(client):
-    assert (await client.get("/?active=false", headers=STUDENT)).status_code == 403
+async def test_student_can_list_deactivated(client):
+    created = await create(client, active=False)
+    response = await client.get("/?active=false", headers=STUDENT)
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json()["items"]] == [created["id"]]
 
 
 async def test_reactivate(client):
     created = await create(client, active=False)
     await client.patch(f"/{created['id']}", headers=ADMIN, json={"active": True})
     assert (await client.get("/", headers=STUDENT)).json()["total"] == 1
-
-
-async def test_delete_hides_supplier_and_frees_name(client, engine):
-    created = await create(client)
-    url = f"/{created['id']}"
-    assert (await client.delete(url, headers=ADMIN)).status_code == 204
-    assert (await client.get(url, headers=ADMIN)).status_code == 404
-    assert (await client.delete(url, headers=ADMIN)).status_code == 404
-    assert (await client.patch(url, headers=ADMIN, json={"name": "x"})).status_code == 404
-    assert (await client.get("/?active=false", headers=ADMIN)).json()["total"] == 0
-    await create(client)  # the same name is allowed again
-
-    async with engine.connect() as conn:  # the row is kept for history
-        assert await conn.scalar(text("SELECT count(*) FROM suppliers WHERE deleted_at IS NOT NULL")) == 1
-
 
 # ------------------------------------------------ search, filter, sort, page
 

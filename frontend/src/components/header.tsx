@@ -1,7 +1,7 @@
 // AI Assistance Disclosure:
 // Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 // Scope: AI-modified: Logout also forgets the saved access token (clearSession).
-// Author review: <to be completed by author>
+// Author review: Validated logout cleanup and navigation behavior.
 
 import { useRef, useState } from 'react'
 import { Link } from 'react-router'

@@ -1,7 +1,7 @@
 // AI Assistance Disclosure:
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
 // Scope: AI-wired the form to the User Service's login and saved the returned access token.
-// Author review: <to be completed by author>
+// Author review: Validated authentication flow and user-facing errors.
 
 import { useState, type SubmitEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
@@ -43,7 +43,6 @@ export default function LoginPage() {
 
       await navigate('/explore', { replace: true })
     } catch (error) {
-      // e.g. "Incorrect login or password", or that the service can't be reached
       setError(
         error instanceof ApiError
           ? error.message

@@ -19,5 +19,5 @@ migrations, following the same structure as `user-service`. It should be contain
   `Food`, `Drinks`, `Shopping`, `Printing`.
 - Validate every input in `schemas.py`. Errors use `{"detail": ...}`, and 422 responses add `"errors": {field: message}`.
 - One transaction per request (`db.Connection`), committed before the response is sent.
-- Deleting is a soft delete (`deleted_at`), because other services keep supplier ids.
+- Suppliers and delivery locations are retained and can be deactivated with `active: false`.
 - Every AI-influenced file carries an "AI Assistance Disclosure" header (see the root `AGENTS.md`).

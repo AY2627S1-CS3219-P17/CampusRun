@@ -1,7 +1,7 @@
 // AI Assistance Disclosure:
 // Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
-// Scope: AI-assisted review and debugging for supplier details dialog: loads one supplier by id and shows hours, location, map and photo.
-// Author review: <to be completed by author>
+// Scope: AI-assisted review and debugging for supplier details dialog: loads one supplier and shows hours, location, map and photo.
+// Author review: Validated loading, missing-data, and error states.
 
 import { useEffect, useState } from 'react'
 import { Dialog } from 'radix-ui'
@@ -11,30 +11,25 @@ import { getSupplier } from '../api/supplier'
 import type { Supplier } from '../types/supplier'
 import './update-supplier.css'
 import './supplier-details.css'
+import 'leaflet/dist/leaflet.css'
+import { divIcon } from 'leaflet'
+import { MapContainer, Marker, TileLayer } from 'react-leaflet'
+
+const supplierMarkerIcon = divIcon({
+  className: 'supplier-map-marker',
+  html: '<span class="supplier-map-pin"></span>',
+  iconSize: [40, 40],
+  iconAnchor: [20, 38],
+})
 
 type Props = {
-  // Shown straight away; replaced by the copy loaded from the service
   supplier: Supplier
-  isAdmin: boolean
   onClose: () => void
-  onEdit: (supplier: Supplier) => void
-  onToggle: (supplier: Supplier) => void
-  onDelete: (supplier: Supplier) => void
-}
-
-function mapEmbedUrl(lat: number, lng: number) {
-  const d = 0.0025
-  const bbox = [lng - d, lat - d, lng + d, lat + d].join(',')
-  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`
 }
 
 export default function SupplierDetailsDialog({
   supplier: fromList,
-  isAdmin,
   onClose,
-  onEdit,
-  onToggle,
-  onDelete,
 }: Props) {
   const [loaded, setLoaded] = useState<{
     supplier: Supplier | null
@@ -72,6 +67,7 @@ export default function SupplierDetailsDialog({
               <X size={20} />
             </Dialog.Close>
           </div>
+
           <div className="supplier-details-badges">
             <span
               className={`supplier-type supplier-type-${supplier.type.toLowerCase()}`}
@@ -88,6 +84,7 @@ export default function SupplierDetailsDialog({
               <span className="supplier-details-inactive">Deactivated</span>
             )}
           </div>
+
           <Dialog.Description className="supplier-details-location">
             <MapPin size={16} aria-hidden="true" />
             <span>
@@ -96,6 +93,7 @@ export default function SupplierDetailsDialog({
               {supplier.locationDescription}
             </span>
           </Dialog.Description>
+
           <p className="supplier-details-hours">
             <Clock size={16} aria-hidden="true" />
             <span>
@@ -109,13 +107,23 @@ export default function SupplierDetailsDialog({
             </p>
           )}
 
-          <iframe
+          <MapContainer
             className="supplier-details-map"
-            title={`Map showing ${supplier.name}`}
-            src={mapEmbedUrl(supplier.latitude, supplier.longitude)}
-            loading="lazy"
-            referrerPolicy="no-referrer"
-          />
+            center={[supplier.latitude, supplier.longitude]}
+            zoom={17}
+            scrollWheelZoom={false}
+          >
+            <TileLayer
+              url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            />
+            <Marker
+              position={[supplier.latitude, supplier.longitude]}
+              icon={supplierMarkerIcon}
+              alt={`${supplier.name} location`}
+            />
+          </MapContainer>
+
           <a
             className="supplier-details-maps-link"
             href={mapsLink}
@@ -128,34 +136,16 @@ export default function SupplierDetailsDialog({
           </a>
 
           {supplier.imageUrl && (
-            <img
-              className="supplier-details-photo"
-              src={supplier.imageUrl}
-              alt={`Photo of ${supplier.name}`}
-              loading="lazy"
-            />
+            <>
+              <h3>Image</h3>
+              <img
+                className="supplier-details-photo"
+                src={supplier.imageUrl}
+                alt={`Photo of ${supplier.name}`}
+                loading="lazy"
+              />
+            </>
           )}
-
-          <div className="supplier-dialog-footer">
-            {isAdmin && (
-              <>
-                <button type="button" onClick={() => onDelete(supplier)}>
-                  Delete
-                </button>
-                <button type="button" onClick={() => onToggle(supplier)}>
-                  {supplier.active ? 'Deactivate' : 'Activate'}
-                </button>
-                <button
-                  type="button"
-                  className="supplier-details-primary"
-                  onClick={() => onEdit(supplier)}
-                >
-                  Edit
-                </button>
-              </>
-            )}
-            {!isAdmin && <Dialog.Close>Close</Dialog.Close>}
-          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

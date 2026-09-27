@@ -31,9 +31,15 @@ async def test_no_token_is_401_with_bearer_challenge(client):
         "not-a-jwt",
         make_token(secret="some-other-secret-that-is-also-long-enough-000"),
         make_token(role="superuser"),
-        jwt.encode({"sub": "x", "type": "admin", "exp": 9999999999}, None, algorithm="none"),
+        jwt.encode(
+            {"sub": "x", "type": "admin", "exp": 9999999999}, None, algorithm="none"
+        ),
         # The old claim name, before the User Service's "type" claim was adopted
-        jwt.encode({"sub": "x", "role": "admin", "exp": 9999999999}, TEST_SECRET, algorithm="HS256"),
+        jwt.encode(
+            {"sub": "x", "role": "admin", "exp": 9999999999},
+            TEST_SECRET,
+            algorithm="HS256",
+        ),
     ],
     ids=["garbage", "wrong-secret", "unknown-type", "alg-none", "role-claim"],
 )
@@ -43,7 +49,9 @@ async def test_invalid_tokens_are_401(client, token):
 
 
 async def test_expired_token_says_session_expired(client):
-    response = await client.get("/", headers={"Authorization": f"Bearer {make_token(expires_in=-60)}"})
+    response = await client.get(
+        "/", headers={"Authorization": f"Bearer {make_token(expires_in=-60)}"}
+    )
     assert response.status_code == 401
     assert "expired" in response.json()["detail"]
 
@@ -66,11 +74,12 @@ async def test_student_cannot_create(client, path):
     assert response.json()["detail"] == "Only administrators can make this change."
 
 
-async def test_student_cannot_edit_or_delete(client):
+async def test_student_cannot_edit(client):
     created = (await client.post("/", headers=ADMIN, json=supplier_body())).json()
     url = f"/{created['id']}"
-    assert (await client.patch(url, headers=STUDENT, json={"name": "Hacked"})).status_code == 403
-    assert (await client.delete(url, headers=STUDENT)).status_code == 403
+    assert (
+        await client.patch(url, headers=STUDENT, json={"name": "Hacked"})
+    ).status_code == 403
     assert (await client.get(url, headers=STUDENT)).json()["name"] == "Test Kiosk"
 
 

@@ -69,12 +69,11 @@ Paths are relative to the service. Behind the gateway they're under `/api/suppli
 |---|---|---|
 | `GET /health` | anyone | Liveness and database check |
 | `GET /meta` | signed in | Supplier types and the served-area bounds |
-| `GET /` | signed in | Query options: `q`, `type` (repeatable), `building`, `openNow`, `active` (`false` for admins only), `nearLat` + `nearLng` (+ `radius`, in metres), `sort` (`name`, `-name`, `type`, `-createdAt`, `-updatedAt`, `distance`), `page`, `pageSize` |
+| `GET /` | signed in | Query options: `q`, `type` (repeatable), `building`, `openNow`, `active` (`false` lists deactivated records), `nearLat` + `nearLng` (+ `radius`, in metres), `sort` (`name`, `-name`, `type`, `-createdAt`, `-updatedAt`, `distance`), `page`, `pageSize` |
 | `GET /buildings` | signed in | Building names, for the location filter |
 | `GET /{id}` | signed in | One supplier |
 | `POST /` | admin | Create |
 | `PATCH /{id}` | admin | Change any fields; `{"active": false}` deactivates and `{"active": true}` reactivates |
-| `DELETE /{id}` | admin | Soft delete |
 | `/delivery-locations` and `/delivery-locations/{id}` | same as above | Delivery locations (`q`, `active`, `page`, `pageSize`) |
 
 A request with no token, or an invalid one, gets 401; a request whose account type isn't allowed gets 403. Validation errors

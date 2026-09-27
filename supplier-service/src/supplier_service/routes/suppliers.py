@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-assisted review and debugging for supplier endpoints, including list/search/filter/sort/paginate, get, create,
-#        edit (including activate/deactivate) and soft delete;
+#        edit (including activate/deactivate);
 #        AI-removed the /suppliers prefix and made Location include ROOT_PATH (Claude Code, 2026-09-27).
 # Author review: <to be completed by author>
 
@@ -34,10 +34,9 @@ from supplier_service.tables import supplier_search_text, suppliers
 router = APIRouter(tags=["suppliers"])
 
 EARTH_RADIUS_M = 6_371_000
-NOT_FOUND = "This supplier does not exist or has been deleted."
+NOT_FOUND = "This supplier does not exist."
 
 SupplierId = Annotated[int, Path(ge=1)]
-not_deleted = suppliers.c.deleted_at.is_(None)
 
 
 # ------------------------------------------------------------------ helpers
@@ -89,29 +88,51 @@ def to_out(row, now: time) -> SupplierOut:
 def raise_for_integrity_error(exc: IntegrityError, name: str | None) -> None:
     code = getattr(exc.orig, "pgcode", None) or getattr(exc.orig, "sqlstate", None)
     if code == "23505":  # unique_violation: the only unique rule is the name
-        raise HTTPException(status.HTTP_409_CONFLICT, f"A supplier named “{name}” already exists.")
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, f"A supplier named “{name}” already exists."
+        )
     if code == "23514":  # check_violation
-        raise FieldError(FORM, "These details aren't valid together. Reload and try again.")
+        raise FieldError(
+            FORM, "These details aren't valid together. Reload and try again."
+        )
     raise exc
 
 
 # ------------------------------------------------------------------- queries
 
 
-@router.get("/", response_model=Page[SupplierOut], summary="List, search, filter, sort and page through suppliers")
+@router.get(
+    "/",
+    response_model=Page[SupplierOut],
+    summary="List, search, filter, sort and page through suppliers",
+)
 async def list_suppliers(
     conn: Connection,
     user: AnyUser,
     q: Annotated[
         str | None,
-        Query(max_length=100, description="Keyword, matched ignoring case against name, building and location description."),
+        Query(
+            max_length=100,
+            description="Keyword, matched ignoring case against name, building and location description.",
+        ),
     ] = None,
     supplier_type: Annotated[
-        list[SupplierType] | None, Query(alias="type", description="Repeat to match any of several.")
+        list[SupplierType] | None,
+        Query(alias="type", description="Repeat to match any of several."),
     ] = None,
-    building: Annotated[str | None, Query(max_length=100, description="Exact building name, any case.")] = None,
-    open_now: Annotated[bool, Query(alias="openNow", description="Only suppliers open at the current campus time.")] = False,
-    active: Annotated[bool, Query(description="false lists deactivated suppliers (admins only).")] = True,
+    building: Annotated[
+        str | None, Query(max_length=100, description="Exact building name, any case.")
+    ] = None,
+    open_now: Annotated[
+        bool,
+        Query(
+            alias="openNow",
+            description="Only suppliers open at the current campus time.",
+        ),
+    ] = False,
+    active: Annotated[
+        bool, Query(description="false lists deactivated suppliers.")
+    ] = True,
     near_lat: Annotated[float | None, Query(alias="nearLat", ge=-90, le=90)] = None,
     near_lng: Annotated[float | None, Query(alias="nearLng", ge=-180, le=180)] = None,
     radius: Annotated[
@@ -121,20 +142,22 @@ async def list_suppliers(
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 20,
 ):
-    if not active and not user.is_admin:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only administrators can view deactivated suppliers.")
     if (near_lat is None) != (near_lng is None):
         raise FieldError("nearLat", "Give both nearLat and nearLng.")
     has_point = near_lat is not None
     if radius is not None and not has_point:
         raise FieldError("radius", "A radius needs a point: add nearLat and nearLng.")
     if sort is SupplierSort.DISTANCE and not has_point:
-        raise FieldError("sort", "Sorting by distance needs a point: add nearLat and nearLng.")
+        raise FieldError(
+            "sort", "Sorting by distance needs a point: add nearLat and nearLng."
+        )
 
     now = campus_time_now()
-    conditions = [not_deleted, suppliers.c.active.is_(active)]
+    conditions = [suppliers.c.active.is_(active)]
     if q and q.strip():
-        conditions.append(supplier_search_text.ilike(like_pattern(q.strip()), escape="\\"))
+        conditions.append(
+            supplier_search_text.ilike(like_pattern(q.strip()), escape="\\")
+        )
     if supplier_type:
         conditions.append(suppliers.c.type.in_([t.value for t in supplier_type]))
     if building and building.strip():
@@ -159,7 +182,9 @@ async def list_suppliers(
         SupplierSort.DISTANCE: [distance],
     }[sort]
 
-    total = await conn.scalar(select(func.count()).select_from(suppliers).where(*conditions))
+    total = await conn.scalar(
+        select(func.count()).select_from(suppliers).where(*conditions)
+    )
     rows = (
         await conn.execute(
             select(*columns)
@@ -179,9 +204,13 @@ async def list_suppliers(
     )
 
 
-@router.get("/buildings", response_model=list[str], summary="Building names, for the location filter")
+@router.get(
+    "/buildings",
+    response_model=list[str],
+    summary="Building names, for the location filter",
+)
 async def list_buildings(conn: Connection, user: AnyUser):
-    conditions = [not_deleted]
+    conditions = []
     if not user.is_admin:
         conditions.append(suppliers.c.active.is_(True))
     # One entry per building, ignoring case ("COM2" and "com2" are the same building),
@@ -196,16 +225,28 @@ async def list_buildings(conn: Connection, user: AnyUser):
         .subquery()
     )
     result = await conn.scalars(
-        select(first_spellings.c.building).order_by(func.lower(first_spellings.c.building))
+        select(first_spellings.c.building).order_by(
+            func.lower(first_spellings.c.building)
+        )
     )
     return result.all()
 
 
-@router.get("/{supplier_id}", response_model=SupplierOut, summary="Get one supplier by id")
+@router.get(
+    "/{supplier_id}", response_model=SupplierOut, summary="Get one supplier by id"
+)
 async def get_supplier(supplier_id: SupplierId, conn: Connection, user: AnyUser):
     # Deactivated suppliers stay readable by id (active: false), so errands that
     # point at them can still show where the pickup was.
-    row = (await conn.execute(select(suppliers).where(suppliers.c.id == supplier_id, not_deleted))).mappings().first()
+    row = (
+        (
+            await conn.execute(
+                select(suppliers).where(suppliers.c.id == supplier_id)
+            )
+        )
+        .mappings()
+        .first()
+    )
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND)
     return to_out(row, campus_time_now())
@@ -214,11 +255,26 @@ async def get_supplier(supplier_id: SupplierId, conn: Connection, user: AnyUser)
 # ----------------------------------------------------------------- commands
 
 
-@router.post("/", response_model=SupplierOut, status_code=status.HTTP_201_CREATED, summary="Create a supplier (admin)")
-async def create_supplier(body: SupplierCreate, conn: Connection, admin: AdminUser, response: Response):
+@router.post(
+    "/",
+    response_model=SupplierOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a supplier (admin)",
+)
+async def create_supplier(
+    body: SupplierCreate, conn: Connection, admin: AdminUser, response: Response
+):
     values = to_db(body) | {"created_by": admin.id, "updated_by": admin.id}
     try:
-        row = (await conn.execute(insert(suppliers).values(**values).returning(suppliers))).mappings().one()
+        row = (
+            (
+                await conn.execute(
+                    insert(suppliers).values(**values).returning(suppliers)
+                )
+            )
+            .mappings()
+            .one()
+        )
     except IntegrityError as exc:
         raise_for_integrity_error(exc, body.name)
     response.headers["Location"] = f"{get_settings().root_path}/{row['id']}"
@@ -226,13 +282,17 @@ async def create_supplier(body: SupplierCreate, conn: Connection, admin: AdminUs
 
 
 @router.patch(
-    "/{supplier_id}", response_model=SupplierOut, summary="Edit, deactivate or reactivate a supplier (admin)"
+    "/{supplier_id}",
+    response_model=SupplierOut,
+    summary="Edit, deactivate or reactivate a supplier (admin)",
 )
-async def update_supplier(supplier_id: SupplierId, body: SupplierUpdate, conn: Connection, admin: AdminUser):
+async def update_supplier(
+    supplier_id: SupplierId, body: SupplierUpdate, conn: Connection, admin: AdminUser
+):
     changes = to_db(body, exclude_unset=True)
     stmt = (
         update(suppliers)
-        .where(suppliers.c.id == supplier_id, not_deleted)
+        .where(suppliers.c.id == supplier_id)
         .values(**changes, updated_by=admin.id)
         .returning(suppliers)
     )
@@ -243,16 +303,3 @@ async def update_supplier(supplier_id: SupplierId, body: SupplierUpdate, conn: C
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND)
     return to_out(row, campus_time_now())
-
-
-@router.delete("/{supplier_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a supplier (admin)")
-async def delete_supplier(supplier_id: SupplierId, conn: Connection, admin: AdminUser):
-    deleted = await conn.scalar(
-        update(suppliers)
-        .where(suppliers.c.id == supplier_id, not_deleted)
-        .values(deleted_at=func.now(), updated_by=admin.id)
-        .returning(suppliers.c.id)
-    )
-    if deleted is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)

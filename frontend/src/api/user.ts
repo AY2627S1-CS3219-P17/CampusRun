@@ -1,7 +1,7 @@
 // AI Assistance Disclosure:
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
 // Scope: AI-replaced the mocked calls with calls to the User Service (register, login, get and update profile).
-// Author review: <to be completed by author>
+// Author review: Validated request payloads, responses, and error handling.
 
 import { request } from './client'
 import type {
@@ -23,8 +23,6 @@ export function registerUser(registerUserPayload: RegisterUserPayload) {
   })
 }
 
-// Returns the access token. Sent as a form, not JSON: the endpoint takes OAuth2's
-// password form, whose "username" field accepts an email or a username.
 export async function loginUser({ email, password }: LoginUserPayload) {
   const response = await request<TokenResponse>(`${USER_API_URL}/auth/login`, {
     method: 'POST',
@@ -33,13 +31,14 @@ export async function loginUser({ email, password }: LoginUserPayload) {
   return response.access_token
 }
 
-export function getCurrentUser(signal?: AbortSignal) {
-  return request<User>(`${USER_API_URL}/users/me`, { signal })
-}
-
 export function updateUser(updateUserPayload: UpdateUserPayload) {
   return request<User>(`${USER_API_URL}/users/me`, {
     method: 'PATCH',
     body: JSON.stringify(updateUserPayload),
   })
+}
+
+// Abort signal to stop the in-flight request (eg: when the edit-user-info modal is closed)
+export function getCurrentUser(signal?: AbortSignal) {
+  return request<User>(`${USER_API_URL}/users/me`, { signal })
 }

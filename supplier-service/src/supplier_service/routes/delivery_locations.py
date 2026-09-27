@@ -1,6 +1,6 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
-# Scope: AI-assisted review and debugging for delivery location endpoints: list/search, get, create, edit and soft delete;
+# Scope: AI-assisted review and debugging for delivery location endpoints: list/search, get, create, and edit;
 #        AI-made Location include ROOT_PATH (Claude Code, 2026-09-27).
 # Author review: <to be completed by author>
 
@@ -26,31 +26,36 @@ from supplier_service.tables import delivery_locations
 
 router = APIRouter(prefix="/delivery-locations", tags=["delivery locations"])
 
-NOT_FOUND = "This delivery location does not exist or has been deleted."
+NOT_FOUND = "This delivery location does not exist."
 LocationId = Annotated[int, Path(ge=1)]
-not_deleted = delivery_locations.c.deleted_at.is_(None)
 
 
 def _raise_for_integrity_error(exc: IntegrityError, name: str | None) -> None:
     code = getattr(exc.orig, "pgcode", None) or getattr(exc.orig, "sqlstate", None)
     if code == "23505":
-        raise HTTPException(status.HTTP_409_CONFLICT, f"A delivery location named “{name}” already exists.")
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"A delivery location named “{name}” already exists.",
+        )
     raise exc
 
 
-@router.get("", response_model=Page[DeliveryLocationOut], summary="List and search delivery locations")
+@router.get(
+    "",
+    response_model=Page[DeliveryLocationOut],
+    summary="List and search delivery locations",
+)
 async def list_delivery_locations(
     conn: Connection,
     user: AnyUser,
     q: Annotated[str | None, Query(max_length=100)] = None,
-    active: Annotated[bool, Query(description="false lists deactivated ones (admins only).")] = True,
+    active: Annotated[
+        bool, Query(description="false lists deactivated ones.")
+    ] = True,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 50,
 ):
-    if not active and not user.is_admin:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only administrators can view deactivated delivery locations.")
-
-    conditions = [not_deleted, delivery_locations.c.active.is_(active)]
+    conditions = [delivery_locations.c.active.is_(active)]
     if q and q.strip():
         pattern = like_pattern(q.strip())
         conditions.append(
@@ -60,7 +65,9 @@ async def list_delivery_locations(
             )
         )
 
-    total = await conn.scalar(select(func.count()).select_from(delivery_locations).where(*conditions))
+    total = await conn.scalar(
+        select(func.count()).select_from(delivery_locations).where(*conditions)
+    )
     rows = (
         await conn.execute(
             select(delivery_locations)
@@ -79,37 +86,73 @@ async def list_delivery_locations(
     )
 
 
-@router.get("/{location_id}", response_model=DeliveryLocationOut, summary="Get one delivery location")
-async def get_delivery_location(location_id: LocationId, conn: Connection, user: AnyUser):
+@router.get(
+    "/{location_id}",
+    response_model=DeliveryLocationOut,
+    summary="Get one delivery location",
+)
+async def get_delivery_location(
+    location_id: LocationId, conn: Connection, user: AnyUser
+):
     row = (
-        await conn.execute(select(delivery_locations).where(delivery_locations.c.id == location_id, not_deleted))
-    ).mappings().first()
+        (
+            await conn.execute(
+                select(delivery_locations).where(delivery_locations.c.id == location_id)
+            )
+        )
+        .mappings()
+        .first()
+    )
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND)
     return DeliveryLocationOut.model_validate(dict(row))
 
 
 @router.post(
-    "", response_model=DeliveryLocationOut, status_code=status.HTTP_201_CREATED, summary="Create a delivery location (admin)"
+    "",
+    response_model=DeliveryLocationOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a delivery location (admin)",
 )
-async def create_delivery_location(body: DeliveryLocationCreate, conn: Connection, admin: AdminUser, response: Response):
+async def create_delivery_location(
+    body: DeliveryLocationCreate, conn: Connection, admin: AdminUser, response: Response
+):
     values = to_db(body) | {"created_by": admin.id, "updated_by": admin.id}
     try:
-        row = (await conn.execute(insert(delivery_locations).values(**values).returning(delivery_locations))).mappings().one()
+        row = (
+            (
+                await conn.execute(
+                    insert(delivery_locations)
+                    .values(**values)
+                    .returning(delivery_locations)
+                )
+            )
+            .mappings()
+            .one()
+        )
     except IntegrityError as exc:
         _raise_for_integrity_error(exc, body.name)
-    response.headers["Location"] = f"{get_settings().root_path}/delivery-locations/{row['id']}"
+    response.headers["Location"] = (
+        f"{get_settings().root_path}/delivery-locations/{row['id']}"
+    )
     return DeliveryLocationOut.model_validate(dict(row))
 
 
 @router.patch(
-    "/{location_id}", response_model=DeliveryLocationOut, summary="Edit, deactivate or reactivate a delivery location (admin)"
+    "/{location_id}",
+    response_model=DeliveryLocationOut,
+    summary="Edit, deactivate or reactivate a delivery location (admin)",
 )
-async def update_delivery_location(location_id: LocationId, body: DeliveryLocationUpdate, conn: Connection, admin: AdminUser):
+async def update_delivery_location(
+    location_id: LocationId,
+    body: DeliveryLocationUpdate,
+    conn: Connection,
+    admin: AdminUser,
+):
     changes = to_db(body, exclude_unset=True)
     stmt = (
         update(delivery_locations)
-        .where(delivery_locations.c.id == location_id, not_deleted)
+        .where(delivery_locations.c.id == location_id)
         .values(**changes, updated_by=admin.id)
         .returning(delivery_locations)
     )
@@ -120,16 +163,3 @@ async def update_delivery_location(location_id: LocationId, body: DeliveryLocati
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND)
     return DeliveryLocationOut.model_validate(dict(row))
-
-
-@router.delete("/{location_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete a delivery location (admin)")
-async def delete_delivery_location(location_id: LocationId, conn: Connection, admin: AdminUser):
-    deleted = await conn.scalar(
-        update(delivery_locations)
-        .where(delivery_locations.c.id == location_id, not_deleted)
-        .values(deleted_at=func.now(), updated_by=admin.id)
-        .returning(delivery_locations.c.id)
-    )
-    if deleted is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)

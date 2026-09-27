@@ -8,7 +8,7 @@
     uv run python -m supplier_service.seed
 
 Run after `alembic upgrade head`. Safe to run again: a table that already has
-rows (including deleted ones) is left alone.
+rows is left alone.
 
 seed/suppliers.csv keeps the column layout of the template's
 data/csv/supplier-seed-data.csv so the two are easy to compare:

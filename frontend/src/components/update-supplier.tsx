@@ -2,9 +2,15 @@
 // Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 // Scope: AI-modified: saves through the Supplier Service; adds building, floor, directions,
 //        coordinates and photo fields, and per-field validation including errors from the service.
-// Author review: <to be completed by author>
+//        AI-refactored the form sections, paired-field errors and time-picker interaction
+// Author review: Validated form validation, API errors, and input boundaries.
 
-import { useRef, useState, type ReactNode, type SubmitEvent } from 'react'
+import {
+  useState,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SubmitEvent,
+} from 'react'
 import { Dialog, Select } from 'radix-ui'
 import { Check, ChevronDown, X } from 'lucide-react'
 import { ApiError } from '../api/client'
@@ -24,20 +30,18 @@ type Props = {
   onRestoreFocus: () => void
 }
 
+type InputValue<T> = T extends number | null ? string : T
 type Values = {
-  name: string
-  type: SupplierCategory
-  building: string
-  floor: string
-  locationDescription: string
-  latitude: string
-  longitude: string
-  startTime: string
-  endTime: string
-  imageUrl: string
+  [Key in keyof CreateSupplierPayload]: InputValue<CreateSupplierPayload[Key]>
 }
 type Field = keyof Values
 type Errors = Partial<Record<Field | 'form', string>>
+
+// Matches BE, for NUS campus geo boundary
+const COORDINATE_BOUNDS = {
+  latitude: { min: 1.287, max: 1.31 },
+  longitude: { min: 103.764, max: 103.788 },
+} as const
 
 function toValues(supplier?: Supplier): Values {
   return {
@@ -80,25 +84,32 @@ function validate(values: Values): Errors {
     else if (value.length > max)
       errors[field] = `Use at most ${max} characters.`
   }
-  text('name', 100, 'Enter a name.')
-  text('building', 100, 'Enter the building.')
+
+  text('name', 100, 'Required')
+  text('building', 100, 'Building is required')
   text('floor', 10, null)
-  text('locationDescription', 300, 'Say where to find it, e.g. "Next to LT19".')
+  text('locationDescription', 300, 'Required')
+
   for (const field of ['latitude', 'longitude'] as const) {
     const value = values[field].trim()
-    if (!value) errors[field] = `Enter the ${field}.`
-    else if (!Number.isFinite(Number(value)))
-      errors[field] = 'Enter a number, e.g. 1.2966.'
+    if (!value)
+      errors[field] =
+        `${field.charAt(0).toUpperCase() + field.slice(1)} is required`
+    else {
+      const { min, max } = COORDINATE_BOUNDS[field]
+      if (Number(value) < min || Number(value) > max)
+        errors[field] = `Use a value from ${min} to ${max}.`
+    }
   }
-  if (!values.startTime) errors.startTime = 'Enter an opening time.'
-  if (!values.endTime) errors.endTime = 'Enter a closing time.'
+
   const url = values.imageUrl.trim()
   if (url && !/^https?:\/\/\S+$/i.test(url))
     errors.imageUrl = 'Enter a full link starting with https://.'
+
   return errors
 }
 
-export default function CreateSupplierDialog({
+export default function UpdateSupplierDialog({
   supplier,
   onSave,
   onClose,
@@ -110,7 +121,6 @@ export default function CreateSupplierDialog({
   const [submitted, setSubmitted] = useState(false)
   const [serverErrors, setServerErrors] = useState<Errors>({})
   const [saving, setSaving] = useState(false)
-  const formRef = useRef<HTMLFormElement>(null)
 
   const clientErrors = validate(values)
   const errorFor = (field: Field) =>
@@ -126,12 +136,7 @@ export default function CreateSupplierDialog({
     event.preventDefault()
     if (saving) return
     setSubmitted(true)
-    if (Object.keys(clientErrors).length > 0) {
-      formRef.current
-        ?.querySelector<HTMLElement>('[aria-invalid="true"]')
-        ?.focus()
-      return
-    }
+
     const payload = toPayload(values)
     let changes: Partial<CreateSupplierPayload> = payload
     if (supplier) {
@@ -148,6 +153,7 @@ export default function CreateSupplierDialog({
         return
       }
     }
+
     setSaving(true)
     setServerErrors({})
     try {
@@ -168,22 +174,34 @@ export default function CreateSupplierDialog({
     }
   }
 
-  const input = (field: Field, props: Record<string, string> = {}) => (
+  const input = (
+    field: Field,
+    props: InputHTMLAttributes<HTMLInputElement> = {},
+  ) => (
     <input
       {...props}
       value={values[field]}
       onChange={(event) => update(field, event.target.value)}
       onBlur={() => setTouched((current) => new Set(current).add(field))}
+      onClick={(event) => {
+        props.onClick?.(event)
+        if (props.type === 'time') event.currentTarget.showPicker?.()
+      }}
       aria-invalid={errorFor(field) ? true : undefined}
       aria-describedby={`supplier-${field}-error`}
     />
   )
 
-  const field = (name: Field, label: string, control: ReactNode) => (
-    <label className={errorFor(name) ? 'has-error' : undefined}>
+  const field = (
+    name: Field,
+    label: string,
+    control: ReactNode,
+    showError = true,
+  ) => (
+    <label>
       {label}
       {control}
-      {errorFor(name) && (
+      {showError && errorFor(name) && (
         <span
           className="supplier-dialog-field-error"
           id={`supplier-${name}-error`}
@@ -193,6 +211,20 @@ export default function CreateSupplierDialog({
       )}
     </label>
   )
+
+  const rowErrors = (...fields: Field[]) => {
+    const invalid = fields.filter((name) => errorFor(name))
+    if (invalid.length === 0) return null
+    return (
+      <div className="supplier-dialog-row-errors">
+        {invalid.map((name) => (
+          <span key={name} id={`supplier-${name}-error`}>
+            {errorFor(name)}
+          </span>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <Dialog.Root
@@ -212,7 +244,7 @@ export default function CreateSupplierDialog({
         >
           <div className="supplier-dialog-heading">
             <Dialog.Title>
-              {supplier ? 'Edit supplier' : 'Create supplier'}
+              {supplier ? 'Edit Supplier' : 'Create Supplier'}
             </Dialog.Title>
             <Dialog.Close
               className="supplier-dialog-close"
@@ -222,124 +254,152 @@ export default function CreateSupplierDialog({
               <X size={20} />
             </Dialog.Close>
           </div>
-          <Dialog.Description>
-            Enter the supplier details, where to find it and its opening hours.
-          </Dialog.Description>
+
           <form
-            ref={formRef}
             noValidate
             onSubmit={(event) => {
               void handleSubmit(event)
             }}
           >
             <fieldset disabled={saving}>
-              {field('name', 'Name', input('name'))}
+              <div className="supplier-dialog-section">
+                {field(
+                  'name',
+                  'Name',
+                  input('name', { placeholder: 'Starbucks' }),
+                )}
 
-              <label htmlFor="supplier-category">Type</label>
-              <Select.Root
-                value={values.type}
-                disabled={saving}
-                onValueChange={(type) => {
-                  if (SUPPLIER_CATEGORIES.includes(type as SupplierCategory))
-                    update('type', type)
-                }}
-              >
-                <Select.Trigger
-                  id="supplier-category"
-                  className="supplier-dialog-select"
+                <label htmlFor="supplier-category">Type</label>
+                <Select.Root
+                  value={values.type}
+                  disabled={saving}
+                  onValueChange={(type) => {
+                    if (SUPPLIER_CATEGORIES.includes(type as SupplierCategory))
+                      update('type', type)
+                  }}
                 >
-                  <Select.Value />
-                  <Select.Icon>
-                    <ChevronDown size={16} />
-                  </Select.Icon>
-                </Select.Trigger>
-                <Select.Portal>
-                  <Select.Content
-                    className="supplier-dialog-options"
-                    position="popper"
-                    sideOffset={4}
-                    collisionPadding={12}
+                  <Select.Trigger
+                    id="supplier-category"
+                    className="supplier-dialog-select"
                   >
-                    <Select.Viewport>
-                      {SUPPLIER_CATEGORIES.map((type) => (
-                        <Select.Item
-                          className="supplier-dialog-option"
-                          key={type}
-                          value={type}
-                        >
-                          <Select.ItemText>{type}</Select.ItemText>
-                          <Select.ItemIndicator>
-                            <Check size={16} />
-                          </Select.ItemIndicator>
-                        </Select.Item>
-                      ))}
-                    </Select.Viewport>
-                  </Select.Content>
-                </Select.Portal>
-              </Select.Root>
+                    <Select.Value />
+                    <Select.Icon>
+                      <ChevronDown size={16} />
+                    </Select.Icon>
+                  </Select.Trigger>
+                  <Select.Portal>
+                    <Select.Content
+                      className="supplier-dialog-options"
+                      position="popper"
+                      sideOffset={4}
+                      collisionPadding={12}
+                    >
+                      <Select.Viewport>
+                        {SUPPLIER_CATEGORIES.map((type) => (
+                          <Select.Item
+                            className="supplier-dialog-option"
+                            key={type}
+                            value={type}
+                          >
+                            <Select.ItemText>{type}</Select.ItemText>
+                            <Select.ItemIndicator>
+                              <Check size={16} />
+                            </Select.ItemIndicator>
+                          </Select.Item>
+                        ))}
+                      </Select.Viewport>
+                    </Select.Content>
+                  </Select.Portal>
+                </Select.Root>
+              </div>
 
-              <div className="supplier-dialog-times">
+              <div className="supplier-dialog-section">
+                <div className="supplier-dialog-fields">
+                  {field(
+                    'building',
+                    'Building',
+                    input('building', { placeholder: 'COM3' }),
+                    false,
+                  )}
+                  {field(
+                    'floor',
+                    'Floor (optional)',
+                    input('floor', { placeholder: '1' }),
+                    false,
+                  )}
+                  {rowErrors('building', 'floor')}
+                </div>
+
                 {field(
-                  'building',
-                  'Building',
-                  input('building', { placeholder: 'COM3' }),
-                )}
-                {field(
-                  'floor',
-                  'Floor (optional)',
-                  input('floor', { placeholder: '1' }),
-                )}
-              </div>
-              {field(
-                'locationDescription',
-                'Where to find it',
-                input('locationDescription', {
-                  placeholder: 'Next to LT19',
-                }),
-              )}
-              <div className="supplier-dialog-times">
-                {field(
-                  'latitude',
-                  'Latitude',
-                  input('latitude', {
-                    inputMode: 'decimal',
-                    placeholder: '1.2949',
+                  'locationDescription',
+                  'Description',
+                  input('locationDescription', {
+                    placeholder: 'Next to LT19',
                   }),
                 )}
+
+                <div className="supplier-dialog-fields">
+                  {field(
+                    'latitude',
+                    'Latitude',
+                    input('latitude', {
+                      type: 'number',
+                      min: COORDINATE_BOUNDS.latitude.min,
+                      max: COORDINATE_BOUNDS.latitude.max,
+                      step: 'any',
+                      inputMode: 'decimal',
+                      placeholder: '1.2949',
+                    }),
+                    false,
+                  )}
+                  {field(
+                    'longitude',
+                    'Longitude',
+                    input('longitude', {
+                      type: 'number',
+                      min: COORDINATE_BOUNDS.longitude.min,
+                      max: COORDINATE_BOUNDS.longitude.max,
+                      step: 'any',
+                      inputMode: 'decimal',
+                      placeholder: '103.7744',
+                    }),
+                    false,
+                  )}
+                  {rowErrors('latitude', 'longitude')}
+                </div>
+                <p className="supplier-dialog-hint">
+                  In Google Maps, right-click the spot to copy its coordinates.
+                </p>
+              </div>
+
+              <div className="supplier-dialog-section">
+                <div className="supplier-dialog-fields">
+                  {field(
+                    'startTime',
+                    'Opening',
+                    input('startTime', { type: 'time' }),
+                    false,
+                  )}
+                  {field(
+                    'endTime',
+                    'Closing',
+                    input('endTime', { type: 'time' }),
+                    false,
+                  )}
+                </div>
+                <p className="supplier-dialog-hint">
+                  A closing time earlier than the opening time means it closes
+                  after midnight.
+                </p>
+
                 {field(
-                  'longitude',
-                  'Longitude',
-                  input('longitude', {
-                    inputMode: 'decimal',
-                    placeholder: '103.7744',
-                  }),
+                  'imageUrl',
+                  'Photo Link (optional)',
+                  input('imageUrl', { type: 'url', placeholder: 'https://' }),
                 )}
               </div>
-              <p className="supplier-dialog-hint">
-                In Google Maps, right-click the spot to copy its coordinates.
-              </p>
-              <div className="supplier-dialog-times">
-                {field(
-                  'startTime',
-                  'Opening time',
-                  input('startTime', { type: 'time' }),
-                )}
-                {field(
-                  'endTime',
-                  'Closing time',
-                  input('endTime', { type: 'time' }),
-                )}
-              </div>
-              <p className="supplier-dialog-hint">
-                A closing time earlier than the opening time means it closes
-                after midnight.
-              </p>
-              {field(
-                'imageUrl',
-                'Photo link (optional)',
-                input('imageUrl', { type: 'url', placeholder: 'https://' }),
-              )}
             </fieldset>
+
             {serverErrors.form && (
               <p className="supplier-dialog-error" role="alert">
                 {serverErrors.form}

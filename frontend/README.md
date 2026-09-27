@@ -1,15 +1,22 @@
-# Frontend for CampusRun 
+# Frontend
 ## React + Radix UI + React Router + Vite 
 
 ### Set Up 🤩
-Requires Node 24.18.0 (pinned in `mise.toml`, `.nvmrc` and `package.json` `engines`).
+Requires Node 24.18.0 (pinned in `mise.toml`, `.nvmrc` and `package.json` `engines`) <br>
+Remember to copy any repo-wide `.env.example` files to `.env` and fill it in 
 
 ```
 cd frontend 
 mise install   # or: nvm use
 npm install
 
-# Starts local vite server at :5173
+# Terminal 1 - Start containerized BE + FE + Gateway at :8080
+cd CampusRun
+docker compose up --build
+
+# Terminal 2 - Start local FE server at :5173
+# Work on local FE server for HMR 
+cd frontend 
 npm run dev 
 
 # Useful commands
@@ -18,11 +25,32 @@ npm run lint
 npm run format:check
 ```
 
+### Mental Model 🤔
+```
+# Development (npm run dev):
+
+Browser → Vite dev server (:5173)
+          ├─ Pages and assets → served by Vite with HMR
+          └─ /api/... → VITE_API_PROXY_TARGET (:8080)
+                        → gateway nginx
+                          ├─ /api/users/...     → user-service
+                          └─ /api/suppliers/... → supplier-service
+
+
+Containerized app (docker compose up):
+
+Browser → gateway nginx (:8080)
+          ├─ /api/users/...     → user-service
+          ├─ /api/suppliers/... → supplier-service
+          └─ Everything else    → frontend nginx
+                                  └─ serves built HTML/CSS/JS
+```
+
+### Quality of Life 😊
 Also, install Prettier and ESLint extensions <br>
-Then, at the root level (CampusRun), set VSCode project settings 
+Then, at the root level: `CampusRun/.vscode.settings.json`, set VSCode project settings 
 
 ```
-# Place under CampusRun/.vscode/settings.json 
 {
     "eslint.workingDirectories": ["./frontend"],
     "[typescript]": {
@@ -46,17 +74,3 @@ Everything lies under `frontend/src`
 4. `pages` -> React Router pages 
 5. `types` -> Reusable types 
 6. `utils` -> Reusable helper functions
-
-### Connecting to the services
-The app calls the services with relative URLs (`/api/users/...`, `/api/suppliers/...`), so behind the gateway they're the same origin as the page.
-
-Under `npm run dev`, the Vite dev server forwards `/api` to `VITE_API_PROXY_TARGET`. It's required: copy `.env.example` to `.env` (it points at the gateway, `http://localhost:8080`), and the dev server refuses to start without it.
-
-Start the gateway and the services first with `docker compose up --build` from the repo root.
-
-### Running in Docker
-`docker compose up --build` from the repo root also builds this app (`Dockerfile`) and serves it with nginx (`nginx.conf`) behind the gateway, at http://localhost:8080. That runs the built files, so rebuild to see changes; use `npm run dev` while developing.
-
-Every call sends the access token stored in the browser (`src/utils/session.ts`). Until the User Service login is connected, the supplier page offers **Use a development token** (in `npm run dev` only):
-1. Make a token in `supplier-service` with `uv run python scripts/make_token.py --type admin`, or `--type student`.
-2. Paste it into that dialog.

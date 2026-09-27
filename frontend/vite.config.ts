@@ -1,7 +1,7 @@
 // AI Assistance Disclosure:
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
 // Scope: AI-added the dev-server proxy that forwards /api to VITE_API_PROXY_TARGET.
-// Author review: <to be completed by author>
+// Author review: Validated gateway proxy behavior and configuration style.
 
 import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv } from 'vite'

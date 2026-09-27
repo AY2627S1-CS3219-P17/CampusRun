@@ -335,10 +335,6 @@
   }
 }
 
-/* AI Assistance Disclosure: Claude (claude.ai chat, model: Claude Opus 5.5), 2026-09-26.
-   Scope: AI-added styles below for sign-in, sorting, status messages, open/closed labels,
-   clickable cards, delete, loading and pagination.
-   Author review: <to be completed by author> */
 .suppliers-session {
   font-size: 14px !important;
 }
@@ -398,20 +394,23 @@
   color: #607a80;
   font-size: 14px;
 }
-.supplier-notice {
-  font-weight: 600;
+.supplier-toast-viewport {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 100;
+  width: min(360px, calc(100vw - 48px));
 }
-.supplier-notice-ok {
-  color: #176849;
-}
-.supplier-notice-error {
+.supplier-toast {
+  padding: 14px 16px;
+  border: 1px solid #f0b4ad;
+  border-radius: 10px;
   color: #b42318;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(22 46 52 / 16%);
 }
 .supplier-list {
   padding-top: 14px;
-}
-.supplier-list.is-loading {
-  opacity: 0.6;
 }
 .supplier-card {
   position: relative;
@@ -453,9 +452,6 @@
 }
 .supplier-open.is-open {
   color: #176849;
-}
-.supplier-settings-danger {
-  color: #b42318;
 }
 .supplier-empty p {
   margin: 0 0 10px;

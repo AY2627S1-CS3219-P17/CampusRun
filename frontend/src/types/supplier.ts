@@ -1,7 +1,7 @@
 // AI Assistance Disclosure:
 // Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 // Scope: AI-modified: types now match the Supplier Service API responses and requests.
-// Author review: <to be completed by author>
+// Author review: Validated types against the Supplier Service contract.
 
 export type SupplierCategory = 'Food' | 'Drinks' | 'Shopping' | 'Printing'
 
@@ -55,8 +55,7 @@ export type EditSupplierPayload = Partial<
   CreateSupplierPayload & { active: boolean }
 >
 
-export type SupplierSort =
-  'name' | '-name' | 'type' | '-createdAt' | '-updatedAt'
+export type SupplierSort = 'name' | '-name' | '-createdAt' | '-updatedAt'
 
 export type SupplierQuery = {
   q: string

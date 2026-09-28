@@ -1,19 +1,21 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated registration request and user response models with NUS email, username and password validation;
-#        AI-added the profile update request model, and aligned the username and password rules with the web client (2026-09-27).
+#        AI-added the profile update request model, and aligned the username and password rules with the web client (2026-09-27);
+#        AI-limited emails to @u.nus.edu, added role to UserResponse and removed AdminResponse (2026-09-28).
 # Author review: reviewed by Nathan
 
 import re
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BaseModel, EmailStr, StringConstraints, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, StringConstraints, field_validator, model_validator
 
+from user_service.security import Role
 from user_service.tables import USERNAME_MAX_LENGTH
 
-# Student and staff addresses; the platform is limited to the NUS community
-ALLOWED_EMAIL_DOMAINS = frozenset({"u.nus.edu", "nus.edu.sg"})
+# Student addresses only; the platform is limited to NUS students (admins use one too)
+ALLOWED_EMAIL_DOMAINS = frozenset({"u.nus.edu"})
 
 USERNAME_MIN_LENGTH = 3
 PASSWORD_MIN_LENGTH = 8
@@ -55,6 +57,9 @@ Password = Annotated[
 
 
 class RegisterRequest(BaseModel):
+    # Rejects unknown fields such as "role", so a sign-up can't ask to be an admin
+    model_config = ConfigDict(extra="forbid")
+
     email: EmailStr
     username: Username
     password: Password
@@ -64,7 +69,7 @@ class RegisterRequest(BaseModel):
     def check_nus_domain(cls, email: str) -> str:
         domain = email.rsplit("@", 1)[1].lower()
         if domain not in ALLOWED_EMAIL_DOMAINS:
-            raise ValueError("must be an NUS email address (@u.nus.edu or @nus.edu.sg)")
+            raise ValueError("must be an NUS student email address (@u.nus.edu)")
         return email
 
 
@@ -101,12 +106,7 @@ class UserResponse(BaseModel):
     email: str
     username: str
     email_verified_at: datetime | None
-    created_at: datetime
-
-
-class AdminResponse(BaseModel):
-    id: int
-    username: str
+    role: Role
     created_at: datetime
 
 

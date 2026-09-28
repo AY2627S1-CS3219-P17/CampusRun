@@ -2,8 +2,12 @@
 // Tool: Codex (model: GPT-5), date: 2026-09-28
 // Scope: AI-assisted session storage and cross-tab sign-in handling.
 // Author review: Validated per-tab isolation and same-user sign-out behaviour.
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-28
+// Scope: AI-changed the session to read the "role" claim instead of "type".
+// Author review: <to be completed by author>
 
 import { useSyncExternalStore } from 'react'
+import type { Role } from '../types/user'
 
 // Each tab stores its token under this key in its own sessionStorage. CHANGE_EVENT
 // notifies React in the current tab when that tab's session changes.
@@ -11,7 +15,6 @@ const TOKEN_KEY = 'campusrun.accessToken'
 const CHANGE_EVENT = 'campusrun:session'
 const SESSION_CHANNEL = 'campusrun:session'
 
-type Role = 'student' | 'admin'
 type Session = {
   token: string
   userId: string
@@ -19,8 +22,8 @@ type Session = {
   expiresAt: number
 }
 
-// The User Service puts the account type in the "type" claim
-type Claims = { sub?: unknown; type?: unknown; exp?: unknown }
+// The User Service puts the user's role in the "role" claim
+type Claims = { sub?: unknown; role?: unknown; exp?: unknown }
 type SignInMessage = { type: 'signed-in-elsewhere'; userId: string }
 
 function decode(token: string): Session | null {
@@ -29,14 +32,14 @@ function decode(token: string): Session | null {
     const claims = JSON.parse(
       atob(payload.replace(/-/g, '+').replace(/_/g, '/')),
     ) as Claims
-    if (claims.type !== 'student' && claims.type !== 'admin') return null
+    if (claims.role !== 'student' && claims.role !== 'admin') return null
 
     if (typeof claims.exp !== 'number' || claims.exp * 1000 < Date.now())
       return null
     return {
       token,
       userId: String(claims.sub),
-      role: claims.type,
+      role: claims.role,
       expiresAt: claims.exp * 1000,
     }
   } catch {
@@ -78,7 +81,7 @@ export function getSession(): Session | null {
 }
 
 export function saveToken(token: string): boolean {
-  // False if token malformed/expired/unknown account type
+  // False if token malformed/expired/unknown role
   const trimmed = token.trim().replace(/^Bearer\s+/i, '')
   const session = decode(trimmed)
   if (!session) return false

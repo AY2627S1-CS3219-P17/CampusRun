@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
 # Scope: AI-generated FastAPI app with engine lifespan and GET /health endpoint; AI-updated lifespan return type to AsyncGenerator and made API docs depend on ENABLE_DOCS;
 #        AI-completed the POST /auth/register endpoint from the author's draft; AI-renamed the user token type to "student" (Claude Code, 2026-09-27);
-#        AI-generated the PATCH /users/me endpoint (2026-09-27).
+#        AI-generated the PATCH /users/me endpoint (2026-09-27); AI-merged the admin login into /auth/login and removed /admins/me (2026-09-28).
 # Author review: reviewed by Nathan
 
 from collections.abc import AsyncGenerator
@@ -18,20 +18,18 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from user_service.auth import CurrentAdmin, CurrentUser, credentials_error
-from user_service.auth import CurrentUser
+from user_service.auth import CurrentUser, credentials_error
 from user_service.config import Settings, get_settings
 from user_service.db import Connection, create_engine, get_engine
 from user_service.schemas import (
     PASSWORD_MAX_LENGTH,
-    AdminResponse,
     RegisterRequest,
     TokenResponse,
     UpdateUserRequest,
     UserResponse,
 )
 from user_service.security import DUMMY_HASH, create_access_token, password_hash
-from user_service.tables import users, admins
+from user_service.tables import users
 
 
 @asynccontextmanager
@@ -102,6 +100,7 @@ async def register(body: RegisterRequest, conn: Connection) -> UserResponse:
                 users.c.email,
                 users.c.username,
                 users.c.email_verified_at,
+                users.c.role,
                 users.c.created_at,
             )
         )
@@ -120,7 +119,7 @@ async def login(form: LoginForm, conn: Connection, settings: SettingsDep) -> Tok
     identifier = form.username.strip().lower()
     row = (
         await conn.execute(
-            select(users.c.id, users.c.password_hash).where(
+            select(users.c.id, users.c.password_hash, users.c.role).where(
                 or_(func.lower(users.c.email) == identifier, func.lower(users.c.username) == identifier)
             )
         )
@@ -130,24 +129,7 @@ async def login(form: LoginForm, conn: Connection, settings: SettingsDep) -> Tok
     valid = await check_password(form.password, row.password_hash if row else None)
     if row is None or not valid:
         raise login_failed()
-    return TokenResponse(access_token=create_access_token(row.id, "student", settings))
-
-
-@app.post("/auth/admin/login")
-async def admin_login(form: LoginForm, conn: Connection, settings: SettingsDep) -> TokenResponse:
-    row = (
-        await conn.execute(
-            select(admins.c.id, admins.c.password_hash).where(
-                func.lower(admins.c.username) == form.username.strip().lower()
-            )
-        )
-    ).one_or_none()
-
-    # Check the password before testing row, so unknown accounts still pay for a hash
-    valid = await check_password(form.password, row.password_hash if row else None)
-    if row is None or not valid:
-        raise login_failed()
-    return TokenResponse(access_token=create_access_token(row.id, "admin", settings))
+    return TokenResponse(access_token=create_access_token(row.id, row.role, settings))
 
 # Useing the CurrentUser type annotation for the endpoint parameter makes FastAPI run require_user first, which returns 401/403 before the endpoint runs; the parameter name doesn't matter.
 @app.get("/users/me")
@@ -159,6 +141,7 @@ async def read_current_user(account: CurrentUser, conn: Connection) -> UserRespo
                 users.c.email,
                 users.c.username,
                 users.c.email_verified_at,
+                users.c.role,
                 users.c.created_at,
             ).where(users.c.id == account.id)
         )
@@ -186,7 +169,7 @@ async def update_current_user(body: UpdateUserRequest, account: CurrentUser, con
         # Tokens issued before the change stay valid until they expire; see "Revoking sessions" in docs/auth-plan.md
         changes["password_hash"] = await run_in_threadpool(password_hash.hash, body.new_password)
 
-    columns = (users.c.id, users.c.email, users.c.username, users.c.email_verified_at, users.c.created_at)
+    columns = (users.c.id, users.c.email, users.c.username, users.c.email_verified_at, users.c.role, users.c.created_at)
     if changes:
         try:
             row = (
@@ -206,14 +189,3 @@ async def update_current_user(body: UpdateUserRequest, account: CurrentUser, con
         raise credentials_error()
     return UserResponse.model_validate(row, from_attributes=True)
 
-
-@app.get("/admins/me")
-async def read_current_admin(account: CurrentAdmin, conn: Connection) -> AdminResponse:
-    row = (
-        await conn.execute(
-            select(admins.c.id, admins.c.username, admins.c.created_at).where(admins.c.id == account.id)
-        )
-    ).one_or_none()
-    if row is None:
-        raise credentials_error()
-    return AdminResponse.model_validate(row, from_attributes=True)

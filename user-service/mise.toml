@@ -13,7 +13,7 @@ depends = ["start-db"]
 run = "uv run alembic upgrade head"
 
 [tasks.create-admin]
-description = "Create the initial admin in the local database from INITIAL_ADMIN_* in .env"
+description = "Create the initial admin user in the local database from INITIAL_ADMIN_* in .env"
 depends = ["migrate"]
 run = "uv run create-initial-admin"
 

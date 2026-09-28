@@ -1,6 +1,6 @@
 # User Service Setup Plan
 
-Last updated: 2026-09-26
+Last updated: 2026-09-28
 
 ## Status
 
@@ -36,7 +36,7 @@ Not yet verified against a real database. Docker wasn't running, so no container
 ### 3. Table definitions (`src/user_service/tables.py`)
 - [x] SQLAlchemy Core `MetaData` with a naming convention, set before the first migration.
 - [x] `users`: `Identity()` integer primary key, email, nullable `email_verified_at` (null until the user confirms their email), username, password hash, nullable `profile_picture_url`, `created_at`/`updated_at`. Email and username are unique regardless of case (unique indexes on `lower(...)`).
-- [x] `admins`: separate accounts with their own credentials (no foreign key to `users`). `Identity()` integer primary key, username (unique regardless of case), password hash, timestamps. Ids overlap with `users.id`, so tokens need a role claim.
+- [x] `users.role`: `student` (the default) or `admin`, enforced by a CHECK constraint. This replaced a separate `admins` table on 2026-09-28; see [admin-role-plan.md](admin-role-plan.md).
 
 ### 4. Alembic
 - [x] `uv add alembic`, then `alembic init -t async migrations`.
@@ -58,8 +58,8 @@ Not yet verified against a real database. Docker wasn't running, so no container
 - **Fast development:** `docker compose up -d user-db`, then `cd user-service && uv run fastapi dev src/user_service/main.py`, then `curl localhost:8000/health`.
 
 ## Decisions
-- **FastAPI + SQLAlchemy Core,** an auto-increment integer `users.id`, and a separate admin table. These were decided by the team.
-- **Admins are separate accounts,** not a role on `users`. Other services' `user_id` always means a student, and a compromised student account can't become an admin.
+- **FastAPI + SQLAlchemy Core** and an auto-increment integer `users.id`. These were decided by the team.
+- **Admins are users with the `admin` role.** At first they were separate accounts in their own table, but the team replaced that on 2026-09-28. Admins can't post or accept errands, so other services check `role == "student"` on those routes. Only the `create-initial-admin` script creates admins; no endpoint changes a role.
 - **Migrations run as a separate one-off step,** not on app start. This is a common pattern but isn't officially documented as a recommendation. It maps directly onto a Cloud Run job later.
 - **No hostnames or secrets in code or the image.** Only `compose.yaml` mentions `user-db`.
 - **`compose.yaml` is for local development and demos only.** Cloud Run (Cloud SQL, Secret Manager, a Cloud Run job for migrations, the injected `PORT`) will be configured separately later.

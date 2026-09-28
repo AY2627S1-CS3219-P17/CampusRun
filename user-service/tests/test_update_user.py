@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
 # Scope: AI-generated tests for the PATCH /users/me endpoint (username and password changes), including the web
-#        client's username and password rules.
+#        client's username and password rules; AI-changed the admin test for admins as users (2026-09-28).
 # Author review: <to be completed by author>
 
 import pytest
@@ -10,7 +10,7 @@ from sqlalchemy import delete, insert
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from user_service.security import password_hash
-from user_service.tables import admins, users
+from user_service.tables import users
 
 pytestmark = pytest.mark.anyio
 
@@ -18,8 +18,8 @@ ALICE = {"email": "alice@u.nus.edu", "username": "alice", "password": "S3cret-pa
 BOB = {"email": "bob@u.nus.edu", "username": "bob", "password": "B0b-password"}
 
 
-async def login(client: AsyncClient, username: str, password: str, path: str = "/auth/login"):
-    return await client.post(path, data={"username": username, "password": password})
+async def login(client: AsyncClient, username: str, password: str):
+    return await client.post("/auth/login", data={"username": username, "password": password})
 
 
 async def register_and_login(client: AsyncClient, account: dict) -> dict[str, str]:
@@ -143,14 +143,20 @@ async def test_requires_token(client: AsyncClient) -> None:
     assert (await client.patch("/users/me", json={"username": "alice_2"})).status_code == 401
 
 
-async def test_rejects_admin_token(client: AsyncClient, engine: AsyncEngine) -> None:
+async def test_admin_can_update_own_profile(client: AsyncClient, engine: AsyncEngine) -> None:
     async with engine.begin() as conn:
-        await conn.execute(insert(admins).values(username="root", password_hash=password_hash.hash("admin-pass")))
-    token = (await login(client, "root", "admin-pass", "/auth/admin/login")).json()["access_token"]
+        await conn.execute(
+            insert(users).values(
+                email="root@u.nus.edu", username="root", password_hash=password_hash.hash("Adm1n-pass"), role="admin"
+            )
+        )
+    token = (await login(client, "root", "Adm1n-pass")).json()["access_token"]
 
     response = await client.patch("/users/me", headers={"Authorization": f"Bearer {token}"}, json={"username": "x_y"})
 
-    assert response.status_code == 403
+    assert response.status_code == 200
+    assert response.json()["username"] == "x_y"
+    assert response.json()["role"] == "admin"
 
 
 async def test_rejects_token_of_deleted_account(client: AsyncClient, engine: AsyncEngine, alice: dict) -> None:

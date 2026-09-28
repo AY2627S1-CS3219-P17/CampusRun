@@ -1,7 +1,11 @@
 // AI Assistance Disclosure:
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
-// Scope: AI-added the User type and changed UpdateUserPayload to match the User Service's PATCH /users/me.
+// Scope: AI-added the User type and changed UpdateUserPayload to match the User Service's PATCH /users/me;
+//        AI-added the role (2026-09-28).
 // Author review: Validated types against the User Service contract.
+
+// Admins are users with the admin role; they can't post or accept errands
+export type Role = 'student' | 'admin'
 
 export type RegisterUserValues = {
   username: string
@@ -26,5 +30,6 @@ export type User = {
   email: string
   username: string
   email_verified_at: string | null
+  role: Role
   created_at: string
 }

@@ -1,25 +1,28 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
 # Scope: AI-generated tests for password login, JWT validation and the /users/me and /admins/me endpoints;
-#        AI-updated for the "student" token type (Claude Code, 2026-09-27).
+#        AI-updated for the "student" token type (Claude Code, 2026-09-27);
+#        AI-updated for admins as users with the admin role and the "role" claim (Claude Code, 2026-09-28).
 # Author review: <to be completed by author>
 
 from datetime import UTC, datetime, timedelta
 
 import jwt
 import pytest
+from fastapi import HTTPException
 from httpx import AsyncClient
 from sqlalchemy import delete, insert
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from user_service.auth import require_admin, require_student, require_user
 from user_service.config import get_settings
 from user_service.security import ALGORITHM, password_hash
-from user_service.tables import admins, users
+from user_service.tables import users
 
 pytestmark = pytest.mark.anyio
 
 USER = {"email": "alice@u.nus.edu", "username": "alice", "password": "S3cret-pass"}
-ADMIN = {"username": "root", "password": "admin-pass"}
+ADMIN = {"email": "root@u.nus.edu", "username": "root", "password": "Adm1n-pass"}
 
 
 @pytest.fixture
@@ -33,15 +36,18 @@ async def user(client: AsyncClient) -> dict:
 async def admin(engine: AsyncEngine) -> None:
     async with engine.begin() as conn:
         await conn.execute(
-            insert(admins).values(
-                username=ADMIN["username"], password_hash=password_hash.hash(ADMIN["password"])
+            insert(users).values(
+                email=ADMIN["email"],
+                username=ADMIN["username"],
+                password_hash=password_hash.hash(ADMIN["password"]),
+                role="admin",
             )
         )
 
 
-async def login(client: AsyncClient, username: str, password: str, path: str = "/auth/login"):
+async def login(client: AsyncClient, username: str, password: str):
     # data= sends a form body, which OAuth2PasswordRequestForm expects
-    return await client.post(path, data={"username": username, "password": password})
+    return await client.post("/auth/login", data={"username": username, "password": password})
 
 
 def bearer(token: str) -> dict[str, str]:
@@ -49,7 +55,7 @@ def bearer(token: str) -> dict[str, str]:
 
 
 def make_token(secret: str | None = None, **overrides) -> str:
-    claims = {"sub": "1", "type": "student", "exp": datetime.now(UTC) + timedelta(minutes=5), **overrides}
+    claims = {"sub": "1", "role": "student", "exp": datetime.now(UTC) + timedelta(minutes=5), **overrides}
     # A claim set to None means "leave it out"
     claims = {key: value for key, value in claims.items() if value is not None}
     return jwt.encode(claims, secret or get_settings().jwt_secret.get_secret_value(), algorithm=ALGORITHM)
@@ -64,7 +70,7 @@ async def test_login_accepts_email_or_username(client: AsyncClient, user: dict, 
     assert body["token_type"] == "bearer"
     claims = jwt.decode(body["access_token"], options={"verify_signature": False})
     assert claims["sub"] == str(user["id"])
-    assert claims["type"] == "student"
+    assert claims["role"] == "student"
 
 
 @pytest.mark.parametrize(
@@ -87,6 +93,7 @@ async def test_me_returns_current_user(client: AsyncClient, user: dict) -> None:
 
     assert response.status_code == 200
     assert response.json()["username"] == "alice"
+    assert response.json()["role"] == "student"
 
 
 async def test_me_requires_token(client: AsyncClient) -> None:
@@ -103,7 +110,8 @@ async def test_me_requires_token(client: AsyncClient) -> None:
         make_token(exp=datetime.now(UTC) - timedelta(minutes=1)),  # expired
         make_token(secret="some-other-secret-that-is-32-chars-long!"),  # forged
         make_token(exp=None),  # no expiry
-        make_token(type=None),  # no account type
+        make_token(role=None),  # no role
+        make_token(role=None, type="student"),  # the old claim name
     ],
 )
 async def test_me_rejects_invalid_tokens(client: AsyncClient, user: dict, token: str) -> None:
@@ -124,27 +132,34 @@ async def test_me_rejects_token_for_deleted_account(
     assert response.status_code == 401
 
 
-async def test_admin_login_and_me(client: AsyncClient, admin: None) -> None:
-    token = (await login(client, "root", ADMIN["password"], "/auth/admin/login")).json()["access_token"]
-
-    response = await client.get("/admins/me", headers=bearer(token))
+async def test_admin_logs_in_like_a_student(client: AsyncClient, admin: None) -> None:
+    response = await login(client, ADMIN["email"], ADMIN["password"])
 
     assert response.status_code == 200
-    assert response.json()["username"] == "root"
+    token = response.json()["access_token"]
+    assert jwt.decode(token, options={"verify_signature": False})["role"] == "admin"
+
+    me = await client.get("/users/me", headers=bearer(token))
+    assert me.status_code == 200
+    assert me.json()["username"] == "root"
+    assert me.json()["role"] == "admin"
 
 
-async def test_tokens_only_work_for_their_account_type(
-    client: AsyncClient, user: dict, admin: None
-) -> None:
-    user_token = (await login(client, "alice", USER["password"])).json()["access_token"]
-    admin_token = (await login(client, "root", ADMIN["password"], "/auth/admin/login")).json()["access_token"]
+async def check(dependency, token: str) -> int:
+    # Runs the dependency chain directly, since no route in this service is student-only yet
+    try:
+        account = await require_user(token, get_settings())
+        await dependency(account)
+    except HTTPException as error:
+        return error.status_code
+    return 200
 
-    # Both accounts have id 1, so only the "type" claim tells them apart
-    assert (await client.get("/admins/me", headers=bearer(user_token))).status_code == 403
-    assert (await client.get("/users/me", headers=bearer(admin_token))).status_code == 403
 
+async def test_role_checks(client: AsyncClient, user: dict, admin: None) -> None:
+    student_token = (await login(client, "alice", USER["password"])).json()["access_token"]
+    admin_token = (await login(client, "root", ADMIN["password"])).json()["access_token"]
 
-async def test_user_login_rejects_admin_credentials(client: AsyncClient, admin: None) -> None:
-    response = await login(client, "root", ADMIN["password"])
-
-    assert response.status_code == 401
+    assert await check(require_student, student_token) == 200
+    assert await check(require_student, admin_token) == 403
+    assert await check(require_admin, admin_token) == 200
+    assert await check(require_admin, student_token) == 403

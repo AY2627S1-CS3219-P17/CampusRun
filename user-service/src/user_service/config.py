@@ -1,6 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
-# Scope: AI-generated pydantic-settings Settings class reading DATABASE_URL and ENABLE_DOCS; AI-added Pyright ignore on Settings().
+# Scope: AI-generated pydantic-settings Settings class reading DATABASE_URL and ENABLE_DOCS; AI-added Pyright ignore on Settings();
+#        AI-added INITIAL_ADMIN_EMAIL (Claude Code, 2026-09-28).
 # Author review: reviewed by Nathan
 
 from functools import lru_cache
@@ -22,6 +23,7 @@ class Settings(BaseSettings):
     jwt_access_token_ttl: int = 60
 
     # Only read by the create-initial-admin script; the server runs without them
+    initial_admin_email: str | None = None
     initial_admin_username: str | None = None
     initial_admin_password: SecretStr | None = None
 

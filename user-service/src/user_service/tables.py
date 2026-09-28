@@ -1,10 +1,11 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
 # Scope: AI-generated SQLAlchemy Core MetaData naming convention and users/admins table definitions;
-#        AI-added USERNAME_MAX_LENGTH constant.
+#        AI-added USERNAME_MAX_LENGTH constant; AI-replaced the admins table with a role column on users (Claude Code, 2026-09-28).
 # Author review: Reviewed and added email_verified_at
 
 from sqlalchemy import (
+    CheckConstraint,
     Column,
     DateTime,
     Identity,
@@ -17,7 +18,7 @@ from sqlalchemy import (
     func,
 )
 
-# Shared by the users and admins tables, and by input validation
+# Shared by the users table and input validation
 USERNAME_MAX_LENGTH = 32
 
 # Deterministic constraint names, so Alembic migrations can refer to them
@@ -62,19 +63,12 @@ users = Table(
     Column("password_hash", Text, nullable=False),
     # URL or object-storage key; the image itself lives outside the database
     Column("profile_picture_url", Text, nullable=True),
+    # "student" or "admin"; only set to "admin" by the create-initial-admin script, never through the API
+    Column("role", String(16), nullable=False, server_default="student"),
     *_timestamps(),
-)
-
-admins = Table(
-    "admins",
-    metadata,
-    Column("id", Integer, Identity(), primary_key=True),
-    Column("username", String(USERNAME_MAX_LENGTH), nullable=False),
-    Column("password_hash", Text, nullable=False),
-    *_timestamps(),
+    CheckConstraint("role IN ('student', 'admin')", name="role"),
 )
 
 # Case-insensitive uniqueness: "Alice@u.nus.edu" and "alice@u.nus.edu" are the same account
 Index("uq_users_email_lower", func.lower(users.c.email), unique=True)
 Index("uq_users_username_lower", func.lower(users.c.username), unique=True)
-Index("uq_admins_username_lower", func.lower(admins.c.username), unique=True)

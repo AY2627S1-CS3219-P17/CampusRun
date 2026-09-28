@@ -2,17 +2,23 @@
 // Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 // Scope: AI-modified: Logout also forgets the saved access token (clearSession).
 // Author review: Validated logout cleanup and navigation behavior.
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-28
+// Scope: AI-hid the errand sections and create-request button from admins.
+// Author review: <to be completed by author>
 
 import { useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { DropdownMenu } from 'radix-ui'
 import { LogOut, MessageCircle, Plus, Store, UserRound } from 'lucide-react'
 import EditInfoDialog from './edit-user-info'
-import { clearSession } from '../utils/session'
+import { clearSession, useSession } from '../utils/session'
 import './header.css'
 
 const sections = ['Explore', 'My Tasks', 'My Requests'] as const
 type HeaderSection = (typeof sections)[number]
+
+// Admins can't take part in errands, so they only get Explore
+const adminSections: readonly HeaderSection[] = ['Explore']
 
 const sectionPaths: Record<HeaderSection, string> = {
   Explore: '/explore',
@@ -28,11 +34,12 @@ export default function Header({ initialSection }: HeaderProps) {
   const [activeSection, setActiveSection] = useState(initialSection)
   const [editingInfo, setEditingInfo] = useState(false)
   const profileRef = useRef<HTMLButtonElement>(null)
+  const isAdmin = useSession()?.role === 'admin'
 
   return (
     <header className="app-header">
       <nav className="header-nav" aria-label="Main navigation">
-        {sections.map((section) => (
+        {(isAdmin ? adminSections : sections).map((section) => (
           <Link
             key={section}
             to={sectionPaths[section]}
@@ -62,13 +69,15 @@ export default function Header({ initialSection }: HeaderProps) {
           <Store size={20} strokeWidth={1.8} aria-hidden="true" />
         </Link>
 
-        <button
-          className="header-icon-button header-create"
-          type="button"
-          aria-label="Create request"
-        >
-          <Plus size={22} strokeWidth={1.8} aria-hidden="true" />
-        </button>
+        {!isAdmin && (
+          <button
+            className="header-icon-button header-create"
+            type="button"
+            aria-label="Create request"
+          >
+            <Plus size={22} strokeWidth={1.8} aria-hidden="true" />
+          </button>
+        )}
 
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>

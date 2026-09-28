@@ -3,13 +3,16 @@ AI Assistance Disclosure:
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 Scope: AI-generated step-by-step guide for the nginx gateway and JWT authentication in the user service,
        based on design decisions discussed with the team; AI-added the session revocation options and
-       renamed the user token type to "student" (2026-09-27).
+       renamed the user token type to "student" (2026-09-27);
+       AI-updated for admins as users with the admin role and the "role" claim (2026-09-28).
 Author review: <to be completed by author>
 -->
 
 # Gateway + Auth Implementation Guide
 
-This guide walks through adding an **nginx gateway** in front of the services and **password login with JWT access tokens** in `user-service`. It follows FastAPI's [Security tutorial](https://fastapi.tiangolo.com/tutorial/security/first-steps/), adapted for our setup (async SQLAlchemy Core, separate `users`/`admins` tables, multiple services).
+This guide walks through adding an **nginx gateway** in front of the services and **password login with JWT access tokens** in `user-service`. It follows FastAPI's [Security tutorial](https://fastapi.tiangolo.com/tutorial/security/first-steps/), adapted for our setup (async SQLAlchemy Core, one `users` table with a `role` column, multiple services).
+
+> **Updated 2026-09-28:** admins are now users with `role = 'admin'` rather than rows in a separate `admins` table. There is one login, and the token's claim is `role`, not `type`. The steps below have been updated to match. See [admin-role-plan.md](admin-role-plan.md) for the change itself.
 
 Work through the parts in order. Each step ends with a **Check** so you know it worked before moving on.
 
@@ -38,7 +41,7 @@ browser ──:8080──►  gateway (nginx) ──/api/users/*──►  user-
 | Entry point | One nginx container; the only service with a published port | The frontend uses one origin, so no CORS setup. The services stay unreachable from outside. |
 | Credential | JWT access token in `Authorization: Bearer <token>` | Any service can verify it locally with no call to user-service. |
 | Signing | HS256 with a shared `JWT_SECRET` | Simplest option. Trade-off: every service holding the secret could also mint tokens. That's acceptable for this project. |
-| Token claims | `sub` (account id, as a string), `type` (`"student"` or `"admin"`), `iat`, `exp` | `users` and `admins` are separate tables and **both have ids starting at 1**. Without `type`, admin #1 and user #1 look the same. |
+| Token claims | `sub` (user id, as a string), `role` (`"student"` or `"admin"`), `iat`, `exp` | Other services can check permissions from the token alone, without calling user-service. |
 | Lifetime | 60 minutes, no refresh tokens | Keeps the scope small. Logout = the frontend discards the token. Tokens can't be revoked early; see [Revoking sessions](#revoking-sessions). |
 | Login input | `OAuth2PasswordRequestForm` (form-encoded `username` + `password`) | Makes Swagger's **Authorize** button work. The `username` field accepts **email or username**. |
 | Requester/courier toggle | Frontend UI mode only; not stored and not in the token | Every user can do both. Order-service enforces rules per errand, e.g. "can't accept your own". |
@@ -251,18 +254,18 @@ from user_service.config import Settings
 
 ALGORITHM = "HS256"
 
-AccountType = Literal["student", "admin"]
+Role = Literal["student", "admin"]
 
 # Verified against when the account doesn't exist, so a failed login takes the same time either way
 DUMMY_HASH = password_hash.hash("dummy-password-for-timing")
 
 
-def create_access_token(account_id: int, account_type: AccountType, settings: Settings) -> str:
+def create_access_token(account_id: int, role: Role, settings: Settings) -> str:
     now = datetime.now(UTC)
     payload = {
         # PyJWT requires "sub" to be a string
         "sub": str(account_id),
-        "type": account_type,
+        "role": role,
         "iat": now,
         "exp": now + timedelta(minutes=settings.jwt_access_token_ttl),
     }
@@ -276,7 +279,7 @@ def decode_access_token(token: str, settings: Settings) -> dict[str, Any]:
         settings.jwt_secret.get_secret_value(),
         # Pinning the algorithm stops a forged token from choosing "none"
         algorithms=[ALGORITHM],
-        options={"require": ["sub", "type", "exp"]},
+        options={"require": ["sub", "role", "exp"]},
     )
 ```
 
@@ -290,12 +293,9 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: Literal["bearer"] = "bearer"
 
-
-class AdminResponse(BaseModel):
-    id: int
-    username: str
-    created_at: datetime
 ```
+
+Also add `role: Role` to `UserResponse` (import `Role` from `security`).
 
 ### Step 2.5: Auth dependencies in a new `auth.py`
 
@@ -312,23 +312,18 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
 from user_service.config import Settings, get_settings
-from user_service.security import AccountType, decode_access_token
+from user_service.security import Role, decode_access_token
 
-# Two schemes so Swagger's Authorize dialog offers both logins; both read the same Bearer header.
-# scheme_name must differ, or the two collide in the OpenAPI schema.
 # tokenUrl only tells Swagger where to log in; prefixing root_path makes it right both directly and behind the gateway
 user_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{get_settings().root_path}/auth/login", scheme_name="UserAuth"
-)
-admin_scheme = OAuth2PasswordBearer(
-    tokenUrl=f"{get_settings().root_path}/auth/admin/login", scheme_name="AdminAuth"
 )
 
 
 @dataclass(frozen=True)
 class Account:
     id: int
-    type: AccountType
+    role: Role
 
 
 def credentials_error() -> HTTPException:
@@ -344,12 +339,12 @@ def _account_from_token(token: str, settings: Settings) -> Account:
         payload = decode_access_token(token, settings)
     except jwt.InvalidTokenError:
         raise credentials_error() from None
-    return Account(id=int(payload["sub"]), type=payload["type"])
+    return Account(id=int(payload["sub"]), role=payload["role"])
 
 
-def _require(account: Account, expected: AccountType) -> Account:
-    # Valid token, wrong kind of account: authenticated but not allowed
-    if account.type != expected:
+def _require(account: Account, expected: Role) -> Account:
+    # Valid token, wrong role: authenticated but not allowed
+    if account.role != expected:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
     return account
 
@@ -358,27 +353,30 @@ async def require_user(
     token: Annotated[str, Depends(user_scheme)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> Account:
-    return _require(_account_from_token(token, settings), "student")
+    # Any role: admins are users too
+    return _account_from_token(token, settings)
 
 
-async def require_admin(
-    token: Annotated[str, Depends(admin_scheme)],
-    settings: Annotated[Settings, Depends(get_settings)],
-) -> Account:
-    return _require(_account_from_token(token, settings), "admin")
+async def require_student(account: Annotated[Account, Depends(require_user)]) -> Account:
+    return _require(account, "student")
+
+
+async def require_admin(account: Annotated[Account, Depends(require_user)]) -> Account:
+    return _require(account, "admin")
 
 
 CurrentUser = Annotated[Account, Depends(require_user)]
+CurrentStudent = Annotated[Account, Depends(require_student)]
 CurrentAdmin = Annotated[Account, Depends(require_admin)]
 ```
 
-**401 vs 403:** a missing, invalid or expired token gets **401** ("who are you?"). A valid token for the wrong account type gets **403** ("I know who you are, and you can't do this"). `OAuth2PasswordBearer` already returns 401 when the header is missing.
+**401 vs 403:** a missing, invalid or expired token gets **401** ("who are you?"). A valid token with the wrong role gets **403** ("I know who you are, and you can't do this"). `OAuth2PasswordBearer` already returns 401 when the header is missing.
 
 ### Step 2.6: Login endpoints
 
 This corresponds to the tutorial's [Simple OAuth2](https://fastapi.tiangolo.com/tutorial/security/simple-oauth2/) and [JWT](https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/) pages.
 
-Add to `main.py`. You'll need new imports: `OAuth2PasswordRequestForm` from `fastapi.security`; `func`, `or_` and `select` from `sqlalchemy`; `admins` from `tables`; and the new schemas, `security` helpers and `auth` items.
+Add to `main.py`. You'll need new imports: `OAuth2PasswordRequestForm` from `fastapi.security`; `func`, `or_` and `select` from `sqlalchemy`; and the new schemas, `security` helpers and `auth` items.
 
 ```python
 SettingsDep = Annotated[Settings, Depends(get_settings)]
@@ -408,7 +406,7 @@ async def login(form: LoginForm, conn: Connection, settings: SettingsDep) -> Tok
     identifier = form.username.strip().lower()
     row = (
         await conn.execute(
-            select(users.c.id, users.c.password_hash).where(
+            select(users.c.id, users.c.password_hash, users.c.role).where(
                 or_(func.lower(users.c.email) == identifier, func.lower(users.c.username) == identifier)
             )
         )
@@ -418,25 +416,10 @@ async def login(form: LoginForm, conn: Connection, settings: SettingsDep) -> Tok
     valid = await check_password(form.password, row.password_hash if row else None)
     if row is None or not valid:
         raise login_failed()
-    return TokenResponse(access_token=create_access_token(row.id, "student", settings))
-
-
-@app.post("/auth/admin/login")
-async def admin_login(form: LoginForm, conn: Connection, settings: SettingsDep) -> TokenResponse:
-    row = (
-        await conn.execute(
-            select(admins.c.id, admins.c.password_hash).where(
-                func.lower(admins.c.username) == form.username.strip().lower()
-            )
-        )
-    ).one_or_none()
-
-    # Check the password before testing row, so unknown accounts still pay for a hash
-    valid = await check_password(form.password, row.password_hash if row else None)
-    if row is None or not valid:
-        raise login_failed()
-    return TokenResponse(access_token=create_access_token(row.id, "admin", settings))
+    return TokenResponse(access_token=create_access_token(row.id, row.role, settings))
 ```
+
+Admins and students use this same endpoint; the token's `role` comes from the row.
 
 The `func.lower(...) == ...` comparisons match the case-insensitive unique indexes in `tables.py`, so Postgres can use them.
 
@@ -454,6 +437,7 @@ async def read_current_user(account: CurrentUser, conn: Connection) -> UserRespo
                 users.c.email,
                 users.c.username,
                 users.c.email_verified_at,
+                users.c.role,
                 users.c.created_at,
             ).where(users.c.id == account.id)
         )
@@ -462,21 +446,9 @@ async def read_current_user(account: CurrentUser, conn: Connection) -> UserRespo
     if row is None:
         raise credentials_error()
     return UserResponse.model_validate(row, from_attributes=True)
-
-
-@app.get("/admins/me")
-async def read_current_admin(account: CurrentAdmin, conn: Connection) -> AdminResponse:
-    row = (
-        await conn.execute(
-            select(admins.c.id, admins.c.username, admins.c.created_at).where(admins.c.id == account.id)
-        )
-    ).one_or_none()
-    if row is None:
-        raise credentials_error()
-    return AdminResponse.model_validate(row, from_attributes=True)
 ```
 
-To protect any future route, add a `CurrentUser` or `CurrentAdmin` parameter. That's the whole pattern.
+To protect any future route, add a `CurrentUser` (any role), `CurrentStudent` or `CurrentAdmin` parameter. That's the whole pattern.
 
 ### Step 2.8: Tests
 
@@ -488,143 +460,12 @@ os.environ.setdefault("JWT_SECRET", "test-secret-that-is-at-least-32-characters-
 
 This also covers `test_create_admin.py`, because `Settings(_env_file=None, ...)` still reads real environment variables.
 
-**`tests/test_auth.py`:** a starting point in the same style as `test_register.py`:
-
-```python
-from datetime import UTC, datetime, timedelta
-
-import jwt
-import pytest
-from httpx import AsyncClient
-from sqlalchemy import insert
-from sqlalchemy.ext.asyncio import AsyncEngine
-
-from user_service.config import get_settings
-from user_service.security import ALGORITHM, password_hash
-from user_service.tables import admins
-
-pytestmark = pytest.mark.anyio
-
-USER = {"email": "alice@u.nus.edu", "username": "alice", "password": "s3cret-pass"}
-ADMIN = {"username": "root", "password": "admin-pass"}
-
-
-@pytest.fixture
-async def user(client: AsyncClient) -> dict:
-    response = await client.post("/auth/register", json=USER)
-    assert response.status_code == 201
-    return response.json()
-
-
-@pytest.fixture
-async def admin(engine: AsyncEngine) -> None:
-    async with engine.begin() as conn:
-        await conn.execute(
-            insert(admins).values(
-                username=ADMIN["username"], password_hash=password_hash.hash(ADMIN["password"])
-            )
-        )
-
-
-async def login(client: AsyncClient, username: str, password: str, path: str = "/auth/login"):
-    # data= sends a form body, which OAuth2PasswordRequestForm expects
-    return await client.post(path, data={"username": username, "password": password})
-
-
-def bearer(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
-
-
-def make_token(secret: str | None = None, **overrides) -> str:
-    claims = {"sub": "1", "type": "student", "exp": datetime.now(UTC) + timedelta(minutes=5), **overrides}
-    # exp=None means "leave the claim out"
-    claims = {key: value for key, value in claims.items() if value is not None}
-    return jwt.encode(claims, secret or get_settings().jwt_secret.get_secret_value(), algorithm=ALGORITHM)
-
-
-@pytest.mark.parametrize("identifier", ["alice@u.nus.edu", "ALICE@U.NUS.EDU", "alice", "Alice", "  alice  "])
-async def test_login_accepts_email_or_username(client: AsyncClient, user: dict, identifier: str) -> None:
-    response = await login(client, identifier, USER["password"])
-
-    assert response.status_code == 200
-    body = response.json()
-    assert body["token_type"] == "bearer"
-    claims = jwt.decode(body["access_token"], options={"verify_signature": False})
-    assert claims["sub"] == str(user["id"])
-    assert claims["type"] == "student"
-
-
-@pytest.mark.parametrize(
-    ("identifier", "password"),
-    [("alice", "wrong-password"), ("nobody", USER["password"]), ("alice", "x" * 10_000)],
-)
-async def test_login_failures_look_identical(
-    client: AsyncClient, user: dict, identifier: str, password: str
-) -> None:
-    response = await login(client, identifier, password)
-
-    assert response.status_code == 401
-    assert response.json()["detail"] == "Incorrect login or password"
-
-
-async def test_me_returns_current_user(client: AsyncClient, user: dict) -> None:
-    token = (await login(client, "alice", USER["password"])).json()["access_token"]
-
-    response = await client.get("/users/me", headers=bearer(token))
-
-    assert response.status_code == 200
-    assert response.json()["username"] == "alice"
-
-
-async def test_me_requires_token(client: AsyncClient) -> None:
-    response = await client.get("/users/me")
-
-    assert response.status_code == 401
-    assert response.headers["WWW-Authenticate"] == "Bearer"
-
-
-@pytest.mark.parametrize(
-    "token",
-    [
-        "not-a-jwt",
-        make_token(exp=datetime.now(UTC) - timedelta(minutes=1)),  # expired
-        make_token(secret="some-other-secret-that-is-32-chars-long!"),  # forged
-        make_token(exp=None),  # no expiry
-    ],
-)
-async def test_me_rejects_invalid_tokens(client: AsyncClient, user: dict, token: str) -> None:
-    response = await client.get("/users/me", headers=bearer(token))
-
-    assert response.status_code == 401
-
-
-async def test_admin_login_and_me(client: AsyncClient, admin: None) -> None:
-    token = (await login(client, "root", ADMIN["password"], "/auth/admin/login")).json()["access_token"]
-
-    response = await client.get("/admins/me", headers=bearer(token))
-
-    assert response.status_code == 200
-    assert response.json()["username"] == "root"
-
-
-async def test_tokens_only_work_for_their_account_type(
-    client: AsyncClient, user: dict, admin: None
-) -> None:
-    user_token = (await login(client, "alice", USER["password"])).json()["access_token"]
-    admin_token = (await login(client, "root", ADMIN["password"], "/auth/admin/login")).json()["access_token"]
-
-    # Both accounts have id 1, so only the "type" claim tells them apart
-    assert (await client.get("/admins/me", headers=bearer(user_token))).status_code == 403
-    assert (await client.get("/users/me", headers=bearer(admin_token))).status_code == 403
-
-
-async def test_user_login_rejects_admin_credentials(client: AsyncClient, admin: None) -> None:
-    response = await login(client, "root", ADMIN["password"])
-
-    assert response.status_code == 401
-```
-
-> `make_token(...)` in the `parametrize` list runs when the module is imported, so `JWT_SECRET` must already be set. The `os.environ.setdefault` in `conftest.py` handles that, because pytest imports `conftest.py` first.
+**`tests/test_auth.py`:** see the file in the repo. It covers:
+- login by email or username
+- failed logins that all look the same
+- `/users/me` for both roles
+- rejected tokens (expired, forged, no expiry, no `role`, or the old `type` claim)
+- `require_student` and `require_admin` returning 403 for the wrong role
 
 **Check:** `mise run test` passes, including the existing registration and admin tests.
 
@@ -643,9 +484,9 @@ docker compose up --build -d
 3. `GET /users/me` should return your profile. Log out in the Authorize dialog and it should return 401.
 4. Seed an admin with `mise run create-admin` (from `user-service/`, using `INITIAL_ADMIN_*` in `user-service/.env`), or in Docker:
    ```sh
-   docker compose run --rm -e INITIAL_ADMIN_USERNAME=root -e INITIAL_ADMIN_PASSWORD='admin-pass' user-service create-initial-admin
+   docker compose run --rm -e INITIAL_ADMIN_EMAIL=root@u.nus.edu -e INITIAL_ADMIN_USERNAME=root -e INITIAL_ADMIN_PASSWORD='Adm1n-pass' user-migrate create-initial-admin
    ```
-   Then log in via the **AdminAuth** form and call `GET /admins/me`.
+   Then log in through the same **UserAuth** form. `GET /users/me` returns `"role": "admin"`.
 
 **With curl:**
 
@@ -670,9 +511,10 @@ These are for later milestones and other services. Not needed for D2.
 
 1. **Gateway:** add a `location /api/<name>/ { proxy_pass http://<name>-service:8000/; }` block to `gateway/nginx.conf` and a `depends_on` entry to the gateway.
 2. **Compose:** don't publish the service's port. Give it `ROOT_PATH: /api/<name>` and `JWT_SECRET: ${JWT_SECRET:?...}`.
-3. **Code:** copy a trimmed `auth.py` into the service. Keep `Account`, `credentials_error`, `require_user`/`require_admin`, and the decode logic from `decode_access_token`. It needs only `pyjwt` and the secret; no database, no password hashing, no `create_access_token`. Keep `ALGORITHM` and the required claims identical to user-service's.
+3. **Code:** copy a trimmed `auth.py` into the service. Keep `Account`, `credentials_error`, `require_user`/`require_student`/`require_admin`, and the decode logic from `decode_access_token`. It needs only `pyjwt` and the secret; no database, no password hashing, no `create_access_token`. Keep `ALGORITHM` and the required claims identical to user-service's.
 4. **`tokenUrl`** in other services must point at user-service's login through the gateway: `OAuth2PasswordBearer(tokenUrl="/api/users/auth/login", scheme_name="UserAuth")`. Swagger's Authorize button on those services only works through the gateway.
-5. The user id is `int(account.id)`. Store it in that service's tables as a plain integer column (e.g. `requester_id`). There's no foreign key, because the users table lives in another database.
+5. **Errand and credit routes** (order-service, credit-service) use `require_student`: admins can't post or accept errands and have no credit account.
+6. The user id is `int(account.id)`. Store it in that service's tables as a plain integer column (e.g. `requester_id`). There's no foreign key, because the users table lives in another database.
 
 ### Registration → credit account (M6 async)
 

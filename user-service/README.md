@@ -1,12 +1,12 @@
 <!--
 AI Assistance Disclosure:
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
-Scope: AI-assisted Markdown formatting, environment variable setup instructions, the full-stack build step, the interactive API docs section (including the ENABLE_DOCS note), the initial admin setup section, the running tests section, and the protecting an endpoint section (2026-09-27).
+Scope: AI-assisted Markdown formatting, environment variable setup instructions, the full-stack build step, the interactive API docs section (including the ENABLE_DOCS note), the initial admin setup section, the running tests section, and the protecting an endpoint section (2026-09-27); AI-updated the admin and endpoint sections for the admin role (2026-09-28).
 Author review: Originally written and then verified by Nathan
 -->
 
 # Service Overview
-The User Service manages user registration, authentication, profile information, and a user’s ability to participate as both a requester and a courier; as well as admin accounts.
+The User Service manages user registration, authentication, profile information, and a user’s ability to participate as both a requester and a courier. Admins are users with the `admin` role: they sign in the same way, but can't post or accept errands.
 
 It uses FastAPI with SQLAlchemy Core to handle SQL queries with a Postgres 18 database.
 
@@ -82,9 +82,9 @@ The `--build` flag rebuilds the images so your latest code changes are included.
 
 ## Creating the initial admin
 
-The `create-initial-admin` command creates the first admin account from `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD`. It only runs against an empty `admins` table, so it's safe to re-run and does nothing once any admin exists. Run it after migrations.
+The `create-initial-admin` command creates the first admin (a user with the `admin` role) from `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD`. These follow the same rules as registration, so the email must be an `@u.nus.edu` address. It does nothing once any admin exists, so it's safe to re-run. It fails if a student already uses the email or username. Run it after migrations. Registration always creates students, and no endpoint changes a user's role.
 
-- **Local development:** set both variables in `user-service/.env`, then run:
+- **Local development:** set all three variables in `user-service/.env`, then run:
 
   ```sh
   mise run create-admin
@@ -95,12 +95,12 @@ The `create-initial-admin` command creates the first admin account from `INITIAL
 - **Full stack (Compose):** the variables aren't passed to the containers, so provide them on the command line. This reuses the one-off `user-migrate` container, so the password never enters the long-running server's environment:
 
   ```sh
-  docker compose run --rm -e INITIAL_ADMIN_USERNAME=<username> -e INITIAL_ADMIN_PASSWORD=<password> user-migrate create-initial-admin
+  docker compose run --rm -e INITIAL_ADMIN_EMAIL=<email> -e INITIAL_ADMIN_USERNAME=<username> -e INITIAL_ADMIN_PASSWORD=<password> user-migrate create-initial-admin
   ```
 
 ## Protecting an endpoint
 
-To require a login, add a `CurrentUser` or `CurrentAdmin` parameter (from `user_service.auth`) to the endpoint:
+To require a login, add a `CurrentUser`, `CurrentStudent` or `CurrentAdmin` parameter (from `user_service.auth`) to the endpoint:
 
 ```python
 @app.get("/users/me")
@@ -111,10 +111,9 @@ async def read_current_user(account: CurrentUser, conn: Connection) -> UserRespo
 FastAPI looks at the parameter's **type**, not its name, so `account` could be called anything. `CurrentUser` is `Annotated[Account, Depends(require_user)]`, which makes FastAPI run `require_user` before the endpoint. `require_user` reads the `Authorization: Bearer <token>` header and checks the JWT:
 
 - A missing, invalid or expired token gets a `401`.
-- A valid token for the wrong kind of account (e.g. an admin token on a `CurrentUser` route) gets a `403`.
-- Otherwise the endpoint runs, with `account` set to the decoded `Account(id, type)`.
+- Otherwise the endpoint runs, with `account` set to the decoded `Account(id, role)`.
 
-`CurrentAdmin` works the same way for admin tokens.
+`CurrentUser` accepts any role, since admins are users too. `CurrentStudent` and `CurrentAdmin` run the same checks, then also require the token's `role` claim to be `student` or `admin`. A valid token with the wrong role (e.g. an admin token on a `CurrentStudent` route) gets a `403`.
 
 > **Warning:** nothing marks an endpoint as public. **If you leave out the parameter, anyone can call the endpoint.** Only login, registration, password-recovery start and `/health` should be unprotected.
 

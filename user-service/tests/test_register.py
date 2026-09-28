@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated tests for the POST /auth/register endpoint; AI-added cases for the web client's username and
-#        password rules (2026-09-27).
+#        password rules (2026-09-27); AI-added the student-email-only and role cases (2026-09-28).
 # Author review: reviewed by Nathan
 
 import asyncio
@@ -33,6 +33,7 @@ async def test_creates_user_with_hashed_password(client: AsyncClient, engine: As
     assert body["email"] == "alice@u.nus.edu"
     assert body["username"] == "alice"
     assert body["email_verified_at"] is None
+    assert body["role"] == "student"
     assert "password" not in body and "password_hash" not in body
 
     async with engine.connect() as conn:
@@ -50,10 +51,18 @@ async def test_strips_username_whitespace(client: AsyncClient) -> None:
     assert response.json()["username"] == "alice"
 
 
-async def test_accepts_staff_email(client: AsyncClient) -> None:
+async def test_rejects_staff_email(client: AsyncClient, engine: AsyncEngine) -> None:
     response = await client.post("/auth/register", json={**VALID, "email": "prof@nus.edu.sg"})
 
-    assert response.status_code == 201
+    assert response.status_code == 422
+    assert await count_users(engine) == 0
+
+
+async def test_cannot_register_as_admin(client: AsyncClient, engine: AsyncEngine) -> None:
+    response = await client.post("/auth/register", json={**VALID, "role": "admin"})
+
+    assert response.status_code == 422
+    assert await count_users(engine) == 0
 
 
 @pytest.mark.parametrize(

@@ -1,7 +1,8 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated access-token check and student/admin role dependencies;
-#        AI-changed it to read the account type from the "type" claim, matching the User Service (Claude Code, 2026-09-27).
+#        AI-changed it to read the account type from the "type" claim, matching the User Service (Claude Code, 2026-09-27);
+#        AI-renamed the claim to "role" (Claude Code, 2026-09-28).
 # Author review: <to be completed by author>
 
 """Identity and role checks.
@@ -11,7 +12,7 @@ never calls the User Service per request: it checks the token's signature with t
 shared JWT_SECRET and reads two claims from it:
 
     sub   the user's id (string)
-    type  "student" or "admin"
+    role  "student" or "admin"
 
 Missing, malformed, expired or wrongly signed token  -> 401 Unauthorized
 Valid token, but the role may not do this             -> 403 Forbidden
@@ -66,7 +67,7 @@ def decode_token(token: str) -> CurrentUser:
             # Only the configured algorithm is accepted, so a token signed with
             # "none" or another algorithm is rejected.
             algorithms=[settings.jwt_algorithm],
-            options={"require": ["exp", "sub"]},
+            options={"require": ["exp", "sub", "role"]},
         )
     except jwt.ExpiredSignatureError:
         raise _unauthorized("Your session has expired. Sign in again.")
@@ -74,7 +75,7 @@ def decode_token(token: str) -> CurrentUser:
         raise _unauthorized("Your session is not valid. Sign in again.")
 
     try:
-        role = Role(claims.get("type"))
+        role = Role(claims["role"])
     except ValueError:
         raise _unauthorized("Your session is not valid. Sign in again.")
     return CurrentUser(id=claims["sub"], role=role)

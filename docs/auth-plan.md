@@ -482,10 +482,7 @@ docker compose up --build -d
 1. `POST /auth/register` with an NUS email.
 2. Click **Authorize** and use the **UserAuth** form: enter your email or username plus your password, and leave client_id/secret empty.
 3. `GET /users/me` should return your profile. Log out in the Authorize dialog and it should return 401.
-4. Seed an admin with `mise run create-admin` (from `user-service/`, using `INITIAL_ADMIN_*` in `user-service/.env`), or in Docker:
-   ```sh
-   docker compose run --rm -e INITIAL_ADMIN_EMAIL=root@u.nus.edu -e INITIAL_ADMIN_USERNAME=root -e INITIAL_ADMIN_PASSWORD='Adm1n-pass' user-migrate create-initial-admin
-   ```
+4. Seed an admin. Either set `INITIAL_ADMIN_*` in the root `.env` before `docker compose up`, so the `user-seed-admin` container creates it, or run `mise run create-admin` from `user-service/` with the variables in `user-service/.env`.
    Then log in through the same **UserAuth** form. `GET /users/me` returns `"role": "admin"`.
 
 **With curl:**

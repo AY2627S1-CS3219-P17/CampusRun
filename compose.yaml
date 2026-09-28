@@ -1,7 +1,8 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
 # Scope: AI-generated local development Compose setup for the user service, its Postgres database and its one-off migration step.
-#        AI-added the gateway, the supplier-service ROOT_PATH/ENABLE_DOCS settings and the frontend service (2026-09-27).
+#        AI-added the gateway, the supplier-service ROOT_PATH/ENABLE_DOCS settings and the frontend service (2026-09-27);
+#        AI-added the user-seed-admin one-off service (2026-09-28).
 # Author review: reviewed by Nathan
 
 # AI Assistance Disclosure:
@@ -41,6 +42,22 @@ services:
     depends_on:
       user-db:
         condition: service_healthy
+
+  # One-off: creates the first admin from INITIAL_ADMIN_* after migrations, then exits.
+  # Skips when the variables are unset or an admin already exists. user-service doesn't wait for it,
+  # so a bad value only fails this container, and the admin password never reaches the server.
+  user-seed-admin:
+    build: ./user-service
+    command: ["create-initial-admin", "--skip-if-unset"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${USER_DB_USER:-user_service}:${USER_DB_PASSWORD:?set USER_DB_PASSWORD in .env}@user-db:5432/${USER_DB_NAME:-user_service}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
+      INITIAL_ADMIN_USERNAME: ${INITIAL_ADMIN_USERNAME:-}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}
+    depends_on:
+      user-migrate:
+        condition: service_completed_successfully
 
   user-service:
     build: ./user-service

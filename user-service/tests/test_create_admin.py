@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated tests for the create-initial-admin script; AI-rewrote them for admins as users with the
-#        admin role (2026-09-28).
+#        admin role, and added the --skip-if-unset cases (2026-09-28).
 # Author review: reviewed by Nathan
 
 import asyncio
@@ -123,6 +123,22 @@ async def test_rejects_missing_values(
 ) -> None:
     with pytest.raises(ValueError, match="must all be set"):
         await create_initial_admin(make_settings(database_url, email, username, password))
+
+    assert await fetch_users(engine) == []
+
+
+async def test_skip_if_unset_skips_when_nothing_is_set(engine: AsyncEngine, database_url: str) -> None:
+    settings = make_settings(database_url, email=None, username=None, password=None)
+
+    message = await create_initial_admin(settings, skip_if_unset=True)
+
+    assert message == "Skipped: INITIAL_ADMIN_* not set"
+    assert await fetch_users(engine) == []
+
+
+async def test_skip_if_unset_still_rejects_partial_values(engine: AsyncEngine, database_url: str) -> None:
+    with pytest.raises(ValueError, match="must all be set"):
+        await create_initial_admin(make_settings(database_url, password=None), skip_if_unset=True)
 
     assert await fetch_users(engine) == []
 

@@ -126,7 +126,7 @@ Admins stop being separate accounts in their own `admins` table. They become row
 
 - **Tests:** run `mise run test` in `user-service/` and `supplier-service/`.
 - **Migration:** run `docker compose up --build`. `user-migrate` applies the new revision on top of the existing one without errors.
-- **Seed an admin:** `docker compose run --rm -e INITIAL_ADMIN_EMAIL=... -e INITIAL_ADMIN_USERNAME=... -e INITIAL_ADMIN_PASSWORD=... user-migrate create-initial-admin`.
+- **Seed an admin:** set `INITIAL_ADMIN_*` in the root `.env`, run `docker compose up`, then check `docker compose logs user-seed-admin`.
 - **As the admin in the web app:**
   - Log in on the normal login page.
   - Explore is visible, and Suppliers shows the create and edit controls.

@@ -1,9 +1,11 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated create-initial-admin script that seeds the first admin from INITIAL_ADMIN_* settings;
-#        AI-changed it to create a user with the admin role, validated like a registration (2026-09-28).
+#        AI-changed it to create a user with the admin role, validated like a registration, and added --skip-if-unset
+#        for the Compose seeding service (2026-09-28).
 # Author review: reviewed by Nathan
 
+import argparse
 import asyncio
 import sys
 
@@ -34,7 +36,12 @@ def _validated(settings: Settings) -> RegisterRequest:
         raise ValueError(problems) from None
 
 
-async def create_initial_admin(settings: Settings) -> str:
+async def create_initial_admin(settings: Settings, skip_if_unset: bool = False) -> str:
+    # Only when none are set: a half-filled set is a mistake worth reporting
+    if skip_if_unset and not any(
+        (settings.initial_admin_email, settings.initial_admin_username, settings.initial_admin_password)
+    ):
+        return "Skipped: INITIAL_ADMIN_* not set"
     admin = _validated(settings)
 
     engine = create_engine(settings)
@@ -77,8 +84,15 @@ async def create_initial_admin(settings: Settings) -> str:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Create the first admin user from INITIAL_ADMIN_* settings.")
+    parser.add_argument(
+        "--skip-if-unset",
+        action="store_true",
+        help="exit successfully instead of failing when no INITIAL_ADMIN_* variable is set",
+    )
+    args = parser.parse_args()
     try:
-        message = asyncio.run(create_initial_admin(get_settings()))
+        message = asyncio.run(create_initial_admin(get_settings(), skip_if_unset=args.skip_if_unset))
     except ValueError as error:
         sys.exit(f"Error: {error}")
     print(message)

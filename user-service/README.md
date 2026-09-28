@@ -1,7 +1,7 @@
 <!--
 AI Assistance Disclosure:
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
-Scope: AI-assisted Markdown formatting, environment variable setup instructions, the full-stack build step, the interactive API docs section (including the ENABLE_DOCS note), the initial admin setup section, the running tests section, and the protecting an endpoint section (2026-09-27); AI-updated the admin and endpoint sections for the admin role (2026-09-28).
+Scope: AI-assisted Markdown formatting, environment variable setup instructions, the full-stack build step, the interactive API docs section (including the ENABLE_DOCS note), the initial admin setup section, the running tests section, and the protecting an endpoint section (2026-09-27); AI-updated the admin and endpoint sections for the admin role, and the Compose seeding step (2026-09-28).
 Author review: Originally written and then verified by Nathan
 -->
 
@@ -92,10 +92,10 @@ The `create-initial-admin` command creates the first admin (a user with the `adm
 
   This starts the database and applies migrations first. Without mise, run `uv run create-initial-admin` once migrations are applied.
 
-- **Full stack (Compose):** the variables aren't passed to the containers, so provide them on the command line. This reuses the one-off `user-migrate` container, so the password never enters the long-running server's environment:
+- **Full stack (Compose):** set all three variables in the **root** `.env`, then run `docker compose up`. The one-off `user-seed-admin` container runs `create-initial-admin --skip-if-unset` after migrations. It skips if the variables are empty, and exits once it's done. `user-service` doesn't wait for it, and the password never enters the long-running server's environment. Check the result with `docker compose logs user-seed-admin`. To re-run it after changing the variables:
 
   ```sh
-  docker compose run --rm -e INITIAL_ADMIN_EMAIL=<email> -e INITIAL_ADMIN_USERNAME=<username> -e INITIAL_ADMIN_PASSWORD=<password> user-migrate create-initial-admin
+  docker compose run --rm user-seed-admin
   ```
 
 ## Protecting an endpoint

@@ -1,6 +1,7 @@
 // AI Assistance Disclosure:
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-28
-// Scope: AI-added StudentRoute, which keeps admins out of the errand pages.
+// Scope: AI-added StudentRoute, which keeps admins out of the errand pages; AI-removed it again, since admins
+//        keep every student capability (2026-09-28).
 // Author review: <to be completed by author>
 
 import { StrictMode } from 'react'
@@ -18,25 +19,14 @@ export default function ProtectedRoute() {
   return useSession() ? <Outlet /> : <Navigate to="/login" replace />
 }
 
-// Admins can't post or accept errands, so they're sent back to Explore
-function StudentRoute() {
-  return useSession()?.role === 'student' ? (
-    <Outlet />
-  ) : (
-    <Navigate to="/explore" replace />
-  )
-}
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
         <Route element={<ProtectedRoute />}>
           <Route path="/explore" element={<Explore />} />
-          <Route element={<StudentRoute />}>
-            <Route path="/my-tasks" element={<MyTasks />} />
-            <Route path="/my-requests" element={<MyRequests />} />
-          </Route>
+          <Route path="/my-tasks" element={<MyTasks />} />
+          <Route path="/my-requests" element={<MyRequests />} />
           <Route path="/suppliers" element={<Suppliers />} />
         </Route>
 

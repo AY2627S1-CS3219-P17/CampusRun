@@ -465,7 +465,7 @@ This also covers `test_create_admin.py`, because `Settings(_env_file=None, ...)`
 - failed logins that all look the same
 - `/users/me` for both roles
 - rejected tokens (expired, forged, no expiry, no `role`, or the old `type` claim)
-- `require_student` and `require_admin` returning 403 for the wrong role
+- `require_user` accepting both roles, and `require_admin` returning 403 for a student
 
 **Check:** `mise run test` passes, including the existing registration and admin tests.
 
@@ -508,9 +508,9 @@ These are for later milestones and other services. Not needed for D2.
 
 1. **Gateway:** add a `location /api/<name>/ { proxy_pass http://<name>-service:8000/; }` block to `gateway/nginx.conf` and a `depends_on` entry to the gateway.
 2. **Compose:** don't publish the service's port. Give it `ROOT_PATH: /api/<name>` and `JWT_SECRET: ${JWT_SECRET:?...}`.
-3. **Code:** copy a trimmed `auth.py` into the service. Keep `Account`, `credentials_error`, `require_user`/`require_student`/`require_admin`, and the decode logic from `decode_access_token`. It needs only `pyjwt` and the secret; no database, no password hashing, no `create_access_token`. Keep `ALGORITHM` and the required claims identical to user-service's.
+3. **Code:** copy a trimmed `auth.py` into the service. Keep `Account`, `credentials_error`, `require_user`/`require_admin`, and the decode logic from `decode_access_token`. It needs only `pyjwt` and the secret; no database, no password hashing, no `create_access_token`. Keep `ALGORITHM` and the required claims identical to user-service's.
 4. **`tokenUrl`** in other services must point at user-service's login through the gateway: `OAuth2PasswordBearer(tokenUrl="/api/users/auth/login", scheme_name="UserAuth")`. Swagger's Authorize button on those services only works through the gateway.
-5. **Errand and credit routes** (order-service, credit-service) use `require_student`: admins can't post or accept errands and have no credit account.
+5. **Errand and credit routes** (order-service, credit-service) use `require_user`: an admin can do everything a student can, and has a credit account too. Admin-only actions there must refuse to act on the admin's own errands or credits.
 6. The user id is `int(account.id)`. Store it in that service's tables as a plain integer column (e.g. `requester_id`). There's no foreign key, because the users table lives in another database.
 
 ### Registration → credit account (M6 async)

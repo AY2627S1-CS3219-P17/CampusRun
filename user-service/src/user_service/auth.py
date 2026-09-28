@@ -1,7 +1,8 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated token-checking dependencies (from docs/auth-plan.md); AI-renamed the user token type from "user" to "student" (Claude Code, 2026-09-27);
-#        AI-merged the admin login into the user one and switched to the "role" claim (Claude Code, 2026-09-28).
+#        AI-merged the admin login into the user one and switched to the "role" claim (Claude Code, 2026-09-28);
+#        AI-removed require_student, since admins keep every student capability (Claude Code, 2026-09-28).
 # Author review: <to be completed by author>
 
 from dataclasses import dataclass
@@ -53,12 +54,8 @@ async def require_user(
     token: Annotated[str, Depends(user_scheme)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> Account:
-    # Any role: admins are users too
+    # Any role: an admin can do everything a student can, so errand and credit routes use this too
     return _account_from_token(token, settings)
-
-
-async def require_student(account: Annotated[Account, Depends(require_user)]) -> Account:
-    return _require(account, "student")
 
 
 async def require_admin(account: Annotated[Account, Depends(require_user)]) -> Account:
@@ -66,5 +63,4 @@ async def require_admin(account: Annotated[Account, Depends(require_user)]) -> A
 
 # Adding one of these as an endpoint parameter makes FastAPI run its check first, which returns 401/403 before the endpoint runs; the parameter name doesn't matter.
 CurrentUser = Annotated[Account, Depends(require_user)]
-CurrentStudent = Annotated[Account, Depends(require_student)]
 CurrentAdmin = Annotated[Account, Depends(require_admin)]

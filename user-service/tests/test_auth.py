@@ -2,7 +2,8 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
 # Scope: AI-generated tests for password login, JWT validation and the /users/me and /admins/me endpoints;
 #        AI-updated for the "student" token type (Claude Code, 2026-09-27);
-#        AI-updated for admins as users with the admin role and the "role" claim (Claude Code, 2026-09-28).
+#        AI-updated for admins as users with the admin role and the "role" claim (Claude Code, 2026-09-28);
+#        AI-replaced the require_student checks: both roles pass require_user (Claude Code, 2026-09-28).
 # Author review: <to be completed by author>
 
 from datetime import UTC, datetime, timedelta
@@ -14,7 +15,7 @@ from httpx import AsyncClient
 from sqlalchemy import delete, insert
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from user_service.auth import require_admin, require_student, require_user
+from user_service.auth import require_admin, require_user
 from user_service.config import get_settings
 from user_service.security import ALGORITHM, password_hash
 from user_service.tables import users
@@ -146,7 +147,7 @@ async def test_admin_logs_in_like_a_student(client: AsyncClient, admin: None) ->
 
 
 async def check(dependency, token: str) -> int:
-    # Runs the dependency chain directly, since no route in this service is student-only yet
+    # Runs the dependency chain directly, since no route in this service is admin-only yet
     try:
         account = await require_user(token, get_settings())
         await dependency(account)
@@ -159,7 +160,8 @@ async def test_role_checks(client: AsyncClient, user: dict, admin: None) -> None
     student_token = (await login(client, "alice", USER["password"])).json()["access_token"]
     admin_token = (await login(client, "root", ADMIN["password"])).json()["access_token"]
 
-    assert await check(require_student, student_token) == 200
-    assert await check(require_student, admin_token) == 403
+    # Admins keep every student capability, so any-user routes accept both roles
+    assert (await require_user(student_token, get_settings())).role == "student"
+    assert (await require_user(admin_token, get_settings())).role == "admin"
     assert await check(require_admin, admin_token) == 200
     assert await check(require_admin, student_token) == 403

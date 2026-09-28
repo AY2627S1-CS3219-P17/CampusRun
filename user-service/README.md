@@ -1,12 +1,12 @@
 <!--
 AI Assistance Disclosure:
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
-Scope: AI-assisted Markdown formatting, environment variable setup instructions, the full-stack build step, the interactive API docs section (including the ENABLE_DOCS note), the initial admin setup section, the running tests section, and the protecting an endpoint section (2026-09-27); AI-updated the admin and endpoint sections for the admin role, and the Compose seeding step (2026-09-28).
+Scope: AI-assisted Markdown formatting, environment variable setup instructions, the full-stack build step, the interactive API docs section (including the ENABLE_DOCS note), the initial admin setup section, the running tests section, and the protecting an endpoint section (2026-09-27); AI-updated the admin and endpoint sections for the admin role, and the Compose seeding step (2026-09-28); AI-updated them so admins keep student capabilities (2026-09-28).
 Author review: Originally written and then verified by Nathan
 -->
 
 # Service Overview
-The User Service manages user registration, authentication, profile information, and a user’s ability to participate as both a requester and a courier. Admins are users with the `admin` role: they sign in the same way, but can't post or accept errands.
+The User Service manages user registration, authentication, profile information, and a user’s ability to participate as both a requester and a courier. Admins are users with the `admin` role: they sign in the same way and keep every student capability, plus admin permissions such as managing suppliers.
 
 It uses FastAPI with SQLAlchemy Core to handle SQL queries with a Postgres 18 database.
 
@@ -100,7 +100,7 @@ The `create-initial-admin` command creates the first admin (a user with the `adm
 
 ## Protecting an endpoint
 
-To require a login, add a `CurrentUser`, `CurrentStudent` or `CurrentAdmin` parameter (from `user_service.auth`) to the endpoint:
+To require a login, add a `CurrentUser` or `CurrentAdmin` parameter (from `user_service.auth`) to the endpoint:
 
 ```python
 @app.get("/users/me")
@@ -113,7 +113,7 @@ FastAPI looks at the parameter's **type**, not its name, so `account` could be c
 - A missing, invalid or expired token gets a `401`.
 - Otherwise the endpoint runs, with `account` set to the decoded `Account(id, role)`.
 
-`CurrentUser` accepts any role, since admins are users too. `CurrentStudent` and `CurrentAdmin` run the same checks, then also require the token's `role` claim to be `student` or `admin`. A valid token with the wrong role (e.g. an admin token on a `CurrentStudent` route) gets a `403`.
+`CurrentUser` accepts any role, since an admin can do everything a student can. `CurrentAdmin` runs the same checks, then also requires the token's `role` claim to be `admin`. A student's token on a `CurrentAdmin` route gets a `403`. There's deliberately no student-only dependency.
 
 > **Warning:** nothing marks an endpoint as public. **If you leave out the parameter, anyone can call the endpoint.** Only login, registration, password-recovery start and `/health` should be unprotected.
 

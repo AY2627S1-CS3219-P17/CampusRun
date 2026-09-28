@@ -1,7 +1,8 @@
 <!--
 AI Assistance Disclosure:
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-28
-Scope: AI-generated plan for replacing the separate admins table with a role on users, based on the team's decisions.
+Scope: AI-generated plan for replacing the separate admins table with a role on users, based on the team's decisions;
+       AI-revised it so admins keep every student capability (2026-09-28).
 Author review: <to be completed by author>
 -->
 
@@ -11,13 +12,15 @@ Last updated: 2026-09-28
 
 **Status:** implemented on branch `change-admin-design` (revision `cb86242157bd`). The "Other services" notes are still to do when those services get auth.
 
+> **Revised 2026-09-28: admins keep every student capability.** The team first made admins admin-only (no errands, no credit account). Because every account must use a unique `@u.nus.edu` email, a promoted student couldn't keep a second account, so promotion would have locked them out of errands. Admin is now extra permissions on top of a student account. `require_student` and `CurrentStudent` were removed, and the frontend shows the errand pages to everyone. Items below that say admins are kept out of errands are superseded by this note and kept as history.
+
 Admins stop being separate accounts in their own `admins` table. They become rows in `users` with `role = 'admin'`, and they sign in through the same `/auth/login` and login page as students. Protected operations check the token's `role` claim, not `type`.
 
 ## Decisions
 
 - **The token claim `type` becomes `role`,** with values `"student" | "admin"`. Every service rejects tokens that carry only `type`. Ship all three sections below in one PR, because the rename breaks older services.
 - **Add a new migration.** Teammates have already applied `717eccffe95a`, so don't edit it. Rows in `admins` are dropped, not moved over: they have no email.
-- **Admins are admin-only.** They have no credit account and can't post or accept errands. They can view and edit their own profile.
+- ~~**Admins are admin-only.** They have no credit account and can't post or accept errands.~~ **Superseded:** admins keep every student capability: they can post and accept errands and have a credit account. Admin powers can't be used on errands or credits involving the admin themselves, and admin actions are logged.
 - **Registration accepts `@u.nus.edu` only,** and `@nus.edu.sg` staff addresses are no longer allowed. Registration always creates a `student`.
 - **Admins are created only by the `create-initial-admin` script.** Admins also use an `@u.nus.edu` email, checked by the same rule as registration. No API sets `role`, and promotion is deferred.
 - **Trade-off:** a demoted admin keeps admin access until their current token expires, up to `JWT_ACCESS_TOKEN_TTL`.
@@ -99,8 +102,8 @@ Admins stop being separate accounts in their own `admins` table. They become row
 
 ## Other services (notes only, no code yet)
 
-- **order-service:** errand routes require `role == "student"`. An admin gets 403.
-- **credit-service:** only `/auth/register` publishes `user.registered`. The admin script doesn't, so admins never get a credit account. Credit routes require `role == "student"`.
+- **order-service:** errand routes use `require_user`, so both roles can post and accept errands. Any future admin action on errands (e.g. dispute resolution, forced cancellation) is refused when the admin is the requester or courier.
+- **credit-service:** every user needs a credit account. `/auth/register` publishes `user.registered`, and `create-initial-admin` must publish it too, so the seeded admin gets an account. Any future admin credit adjustment is refused on the admin's own account.
 - Update the "Adding auth to another service" steps in `docs/auth-plan.md` to match.
 
 ## Docs and READMEs

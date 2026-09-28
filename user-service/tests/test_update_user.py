@@ -1,7 +1,8 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
 # Scope: AI-generated tests for the PATCH /users/me endpoint (username and password changes), including the web
-#        client's username and password rules; AI-changed the admin test for admins as users (2026-09-28).
+#        client's username and password rules; AI-changed the admin test for admins as users (2026-09-28);
+#        AI-added the test that protected and unknown fields are rejected (2026-09-28).
 # Author review: <to be completed by author>
 
 import pytest
@@ -130,6 +131,17 @@ async def test_rejects_weak_new_password(client: AsyncClient, alice: dict, new_p
     )
 
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize("field", ["role", "email", "id", "email_verified_at", "password_hash", "nickname"])
+async def test_rejects_protected_and_unknown_fields(client: AsyncClient, alice: dict, field: str) -> None:
+    response = await client.patch("/users/me", headers=alice, json={"username": "alice_2", field: "admin"})
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["body", field]
+    # Nothing changes, not even the valid field sent alongside
+    me = (await client.get("/users/me", headers=alice)).json()
+    assert (me["username"], me["role"]) == ("alice", "student")
 
 
 async def test_empty_body_changes_nothing(client: AsyncClient, alice: dict) -> None:

@@ -2,7 +2,8 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated registration request and user response models with NUS email, username and password validation;
 #        AI-added the profile update request model, and aligned the username and password rules with the web client (2026-09-27);
-#        AI-limited emails to @u.nus.edu, added role to UserResponse and removed AdminResponse (2026-09-28).
+#        AI-limited emails to @u.nus.edu, added role to UserResponse and removed AdminResponse (2026-09-28);
+#        AI-made the profile update request reject unknown fields (2026-09-28).
 # Author review: reviewed by Nathan
 
 import re
@@ -74,6 +75,9 @@ class RegisterRequest(BaseModel):
 
 
 class UpdateUserRequest(BaseModel):
+    # Rejects unknown fields such as "role" or "email", so asking to change them is an error, not a silent no-op
+    model_config = ConfigDict(extra="forbid")
+
     # Omitted fields are left unchanged
     username: Username | None = None
     # Not length-checked here: check_password caps it, so a wrong password gets 400 rather than 422

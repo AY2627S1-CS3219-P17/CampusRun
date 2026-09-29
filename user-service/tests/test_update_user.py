@@ -2,7 +2,8 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
 # Scope: AI-generated tests for the PATCH /users/me endpoint (username and password changes), including the web
 #        client's username and password rules; AI-changed the admin test for admins as users (2026-09-28);
-#        AI-added the test that protected and unknown fields are rejected (2026-09-28).
+#        AI-added the test that protected and unknown fields are rejected (2026-09-28);
+#        AI-added the check that a 422 does not echo the current password (2026-09-29).
 # Author review: <to be completed by author>
 
 import pytest
@@ -122,6 +123,8 @@ async def test_new_password_must_differ_from_current(client: AsyncClient, alice:
 
     assert response.status_code == 422
     assert "must be different" in response.text
+    # A model-level error's input is the whole body, so this would echo the real current password
+    assert ALICE["password"] not in response.text
 
 
 @pytest.mark.parametrize("new_password", ["Sh0rt-", "no-upper-1", "NO-LOWER-1", "No-digits-here", "NoSpecial123"])

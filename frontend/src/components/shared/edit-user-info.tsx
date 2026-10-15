@@ -4,15 +4,15 @@
 //        and keeps Save disabled until something has changed.
 // Author review: Validated changed-field updates and form-state boundaries.
 
-import { validateUsername, validatePassword } from '../utils/validation'
+import { validateUsername, validatePassword } from '../../utils/validation'
 import { useEffect, useState, type SubmitEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { Dialog } from 'radix-ui'
 import { Eye, EyeOff, LockKeyhole, Plus, UserRound, X } from 'lucide-react'
-import { ApiError } from '../api/client'
-import { getCurrentUser, updateUser } from '../api/user'
-import type { UpdateUserPayload } from '../types/user'
-import { clearSession } from '../utils/session'
+import { ApiError } from '../../api/client'
+import { getCurrentUser, updateUser } from '../../api/user'
+import type { UpdateUserPayload } from '../../types/user'
+import { clearSession } from '../../utils/session'
 import './edit-user-info.css'
 
 type EditInfoDialogProps = {

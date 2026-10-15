@@ -4,6 +4,9 @@
 //        coordinates and photo fields, and per-field validation including errors from the service.
 //        AI-refactored the form sections, paired-field errors and time-picker interaction
 // Author review: Validated form validation, API errors, and input boundaries.
+// Tool: Codex (OpenAI), date: 2026-10-16
+// Scope: Replaced manual latitude/longitude fields with the shared bounded map picker.
+// Author review: <to be completed by author>
 
 import {
   useState,
@@ -12,15 +15,17 @@ import {
   type SubmitEvent,
 } from 'react'
 import { Dialog, Select } from 'radix-ui'
-import { Check, ChevronDown, X } from 'lucide-react'
-import { ApiError } from '../api/client'
-import { createSupplier, editSupplier } from '../api/supplier'
+import { Check, ChevronDown, MapPin, X } from 'lucide-react'
+import { ApiError } from '../../api/client'
+import { createSupplier, editSupplier } from '../../api/supplier'
 import {
-  SUPPLIER_CATEGORIES,
   type CreateSupplierPayload,
   type Supplier,
   type SupplierCategory,
-} from '../types/supplier'
+} from '../../types/supplier'
+import { SUPPLIER_CATEGORIES } from '../../utils/supplier'
+import { type MapPosition } from '../../utils/map'
+import InteractiveMap from '../shared/interactive-map'
 import './update-supplier.css'
 
 type Props = {
@@ -36,12 +41,6 @@ type Values = {
 }
 type Field = keyof Values
 type Errors = Partial<Record<Field | 'form', string>>
-
-// Matches BE, for NUS campus geo boundary
-const COORDINATE_BOUNDS = {
-  latitude: { min: 1.287, max: 1.31 },
-  longitude: { min: 103.764, max: 103.788 },
-} as const
 
 function toValues(supplier?: Supplier): Values {
   return {
@@ -90,23 +89,24 @@ function validate(values: Values): Errors {
   text('floor', 10, null)
   text('locationDescription', 300, 'Required')
 
-  for (const field of ['latitude', 'longitude'] as const) {
-    const value = values[field].trim()
-    if (!value)
-      errors[field] =
-        `${field.charAt(0).toUpperCase() + field.slice(1)} is required`
-    else {
-      const { min, max } = COORDINATE_BOUNDS[field]
-      if (Number(value) < min || Number(value) > max)
-        errors[field] = `Use a value from ${min} to ${max}.`
-    }
-  }
+  const position = positionFrom(values)
+  if (!position) errors.latitude = 'Choose a location on the map'
 
   const url = values.imageUrl.trim()
   if (url && !/^https?:\/\/\S+$/i.test(url))
-    errors.imageUrl = 'Enter a full link starting with https://.'
+    errors.imageUrl = 'Enter a full link starting with https://'
 
   return errors
+}
+
+function positionFrom(values: Values): MapPosition | null {
+  if (!values.latitude || !values.longitude) return null
+  const latitude = Number(values.latitude)
+  const longitude = Number(values.longitude)
+
+  return Number.isFinite(latitude) && Number.isFinite(longitude)
+    ? { latitude, longitude }
+    : null
 }
 
 export default function UpdateSupplierDialog({
@@ -132,10 +132,25 @@ export default function UpdateSupplierDialog({
     setServerErrors((current) => ({ ...current, [field]: undefined }))
   }
 
+  function updatePosition({ latitude, longitude }: MapPosition) {
+    setValues((current) => ({
+      ...current,
+      latitude: String(latitude),
+      longitude: String(longitude),
+    }))
+    setTouched((current) => new Set(current).add('latitude').add('longitude'))
+    setServerErrors((current) => ({
+      ...current,
+      latitude: undefined,
+      longitude: undefined,
+    }))
+  }
+
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     if (saving) return
     setSubmitted(true)
+    if (Object.keys(clientErrors).length > 0) return
 
     const payload = toPayload(values)
     let changes: Partial<CreateSupplierPayload> = payload
@@ -269,48 +284,52 @@ export default function UpdateSupplierDialog({
                   input('name', { placeholder: 'Starbucks' }),
                 )}
 
-                <label htmlFor="supplier-category">Type</label>
-                <Select.Root
-                  value={values.type}
-                  disabled={saving}
-                  onValueChange={(type) => {
-                    if (SUPPLIER_CATEGORIES.includes(type as SupplierCategory))
-                      update('type', type)
-                  }}
-                >
-                  <Select.Trigger
-                    id="supplier-category"
-                    className="supplier-dialog-select"
+                <div className="supplier-dialog-field">
+                  <label htmlFor="supplier-category">Type</label>
+                  <Select.Root
+                    value={values.type}
+                    disabled={saving}
+                    onValueChange={(type) => {
+                      if (
+                        SUPPLIER_CATEGORIES.includes(type as SupplierCategory)
+                      )
+                        update('type', type)
+                    }}
                   >
-                    <Select.Value />
-                    <Select.Icon>
-                      <ChevronDown size={16} />
-                    </Select.Icon>
-                  </Select.Trigger>
-                  <Select.Portal>
-                    <Select.Content
-                      className="supplier-dialog-options"
-                      position="popper"
-                      sideOffset={4}
-                      collisionPadding={12}
+                    <Select.Trigger
+                      id="supplier-category"
+                      className="supplier-dialog-select"
                     >
-                      <Select.Viewport>
-                        {SUPPLIER_CATEGORIES.map((type) => (
-                          <Select.Item
-                            className="supplier-dialog-option"
-                            key={type}
-                            value={type}
-                          >
-                            <Select.ItemText>{type}</Select.ItemText>
-                            <Select.ItemIndicator>
-                              <Check size={16} />
-                            </Select.ItemIndicator>
-                          </Select.Item>
-                        ))}
-                      </Select.Viewport>
-                    </Select.Content>
-                  </Select.Portal>
-                </Select.Root>
+                      <Select.Value />
+                      <Select.Icon>
+                        <ChevronDown size={16} />
+                      </Select.Icon>
+                    </Select.Trigger>
+                    <Select.Portal>
+                      <Select.Content
+                        className="supplier-dialog-options"
+                        position="popper"
+                        sideOffset={4}
+                        collisionPadding={12}
+                      >
+                        <Select.Viewport>
+                          {SUPPLIER_CATEGORIES.map((type) => (
+                            <Select.Item
+                              className="supplier-dialog-option"
+                              key={type}
+                              value={type}
+                            >
+                              <Select.ItemText>{type}</Select.ItemText>
+                              <Select.ItemIndicator>
+                                <Check size={16} />
+                              </Select.ItemIndicator>
+                            </Select.Item>
+                          ))}
+                        </Select.Viewport>
+                      </Select.Content>
+                    </Select.Portal>
+                  </Select.Root>
+                </div>
               </div>
 
               <div className="supplier-dialog-section">
@@ -338,38 +357,21 @@ export default function UpdateSupplierDialog({
                   }),
                 )}
 
-                <div className="supplier-dialog-fields">
-                  {field(
-                    'latitude',
-                    'Latitude',
-                    input('latitude', {
-                      type: 'number',
-                      min: COORDINATE_BOUNDS.latitude.min,
-                      max: COORDINATE_BOUNDS.latitude.max,
-                      step: 'any',
-                      inputMode: 'decimal',
-                      placeholder: '1.2949',
-                    }),
-                    false,
-                  )}
-                  {field(
-                    'longitude',
-                    'Longitude',
-                    input('longitude', {
-                      type: 'number',
-                      min: COORDINATE_BOUNDS.longitude.min,
-                      max: COORDINATE_BOUNDS.longitude.max,
-                      step: 'any',
-                      inputMode: 'decimal',
-                      placeholder: '103.7744',
-                    }),
-                    false,
-                  )}
-                  {rowErrors('latitude', 'longitude')}
+                <div className="supplier-dialog-field">
+                  <span>Location</span>
+                  <InteractiveMap
+                    value={positionFrom(values)}
+                    onChange={updatePosition}
+                    ariaLabel="Choose supplier location on map"
+                  />
                 </div>
-                <p className="supplier-dialog-hint">
-                  In Google Maps, right-click the spot to copy its coordinates.
+                <p className="supplier-dialog-hint supplier-dialog-map-hint">
+                  <MapPin size={14} aria-hidden="true" />
+                  {positionFrom(values)
+                    ? `${Number(values.latitude).toFixed(5)}, ${Number(values.longitude).toFixed(5)}`
+                    : 'Click the map to choose a location'}
                 </p>
+                {rowErrors('latitude', 'longitude')}
               </div>
 
               <div className="supplier-dialog-section">

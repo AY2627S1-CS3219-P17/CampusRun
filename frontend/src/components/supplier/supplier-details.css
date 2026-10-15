@@ -1,6 +1,9 @@
 /* AI Assistance Disclosure: Claude (claude.ai chat, model: Claude Opus 5.5), 2026-09-26.
    Scope: AI-generated styles for the supplier details dialog.
    Author review: <to be completed by author> */
+/* Tool: Codex (OpenAI), date: 2026-10-16.
+   Scope: Sized the shared read-only map and removed its duplicate pin styles.
+   Author review: <to be completed by author> */
 .supplier-dialog.supplier-details {
   width: min(560px, calc(100% - 32px));
 }
@@ -40,40 +43,17 @@
 .supplier-details-location strong {
   color: #153941;
 }
-.supplier-details-map {
-  display: block;
-  width: 100%;
+.supplier-details-map.interactive-map,
+.supplier-details-map .leaflet-container {
   height: 220px;
+}
+.supplier-details-map.interactive-map {
   margin-top: 20px;
-  border: 1px solid #dce7e3;
-  border-radius: 10px;
-  background: #eef5f2;
 }
-.supplier-map-marker {
-  border: 0;
-  background: transparent;
-}
-.supplier-map-pin {
-  position: absolute;
-  top: 1px;
-  left: 6px;
-  width: 28px;
-  height: 28px;
-  border: 3px solid white;
-  border-radius: 50% 50% 50% 0;
-  background: #218563;
-  box-shadow: 0 3px 8px rgb(15 54 44 / 40%);
-  transform: rotate(-45deg);
-}
-.supplier-map-pin::after {
-  position: absolute;
-  top: 7px;
-  left: 7px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: white;
-  content: '';
+.supplier-details-map.interactive-map:fullscreen,
+.supplier-details-map.interactive-map:fullscreen .leaflet-container {
+  height: 100vh;
+  margin-top: 0;
 }
 .supplier-details-maps-link {
   display: inline-flex;

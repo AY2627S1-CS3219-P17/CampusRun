@@ -1,3 +1,8 @@
+/* AI Assistance Disclosure:
+ * Tool: Codex (OpenAI), date: 2026-10-15
+ * Scope: Shifted the supplier/store action 4px toward the adjacent create action.
+ * Author review: <to be completed by author>
+ */
 .app-header,
 .app-header *,
 .header-menu,
@@ -78,6 +83,10 @@
   height: 40px;
   background: #e5eee9;
   color: #496b70;
+}
+
+.header-secondary-action {
+  margin-right: -4px;
 }
 
 .header-icon-button:not(.header-profile):hover {

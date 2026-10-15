@@ -4,7 +4,6 @@
 //        AI-added the role (2026-09-28).
 // Author review: Validated types against the User Service contract.
 
-// Admins are users with the admin role; they can't post or accept errands
 export type Role = 'student' | 'admin'
 
 export type RegisterUserValues = {

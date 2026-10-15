@@ -4,40 +4,42 @@
 //        pagination done by the service); adds details, admin-only controls.
 //        AI-refactored per-status pagination and surfaced failed activation/deactivation actions.
 // Author review: Validated filters, pagination, permissions, and action errors.
+// Tool: Codex (OpenAI), date: 2026-10-15
+// Scope: Refactored supplier controls to use the configurable shared toolbar.
+// Author review: <to be completed by author>
+// Tool: Codex (OpenAI), date: 2026-10-16
+// Scope: Restored the supplier settings menu using the shared toolbar dropdown styles.
+// Author review: <to be completed by author>
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { DropdownMenu, Toast } from 'radix-ui'
 import {
   ArrowLeft,
-  ArrowUpDown,
-  Check,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock,
-  Filter,
   MapPin,
   Pencil,
-  Plus,
   Power,
-  Search,
   Settings,
 } from 'lucide-react'
+import Toolbar from '../../components/shared/toolbar'
 import './suppliers.css'
-import UpdateSupplierDialog from '../components/update-supplier'
-import SupplierDetailsDialog from '../components/supplier-details'
-import { ApiError } from '../api/client'
-import { listSuppliers, toggleSupplier } from '../api/supplier'
-import { useSession } from '../utils/session'
+import UpdateSupplierDialog from '../../components/supplier/update-supplier'
+import SupplierDetailsDialog from '../../components/supplier/supplier-details'
+import { ApiError } from '../../api/client'
+import { listSuppliers, toggleSupplier } from '../../api/supplier'
+import { useSession } from '../../utils/session'
 import {
-  SUPPLIER_CATEGORIES,
   type Page,
   type Supplier,
   type SupplierCategory,
   type SupplierQuery,
   type SupplierSort,
-} from '../types/supplier'
+} from '../../types/supplier'
+import { SUPPLIER_CATEGORIES } from '../../utils/supplier'
+import type { ToolbarOption } from '../../types/toolbar'
 
 const PAGE_SIZE = 10
 type SupplierStatus = 'active' | 'deactivated'
@@ -47,6 +49,16 @@ const SORTS: { value: SupplierSort; label: string }[] = [
   { value: '-name', label: 'Name (Z-A)' },
   { value: '-createdAt', label: 'Newest' },
   { value: '-updatedAt', label: 'Recently updated' },
+]
+
+const SUPPLIER_TABS: ToolbarOption[] = [
+  { value: 'active', label: 'Active' },
+  { value: 'deactivated', label: 'Deactivated' },
+]
+
+const SUPPLIER_TYPES: ToolbarOption[] = [
+  { value: 'All Types', label: 'All Types' },
+  ...SUPPLIER_CATEGORIES.map((type) => ({ value: type, label: type })),
 ]
 
 // 1 … 4 5 6 … 12
@@ -71,7 +83,6 @@ export default function SuppliersPage() {
 
   const [editor, setEditor] = useState<{ supplier?: Supplier } | null>(null)
   const editorTrigger = useRef<HTMLElement | null>(null)
-  const createButton = useRef<HTMLButtonElement>(null)
 
   const [details, setDetails] = useState<Supplier | null>(null)
 
@@ -172,6 +183,31 @@ export default function SuppliersPage() {
     setCurrentPage(1)
   }
 
+  function updateStatus(value: string) {
+    if (value === 'active' || value === 'deactivated') setStatus(value)
+  }
+
+  function updateSort(value: string) {
+    const option = SORTS.find((item) => item.value === value)
+    if (option) changeFilter(() => setSort(option.value))
+  }
+
+  function updateType(value: string) {
+    if (
+      value === 'All Types' ||
+      SUPPLIER_CATEGORIES.includes(value as SupplierCategory)
+    ) {
+      changeFilter(() =>
+        setSelectedType(value as SupplierCategory | 'All Types'),
+      )
+    }
+  }
+
+  function openCreate(event: MouseEvent<HTMLButtonElement>) {
+    editorTrigger.current = event.currentTarget
+    setEditor({})
+  }
+
   async function handleToggle(supplier: Supplier) {
     try {
       const saved = await toggleSupplier(supplier.id, !supplier.active)
@@ -205,166 +241,41 @@ export default function SuppliersPage() {
             className="supplier-directory"
             aria-label="Supplier directory"
           >
-            <div className="directory-toolbar">
-              <div
-                className="supplier-tabs"
-                role="tablist"
-                aria-label="Supplier status"
-              >
-                <button
-                  className={status === 'active' ? 'is-active' : ''}
-                  onClick={() => setStatus('active')}
-                  role="tab"
-                  aria-selected={status === 'active'}
-                >
-                  Active
-                </button>
-                <button
-                  className={status === 'deactivated' ? 'is-active' : ''}
-                  onClick={() => setStatus('deactivated')}
-                  role="tab"
-                  aria-selected={status === 'deactivated'}
-                >
-                  Deactivated
-                </button>
-              </div>
-
-              <div className="directory-controls">
-                <label className="supplier-search">
-                  <Search size={18} aria-hidden="true" />
-                  <input
-                    value={query}
-                    onChange={(event) => updateQuery(event.target.value)}
-                    placeholder="Search by name or location"
-                    aria-label="Search suppliers by name or location"
-                    maxLength={100}
-                  />
-                </label>
-
-                <DropdownMenu.Root modal={false}>
-                  <DropdownMenu.Trigger asChild>
-                    <button
-                      className="supplier-filter"
-                      type="button"
-                      aria-label={`Filter suppliers by type: ${selectedType}`}
-                    >
-                      <Filter size={16} aria-hidden="true" />
-                      <span>{selectedType}</span>
-                      <ChevronDown size={15} aria-hidden="true" />
-                    </button>
-                  </DropdownMenu.Trigger>
-                  <DropdownMenu.Portal>
-                    <DropdownMenu.Content
-                      className="supplier-filter-menu"
-                      align="end"
-                      sideOffset={6}
-                      collisionPadding={12}
-                    >
-                      <DropdownMenu.RadioGroup
-                        value={selectedType}
-                        onValueChange={(value) => {
-                          if (
-                            value === 'All Types' ||
-                            SUPPLIER_CATEGORIES.includes(
-                              value as SupplierCategory,
-                            )
-                          )
-                            changeFilter(() =>
-                              setSelectedType(
-                                value as SupplierCategory | 'All Types',
-                              ),
-                            )
-                        }}
-                        aria-label="Supplier type"
-                      >
-                        <DropdownMenu.RadioItem
-                          className="supplier-filter-option"
-                          value="All Types"
-                        >
-                          All Types
-                          <DropdownMenu.ItemIndicator>
-                            <Check size={16} aria-hidden="true" />
-                          </DropdownMenu.ItemIndicator>
-                        </DropdownMenu.RadioItem>
-                        <DropdownMenu.Separator className="supplier-filter-separator" />
-                        {SUPPLIER_CATEGORIES.map((type) => (
-                          <DropdownMenu.RadioItem
-                            className="supplier-filter-option"
-                            key={type}
-                            value={type}
-                          >
-                            {type}
-                            <DropdownMenu.ItemIndicator>
-                              <Check size={16} aria-hidden="true" />
-                            </DropdownMenu.ItemIndicator>
-                          </DropdownMenu.RadioItem>
-                        ))}
-                      </DropdownMenu.RadioGroup>
-                    </DropdownMenu.Content>
-                  </DropdownMenu.Portal>
-                </DropdownMenu.Root>
-
-                <DropdownMenu.Root modal={false}>
-                  <DropdownMenu.Trigger asChild>
-                    <button
-                      className="supplier-filter supplier-sort"
-                      type="button"
-                      aria-label={`Sort suppliers: ${SORTS.find((s) => s.value === sort)?.label}`}
-                    >
-                      <ArrowUpDown size={16} aria-hidden="true" />
-                      <span>{SORTS.find((s) => s.value === sort)?.label}</span>
-                      <ChevronDown size={15} aria-hidden="true" />
-                    </button>
-                  </DropdownMenu.Trigger>
-                  <DropdownMenu.Portal>
-                    <DropdownMenu.Content
-                      className="supplier-filter-menu"
-                      align="end"
-                      sideOffset={6}
-                      collisionPadding={12}
-                    >
-                      <DropdownMenu.RadioGroup
-                        value={sort}
-                        onValueChange={(value) => {
-                          const option = SORTS.find((s) => s.value === value)
-                          if (option) changeFilter(() => setSort(option.value))
-                        }}
-                        aria-label="Sort order"
-                      >
-                        {SORTS.map((option) => (
-                          <DropdownMenu.RadioItem
-                            className="supplier-filter-option"
-                            key={option.value}
-                            value={option.value}
-                          >
-                            {option.label}
-                            <DropdownMenu.ItemIndicator>
-                              <Check size={16} aria-hidden="true" />
-                            </DropdownMenu.ItemIndicator>
-                          </DropdownMenu.RadioItem>
-                        ))}
-                      </DropdownMenu.RadioGroup>
-                    </DropdownMenu.Content>
-                  </DropdownMenu.Portal>
-                </DropdownMenu.Root>
-
-                {isAdmin && (
-                  <button
-                    className="create-supplier"
-                    type="button"
-                    aria-label="Create supplier"
-                    ref={createButton}
-                    onClick={(event) => {
-                      editorTrigger.current = event.currentTarget
-                      setEditor({})
-                    }}
-                  >
-                    <Plus size={18} aria-hidden="true" />
-                  </button>
-                )}
-              </div>
-            </div>
-
+            <Toolbar
+              tabs={{
+                options: SUPPLIER_TABS,
+                value: status,
+                onChange: updateStatus,
+                label: 'Supplier status',
+              }}
+              search={{
+                value: query,
+                onChange: updateQuery,
+                placeholder: 'Search by name or location',
+                label: 'Search suppliers by name or location',
+                maxLength: 100,
+              }}
+              filter={{
+                options: SUPPLIER_TYPES,
+                value: selectedType,
+                onChange: updateType,
+                label: 'Filter suppliers by type',
+              }}
+              sort={{
+                options: SORTS,
+                value: sort,
+                onChange: updateSort,
+                label: 'Sort suppliers',
+              }}
+              createAction={
+                isAdmin
+                  ? {
+                      label: 'Create supplier',
+                      onClick: openCreate,
+                    }
+                  : undefined
+              }
+            />
             <div className="supplier-status-line" aria-live="polite">
               <span>
                 {data
@@ -436,7 +347,7 @@ export default function SuppliersPage() {
                           </DropdownMenu.Trigger>
                           <DropdownMenu.Portal>
                             <DropdownMenu.Content
-                              className="supplier-filter-menu supplier-settings-menu"
+                              className="toolbar-menu supplier-settings-menu"
                               onCloseAutoFocus={(event) => {
                                 if (editor) event.preventDefault()
                               }}
@@ -445,14 +356,14 @@ export default function SuppliersPage() {
                               collisionPadding={12}
                             >
                               <DropdownMenu.Item
-                                className="supplier-filter-option supplier-settings-option"
+                                className="toolbar-option supplier-settings-option"
                                 onSelect={() => setEditor({ supplier })}
                               >
                                 <Pencil size={16} aria-hidden="true" />
                                 Edit
                               </DropdownMenu.Item>
                               <DropdownMenu.Item
-                                className="supplier-filter-option supplier-settings-option"
+                                className="toolbar-option supplier-settings-option"
                                 onSelect={() => {
                                   void handleToggle(supplier)
                                 }}
@@ -543,7 +454,6 @@ export default function SuppliersPage() {
             onRestoreFocus={() => {
               const trigger = editorTrigger.current
               if (trigger?.isConnected) trigger.focus()
-              else createButton.current?.focus()
             }}
             onSave={() => {
               if (!editor.supplier) {

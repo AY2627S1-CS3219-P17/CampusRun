@@ -6,13 +6,17 @@
 // Scope: AI-hid the errand sections and create-request button from admins; AI-showed them again, since admins
 //        keep every student capability (2026-09-28).
 // Author review: <to be completed by author>
+// Tool: Codex (OpenAI), date: 2026-10-15
+// Scope: Wired the create-request header action to the shared request editor dialog.
+// Author review: <to be completed by author>
 
 import { useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { DropdownMenu } from 'radix-ui'
-import { LogOut, MessageCircle, Plus, Store, UserRound } from 'lucide-react'
+import { LogOut, Plus, Store, UserRound } from 'lucide-react'
 import EditInfoDialog from './edit-user-info'
-import { clearSession } from '../utils/session'
+import UpdateRequestDialog from './update-request'
+import { clearSession } from '../../utils/session'
 import './header.css'
 
 const sections = ['Explore', 'My Tasks', 'My Requests'] as const
@@ -31,6 +35,8 @@ type HeaderProps = {
 export default function Header({ initialSection }: HeaderProps) {
   const [activeSection, setActiveSection] = useState(initialSection)
   const [editingInfo, setEditingInfo] = useState(false)
+  const [creatingRequest, setCreatingRequest] = useState(false)
+  const createRef = useRef<HTMLButtonElement>(null)
   const profileRef = useRef<HTMLButtonElement>(null)
 
   return (
@@ -50,14 +56,6 @@ export default function Header({ initialSection }: HeaderProps) {
       </nav>
 
       <div className="header-actions">
-        <button
-          className="header-icon-button header-secondary-action"
-          type="button"
-          aria-label="Messages"
-        >
-          <MessageCircle size={20} strokeWidth={1.8} aria-hidden="true" />
-        </button>
-
         <Link
           to="/suppliers"
           className="header-icon-button header-secondary-action"
@@ -69,7 +67,9 @@ export default function Header({ initialSection }: HeaderProps) {
         <button
           className="header-icon-button header-create"
           type="button"
+          ref={createRef}
           aria-label="Create request"
+          onClick={() => setCreatingRequest(true)}
         >
           <Plus size={22} strokeWidth={1.8} aria-hidden="true" />
         </button>
@@ -106,11 +106,6 @@ export default function Header({ initialSection }: HeaderProps) {
               </DropdownMenu.Item>
 
               {/* These two below only visible for mobile widths */}
-              <DropdownMenu.Item className="header-menu-item header-mobile-action">
-                <MessageCircle size={18} aria-hidden="true" />
-                Messages
-              </DropdownMenu.Item>
-
               <DropdownMenu.Item
                 className="header-menu-item header-mobile-action"
                 asChild
@@ -137,6 +132,13 @@ export default function Header({ initialSection }: HeaderProps) {
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
       </div>
+
+      {creatingRequest && (
+        <UpdateRequestDialog
+          onClose={() => setCreatingRequest(false)}
+          onRestoreFocus={() => createRef.current?.focus()}
+        />
+      )}
 
       {editingInfo && (
         <EditInfoDialog

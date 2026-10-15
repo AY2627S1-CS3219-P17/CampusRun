@@ -2,25 +2,19 @@
 // Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 // Scope: AI-assisted review and debugging for supplier details dialog: loads one supplier and shows hours, location, map and photo.
 // Author review: Validated loading, missing-data, and error states.
+// Tool: Codex (OpenAI), date: 2026-10-16
+// Scope: Reused the shared NUS-bounded map in read-only mode for supplier details.
+// Author review: <to be completed by author>
 
 import { useEffect, useState } from 'react'
 import { Dialog } from 'radix-ui'
 import { Clock, ExternalLink, MapPin, Navigation, X } from 'lucide-react'
-import { ApiError } from '../api/client'
-import { getSupplier } from '../api/supplier'
-import type { Supplier } from '../types/supplier'
+import { ApiError } from '../../api/client'
+import { getSupplier } from '../../api/supplier'
+import type { Supplier } from '../../types/supplier'
+import InteractiveMap from '../shared/interactive-map'
 import './update-supplier.css'
 import './supplier-details.css'
-import 'leaflet/dist/leaflet.css'
-import { divIcon } from 'leaflet'
-import { MapContainer, Marker, TileLayer } from 'react-leaflet'
-
-const supplierMarkerIcon = divIcon({
-  className: 'supplier-map-marker',
-  html: '<span class="supplier-map-pin"></span>',
-  iconSize: [40, 40],
-  iconAnchor: [20, 38],
-})
 
 type Props = {
   supplier: Supplier
@@ -107,22 +101,15 @@ export default function SupplierDetailsDialog({
             </p>
           )}
 
-          <MapContainer
+          <InteractiveMap
             className="supplier-details-map"
-            center={[supplier.latitude, supplier.longitude]}
-            zoom={17}
-            scrollWheelZoom={false}
-          >
-            <TileLayer
-              url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            />
-            <Marker
-              position={[supplier.latitude, supplier.longitude]}
-              icon={supplierMarkerIcon}
-              alt={`${supplier.name} location`}
-            />
-          </MapContainer>
+            value={{
+              latitude: supplier.latitude,
+              longitude: supplier.longitude,
+            }}
+            ariaLabel={`${supplier.name} location`}
+            readOnly
+          />
 
           <a
             className="supplier-details-maps-link"

@@ -1,3 +1,8 @@
+/* AI Assistance Disclosure:
+ * Tool: Codex (OpenAI), date: 2026-10-16
+ * Scope: Added shared-map hint alignment to the supplier editor.
+ * Author review: <to be completed by author>
+ */
 .supplier-dialog-overlay {
   position: fixed;
   inset: 0;
@@ -52,9 +57,15 @@
   padding: 0;
   border: 0;
 }
-.supplier-dialog label {
+.supplier-dialog label,
+.supplier-dialog-field {
   display: grid;
   gap: 6px;
+}
+.supplier-dialog label {
+  font-weight: 600;
+}
+.supplier-dialog-field > span {
   font-weight: 600;
 }
 .supplier-dialog input,
@@ -116,7 +127,7 @@
 }
 .supplier-dialog-footer {
   justify-content: flex-end;
-  margin: 24px 0 15px;
+  margin: 24px 0 0;
 }
 .supplier-dialog-footer button {
   padding: 10px 16px;
@@ -175,6 +186,11 @@
   margin: -4px 0 4px;
   color: #607a80;
   font-size: 13px;
+}
+.supplier-dialog-map-hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 .supplier-dialog-footer button.supplier-dialog-danger {
   border-color: #b42318;

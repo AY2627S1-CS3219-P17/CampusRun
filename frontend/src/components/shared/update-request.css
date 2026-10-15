@@ -1,0 +1,229 @@
+/* AI Assistance Disclosure:
+ * Tool: Codex (OpenAI), date: 2026-10-16
+ * Scope: Styled the request dialog, scrollable supplier menu, validation, and grouped form sections.
+ * Author review: <to be completed by author>
+ */
+.request-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgb(15 35 30 / 40%);
+}
+.request-dialog,
+.request-dialog * {
+  box-sizing: border-box;
+}
+.request-dialog {
+  position: fixed;
+  z-index: 21;
+  top: 50%;
+  left: 50%;
+  width: min(700px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: 24px;
+  border-radius: 16px;
+  background: #fff;
+  color: #153941;
+  box-shadow: 0 16px 64px rgb(21 57 65 / 20%);
+  font:
+    14px Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+  transform: translate(-50%, -50%);
+}
+.request-dialog-heading,
+.request-dialog-footer,
+.request-supplier-trigger,
+.request-supplier-option,
+.request-supplier-search,
+.request-dialog-hint {
+  display: flex;
+  align-items: center;
+}
+.request-dialog-heading {
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.request-dialog h2 {
+  margin: 0;
+  font-size: 22px;
+}
+.request-dialog-close {
+  display: grid;
+  place-items: center;
+  padding: 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+}
+.request-dialog form {
+  display: grid;
+  gap: 0;
+}
+.request-dialog label,
+.request-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  font-weight: 600;
+}
+.request-dialog input,
+.request-supplier-trigger {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #cfdeda;
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-weight: 400;
+}
+.request-dialog input,
+.request-supplier-trigger {
+  height: 40px;
+  padding: 0 10px;
+}
+.request-supplier-trigger {
+  justify-content: space-between;
+  cursor: pointer;
+}
+.request-dialog-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.request-dialog-row-group,
+.request-dialog-row-errors {
+  display: grid;
+  gap: 6px;
+}
+.request-dialog-section {
+  display: grid;
+  gap: 16px;
+  padding: 24px 0;
+}
+.request-dialog-section:first-child {
+  padding-top: 0;
+}
+.request-dialog-section-last {
+  padding-bottom: 0;
+}
+.request-dialog-section + .request-dialog-section {
+  border-top: 2px solid #b8d6cc;
+}
+.request-dialog small,
+.request-dialog-error {
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 400;
+}
+.request-dialog-hint {
+  gap: 5px;
+  color: #607a80;
+  font-size: 13px;
+  font-weight: 400;
+}
+.request-supplier-menu {
+  z-index: 1100;
+  user-select: none;
+  width: min(360px, calc(100vw - 32px));
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid #dce7e3;
+  border-radius: 9px;
+  background: #fff;
+  color: #153941;
+  box-shadow: 0 8px 24px rgb(21 57 65 / 14%);
+  font:
+    14px Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+}
+.request-supplier-search {
+  gap: 7px;
+  margin-bottom: 5px;
+  padding: 0 9px;
+  border: 1px solid #cfdeda;
+  border-radius: 7px;
+  color: #688087;
+}
+.request-dialog .request-supplier-search {
+  display: flex;
+}
+.request-dialog .request-supplier-search:focus-within {
+  outline: 2px solid #218563;
+  outline-offset: 2px;
+}
+.request-dialog .request-supplier-search input {
+  width: 100%;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: #153941;
+  user-select: text;
+}
+.request-dialog input::placeholder {
+  color: #688087;
+  opacity: 1;
+}
+.request-supplier-option {
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
+}
+.request-supplier-option[data-highlighted] {
+  background: #eef5f2;
+}
+.request-supplier-option > span {
+  display: grid;
+  gap: 2px;
+}
+.request-supplier-option small,
+.request-supplier-menu p {
+  margin: 0;
+  color: #607a80;
+  font-weight: 400;
+}
+.request-supplier-menu p {
+  padding: 10px;
+}
+.request-dialog-footer {
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 25px;
+}
+.request-dialog-footer button {
+  padding: 10px 16px;
+  border: 1px solid #cfdeda;
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.request-dialog-footer button[type='submit'] {
+  border-color: #218563;
+  background: #218563;
+  color: #fff;
+}
+.request-dialog :focus-visible {
+  outline: 2px solid #218563;
+  outline-offset: 2px;
+}
+@media (max-width: 600px) {
+  .request-dialog {
+    padding: 20px;
+  }
+  .request-dialog-row {
+    grid-template-columns: 1fr;
+  }
+}

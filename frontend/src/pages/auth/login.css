@@ -23,8 +23,8 @@ body {
   display: grid;
   place-items: center;
   padding: 32px 16px 100px;
-  background: #fffefa url("../assets/auth_mobile.png")
-    center bottom / cover no-repeat;
+  background: #fffefa url('../../assets/auth_mobile.png') center bottom / cover
+    no-repeat;
 }
 
 .login-card {
@@ -220,7 +220,7 @@ body {
     height: 100vh;
     height: 100dvh;
     align-self: center;
-    background: #fffefa url("../assets/auth_desktop.png")
-      center bottom / cover no-repeat;
+    background: #fffefa url('../../assets/auth_desktop.png') center bottom /
+      cover no-repeat;
   }
 }

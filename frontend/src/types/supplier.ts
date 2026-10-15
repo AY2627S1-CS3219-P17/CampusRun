@@ -5,13 +5,6 @@
 
 export type SupplierCategory = 'Food' | 'Drinks' | 'Shopping' | 'Printing'
 
-export const SUPPLIER_CATEGORIES: SupplierCategory[] = [
-  'Food',
-  'Drinks',
-  'Shopping',
-  'Printing',
-]
-
 // As returned by the Supplier Service
 export type Supplier = {
   id: number

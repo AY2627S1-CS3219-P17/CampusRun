@@ -1,11 +1,11 @@
 // AI Assistance Disclosure:
 // Tool: Codex (OpenAI), date: 2026-10-16
-// Scope: Added the request dialog with supplier lookup, user-defined delivery location, validation, and scrollable supplier menu.
+// Scope: Added the request dialog with supplier lookup, user-defined delivery location, validation, scrollable supplier menu, and a text-only AI Autofill view.
 // Author review: <to be completed by author>
 
 import { useEffect, useState, type SubmitEvent } from 'react'
 import { Dialog, DropdownMenu } from 'radix-ui'
-import { Check, ChevronDown, MapPin, Search, X } from 'lucide-react'
+import { Check, ChevronDown, MapPin, Search, Sparkles, X } from 'lucide-react'
 import { listSuppliers } from '../../api/supplier'
 import type { Supplier } from '../../types/supplier'
 import { type MapPosition } from '../../utils/map'
@@ -101,6 +101,8 @@ export default function UpdateRequestDialog({
   const [touched, setTouched] = useState<Set<Field>>(new Set())
   const [submitted, setSubmitted] = useState(false)
   const [serverErrors, setServerErrors] = useState<Errors>({})
+  const [aiView, setAiView] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState('')
 
   useEffect(() => {
     if (!supplierOpen) return
@@ -161,6 +163,22 @@ export default function UpdateRequestDialog({
     })
   }
 
+  function showAiView() {
+    setSupplierOpen(false)
+    setAiView(true)
+    dialogContent?.scrollTo({ top: 0 })
+  }
+
+  function showRequestForm() {
+    setAiView(false)
+    dialogContent?.scrollTo({ top: 0 })
+  }
+
+  function handleAiSubmit(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault()
+    showRequestForm()
+  }
+
   const now = new Date()
   const minDelivery = inputDate(new Date(now.getTime() + 15 * 60_000))
   const maxDelivery = inputDate(new Date(now.getTime() + 24 * 60 * 60_000))
@@ -178,229 +196,274 @@ export default function UpdateRequestDialog({
           }}
         >
           <div className="request-dialog-heading">
-            <Dialog.Title>Create Request</Dialog.Title>
+            <div className="request-dialog-heading-main">
+              <Dialog.Title>
+                {aiView ? 'AI Autofill' : 'Create Request'}
+              </Dialog.Title>
+              {!aiView && (
+                <button
+                  className="request-ai-trigger"
+                  type="button"
+                  aria-label="Describe request with AI"
+                  onClick={showAiView}
+                >
+                  <Sparkles size={19} aria-hidden="true" />
+                </button>
+              )}
+            </div>
             <Dialog.Close className="request-dialog-close" aria-label="Close">
               <X size={20} aria-hidden="true" />
             </Dialog.Close>
           </div>
 
-          <form noValidate onSubmit={handleSubmit}>
-            <div className="request-dialog-section">
-              <label>
-                Title
-                <input
-                  value={title}
-                  placeholder="Pick up printed notes"
-                  onChange={(event) => setTitle(event.target.value)}
-                  onBlur={() => touch('title')}
-                  aria-invalid={errorFor('title') ? true : undefined}
-                />
-                {errorFor('title') && <small>{errorFor('title')}</small>}
-              </label>
-
-              <div className="request-field">
-                <span>Supplier</span>
-                <DropdownMenu.Root
-                  open={supplierOpen}
-                  onOpenChange={setSupplierOpen}
-                  modal={false}
-                >
-                  <DropdownMenu.Trigger asChild>
-                    <button
-                      className="request-supplier-trigger"
-                      type="button"
-                      aria-invalid={errorFor('supplier') ? true : undefined}
-                      onBlur={() => touch('supplier')}
-                    >
-                      <span>{supplier?.name ?? 'Choose a supplier'}</span>
-                      <ChevronDown size={16} aria-hidden="true" />
-                    </button>
-                  </DropdownMenu.Trigger>
-                  <DropdownMenu.Portal container={dialogContent}>
-                    <DropdownMenu.Content
-                      className="request-supplier-menu"
-                      align="start"
-                      sideOffset={6}
-                      collisionPadding={12}
-                    >
-                      <label className="request-supplier-search">
-                        <Search size={16} aria-hidden="true" />
-                        <input
-                          value={supplierQuery}
-                          placeholder="Search suppliers"
-                          aria-label="Search suppliers"
-                          onChange={(event) =>
-                            setSupplierQuery(event.target.value)
-                          }
-                          onKeyDown={(event) => event.stopPropagation()}
-                        />
-                      </label>
-                      {supplierError ? (
-                        <p>{supplierError}</p>
-                      ) : suppliers.length ? (
-                        suppliers.map((option) => (
-                          <DropdownMenu.Item
-                            className="request-supplier-option"
-                            key={option.id}
-                            onSelect={() => {
-                              setSupplier(option)
-                              setSupplierQuery(option.name)
-                              setServerErrors((current) => ({
-                                ...current,
-                                supplier: undefined,
-                              }))
-                            }}
-                          >
-                            <span>
-                              <strong>{option.name}</strong>
-                              <small>{option.location}</small>
-                            </span>
-                            {supplier?.id === option.id && (
-                              <Check size={16} aria-hidden="true" />
-                            )}
-                          </DropdownMenu.Item>
-                        ))
-                      ) : (
-                        <p>No suppliers found.</p>
-                      )}
-                    </DropdownMenu.Content>
-                  </DropdownMenu.Portal>
-                </DropdownMenu.Root>
-                {errorFor('supplier') && <small>{errorFor('supplier')}</small>}
-              </div>
-            </div>
-
-            <div className="request-dialog-section">
-              <div className="request-dialog-row-group">
-                <div className="request-dialog-row">
-                  <label>
-                    Building
-                    <input
-                      value={building}
-                      placeholder="COM3"
-                      onChange={(event) => setBuilding(event.target.value)}
-                      onBlur={() => touch('building')}
-                      aria-invalid={errorFor('building') ? true : undefined}
-                      aria-describedby={
-                        errorFor('building')
-                          ? 'request-building-error'
-                          : undefined
-                      }
-                    />
-                  </label>
-                  <label>
-                    Floor
-                    <input
-                      value={floor}
-                      placeholder="1 (optional)"
-                      onChange={(event) => setFloor(event.target.value)}
-                      onBlur={() => touch('floor')}
-                      aria-invalid={errorFor('floor') ? true : undefined}
-                      aria-describedby={
-                        errorFor('floor') ? 'request-floor-error' : undefined
-                      }
-                    />
-                  </label>
-                </div>
-                {(errorFor('building') || errorFor('floor')) && (
-                  <div className="request-dialog-row-errors">
-                    {errorFor('building') && (
-                      <small id="request-building-error">
-                        {errorFor('building')}
-                      </small>
-                    )}
-                    {errorFor('floor') && (
-                      <small id="request-floor-error">
-                        {errorFor('floor')}
-                      </small>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <label>
-                Description
-                <input
-                  value={description}
-                  placeholder="Next to LT19"
-                  onChange={(event) => setDescription(event.target.value)}
-                  onBlur={() => touch('description')}
-                  aria-invalid={errorFor('description') ? true : undefined}
-                />
-                {errorFor('description') && (
-                  <small>{errorFor('description')}</small>
-                )}
-              </label>
-
-              <div className="request-field">
-                <span>Location</span>
-                <InteractiveMap
-                  value={location}
-                  ariaLabel="Choose location on map"
-                  onChange={(position) => {
-                    setLocation(position)
-                    setServerErrors((current) => ({
-                      ...current,
-                      location: undefined,
-                    }))
-                  }}
-                />
-                <span className="request-dialog-hint">
-                  <MapPin size={14} aria-hidden="true" />
-                  {location
-                    ? `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`
-                    : 'Click the map to choose a location'}
-                </span>
-                {errorFor('location') && <small>{errorFor('location')}</small>}
-              </div>
-            </div>
-
-            <div className="request-dialog-section request-dialog-section-last">
-              <label>
-                Deliver By
-                <input
-                  type="datetime-local"
-                  value={deliveryBy}
-                  min={minDelivery}
-                  max={maxDelivery}
-                  onChange={(event) => setDeliveryBy(event.target.value)}
-                  onBlur={() => touch('deliveryBy')}
-                  onClick={(event) => event.currentTarget.showPicker?.()}
-                  aria-invalid={errorFor('deliveryBy') ? true : undefined}
-                />
-                {errorFor('deliveryBy') && (
-                  <small>{errorFor('deliveryBy')}</small>
-                )}
-              </label>
-
-              <label>
-                Credits
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  step="1"
-                  value={credits}
-                  placeholder="10"
-                  onChange={(event) => setCredits(event.target.value)}
-                  onBlur={() => touch('credits')}
-                  aria-invalid={errorFor('credits') ? true : undefined}
-                />
-                {errorFor('credits') && <small>{errorFor('credits')}</small>}
-              </label>
-            </div>
-
-            {serverErrors.form && (
-              <p className="request-dialog-error" role="alert">
-                {serverErrors.form}
+          {aiView ? (
+            <form className="request-ai-form" onSubmit={handleAiSubmit}>
+              <p className="request-ai-description">
+                Describe your request, the supplier, where to deliver it, when
+                you need it by, and the credits you are offering. Try to include
+                all details.
               </p>
-            )}
+              <label htmlFor="request-ai-prompt">Description</label>
+              <textarea
+                id="request-ai-prompt"
+                autoFocus
+                required
+                maxLength={2000}
+                rows={8}
+                value={aiPrompt}
+                placeholder="Pick up my printed notes from the COM3 print shop and deliver them to the Central Library entrance by 5 pm. I can offer 10 credits."
+                onChange={(event) => setAiPrompt(event.target.value)}
+              />
+              <div className="request-dialog-footer">
+                <button type="button" onClick={showRequestForm}>
+                  Back
+                </button>
+                <button type="submit">Submit</button>
+              </div>
+            </form>
+          ) : (
+            <form noValidate onSubmit={handleSubmit}>
+              <div className="request-dialog-section">
+                <label>
+                  Title
+                  <input
+                    value={title}
+                    placeholder="Pick up printed notes"
+                    onChange={(event) => setTitle(event.target.value)}
+                    onBlur={() => touch('title')}
+                    aria-invalid={errorFor('title') ? true : undefined}
+                  />
+                  {errorFor('title') && <small>{errorFor('title')}</small>}
+                </label>
 
-            <div className="request-dialog-footer">
-              <Dialog.Close type="button">Cancel</Dialog.Close>
-              <button type="submit">Create</button>
-            </div>
-          </form>
+                <div className="request-field">
+                  <span>Supplier</span>
+                  <DropdownMenu.Root
+                    open={supplierOpen}
+                    onOpenChange={setSupplierOpen}
+                    modal={false}
+                  >
+                    <DropdownMenu.Trigger asChild>
+                      <button
+                        className="request-supplier-trigger"
+                        type="button"
+                        aria-invalid={errorFor('supplier') ? true : undefined}
+                        onBlur={() => touch('supplier')}
+                      >
+                        <span>{supplier?.name ?? 'Choose a supplier'}</span>
+                        <ChevronDown size={16} aria-hidden="true" />
+                      </button>
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Portal container={dialogContent}>
+                      <DropdownMenu.Content
+                        className="request-supplier-menu"
+                        align="start"
+                        sideOffset={6}
+                        collisionPadding={12}
+                      >
+                        <label className="request-supplier-search">
+                          <Search size={16} aria-hidden="true" />
+                          <input
+                            value={supplierQuery}
+                            placeholder="Search suppliers"
+                            aria-label="Search suppliers"
+                            onChange={(event) =>
+                              setSupplierQuery(event.target.value)
+                            }
+                            onKeyDown={(event) => event.stopPropagation()}
+                          />
+                        </label>
+                        {supplierError ? (
+                          <p>{supplierError}</p>
+                        ) : suppliers.length ? (
+                          suppliers.map((option) => (
+                            <DropdownMenu.Item
+                              className="request-supplier-option"
+                              key={option.id}
+                              onSelect={() => {
+                                setSupplier(option)
+                                setSupplierQuery(option.name)
+                                setServerErrors((current) => ({
+                                  ...current,
+                                  supplier: undefined,
+                                }))
+                              }}
+                            >
+                              <span>
+                                <strong>{option.name}</strong>
+                                <small>{option.location}</small>
+                              </span>
+                              {supplier?.id === option.id && (
+                                <Check size={16} aria-hidden="true" />
+                              )}
+                            </DropdownMenu.Item>
+                          ))
+                        ) : (
+                          <p>No suppliers found.</p>
+                        )}
+                      </DropdownMenu.Content>
+                    </DropdownMenu.Portal>
+                  </DropdownMenu.Root>
+                  {errorFor('supplier') && (
+                    <small>{errorFor('supplier')}</small>
+                  )}
+                </div>
+              </div>
+
+              <div className="request-dialog-section">
+                <div className="request-dialog-row-group">
+                  <div className="request-dialog-row">
+                    <label>
+                      Building
+                      <input
+                        value={building}
+                        placeholder="COM3"
+                        onChange={(event) => setBuilding(event.target.value)}
+                        onBlur={() => touch('building')}
+                        aria-invalid={errorFor('building') ? true : undefined}
+                        aria-describedby={
+                          errorFor('building')
+                            ? 'request-building-error'
+                            : undefined
+                        }
+                      />
+                    </label>
+                    <label>
+                      Floor
+                      <input
+                        value={floor}
+                        placeholder="1 (optional)"
+                        onChange={(event) => setFloor(event.target.value)}
+                        onBlur={() => touch('floor')}
+                        aria-invalid={errorFor('floor') ? true : undefined}
+                        aria-describedby={
+                          errorFor('floor') ? 'request-floor-error' : undefined
+                        }
+                      />
+                    </label>
+                  </div>
+                  {(errorFor('building') || errorFor('floor')) && (
+                    <div className="request-dialog-row-errors">
+                      {errorFor('building') && (
+                        <small id="request-building-error">
+                          {errorFor('building')}
+                        </small>
+                      )}
+                      {errorFor('floor') && (
+                        <small id="request-floor-error">
+                          {errorFor('floor')}
+                        </small>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <label>
+                  Description
+                  <input
+                    value={description}
+                    placeholder="Next to LT19"
+                    onChange={(event) => setDescription(event.target.value)}
+                    onBlur={() => touch('description')}
+                    aria-invalid={errorFor('description') ? true : undefined}
+                  />
+                  {errorFor('description') && (
+                    <small>{errorFor('description')}</small>
+                  )}
+                </label>
+
+                <div className="request-field">
+                  <span>Location</span>
+                  <InteractiveMap
+                    value={location}
+                    ariaLabel="Choose location on map"
+                    onChange={(position) => {
+                      setLocation(position)
+                      setServerErrors((current) => ({
+                        ...current,
+                        location: undefined,
+                      }))
+                    }}
+                  />
+                  <span className="request-dialog-hint">
+                    <MapPin size={14} aria-hidden="true" />
+                    {location
+                      ? `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`
+                      : 'Click the map to choose a delivery location'}
+                  </span>
+                  {errorFor('location') && (
+                    <small>{errorFor('location')}</small>
+                  )}
+                </div>
+              </div>
+
+              <div className="request-dialog-section request-dialog-section-last">
+                <label>
+                  Deliver By
+                  <input
+                    type="datetime-local"
+                    value={deliveryBy}
+                    min={minDelivery}
+                    max={maxDelivery}
+                    onChange={(event) => setDeliveryBy(event.target.value)}
+                    onBlur={() => touch('deliveryBy')}
+                    onClick={(event) => event.currentTarget.showPicker?.()}
+                    aria-invalid={errorFor('deliveryBy') ? true : undefined}
+                  />
+                  {errorFor('deliveryBy') && (
+                    <small>{errorFor('deliveryBy')}</small>
+                  )}
+                </label>
+
+                <label>
+                  Credits
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    step="1"
+                    value={credits}
+                    placeholder="10"
+                    onChange={(event) => setCredits(event.target.value)}
+                    onBlur={() => touch('credits')}
+                    aria-invalid={errorFor('credits') ? true : undefined}
+                  />
+                  {errorFor('credits') && <small>{errorFor('credits')}</small>}
+                </label>
+              </div>
+
+              {serverErrors.form && (
+                <p className="request-dialog-error" role="alert">
+                  {serverErrors.form}
+                </p>
+              )}
+
+              <div className="request-dialog-footer">
+                <Dialog.Close type="button">Cancel</Dialog.Close>
+                <button type="submit">Create</button>
+              </div>
+            </form>
+          )}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

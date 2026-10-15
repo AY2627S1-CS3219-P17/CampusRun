@@ -1,9 +1,10 @@
 // AI Assistance Disclosure:
-// Tool: Codex (OpenAI), date: 2026-10-15
-// Scope: Composed the Explore page from the reusable credit banner and shared toolbar components.
+// Tool: Codex (OpenAI), dates: 2026-10-15 and 2026-10-16
+// Scope: Composed the Explore page from the reusable credit banner and shared toolbar components, then added one hardcoded available-task card.
 // Author review: <to be completed by author>
 
 import { useState } from 'react'
+import { CalendarDays, CircleDollarSign, MapPin } from 'lucide-react'
 import CreditBanner from '../../components/shared/credit-banner'
 import Toolbar from '../../components/shared/toolbar'
 import Header from '../../components/shared/header'
@@ -34,6 +35,24 @@ export default function ExplorePage() {
             label: 'Sort available tasks',
           }}
         />
+        <article className="explore-task-card">
+          <h2>Pick up printed notes</h2>
+          <span className="explore-task-status">Open</span>
+          <p className="explore-task-location">
+            <MapPin size={16} aria-hidden="true" />
+            <span>
+              COM3 Print Shop&nbsp;&nbsp;&rarr;&nbsp;&nbsp;Central Library
+            </span>
+          </p>
+          <p className="explore-task-due">
+            <CalendarDays size={16} aria-hidden="true" />
+            <span>Due 21 Apr, 5:00 PM</span>
+          </p>
+          <span className="explore-task-reward">
+            <span>+10</span>
+            <CircleDollarSign size={20} aria-hidden="true" />
+          </span>
+        </article>
       </main>
     </div>
   )

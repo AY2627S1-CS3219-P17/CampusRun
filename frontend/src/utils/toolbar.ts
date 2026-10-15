@@ -9,7 +9,7 @@ export const ERRAND_TABS: ToolbarOption[] = [
   { value: 'pending', label: 'Pending' },
   { value: 'active', label: 'Active' },
   { value: 'completed', label: 'Completed' },
-  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'inactive', label: 'Inactive' },
 ]
 
 export const ERRAND_SORTS: ToolbarOption[] = [

@@ -1,6 +1,6 @@
 /* AI Assistance Disclosure:
  * Tool: Codex (OpenAI), date: 2026-10-16
- * Scope: Styled the request dialog, scrollable supplier menu, validation, and grouped form sections.
+ * Scope: Styled the request dialog, scrollable supplier menu, validation, grouped form sections, and simplified AI Autofill view.
  * Author review: <to be completed by author>
  */
 .request-dialog-overlay {
@@ -45,6 +45,57 @@
 .request-dialog-heading {
   justify-content: space-between;
   margin-bottom: 20px;
+}
+.request-dialog-heading-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.request-ai-trigger {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid #d9c6f5;
+  border-radius: 9px;
+  background: #f3eafd;
+  color: #7940b8;
+  cursor: pointer;
+}
+.request-ai-trigger:hover {
+  border-color: #b98ce9;
+  background: #e9d8fa;
+}
+.request-dialog .request-ai-form {
+  gap: 12px;
+}
+.request-ai-description {
+  margin: 0;
+  color: #607a80;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.request-dialog textarea {
+  width: 100%;
+  min-height: 180px;
+  padding: 12px;
+  border: 1px solid #cfdeda;
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-weight: 400;
+  line-height: 1.5;
+  resize: vertical;
+}
+.request-dialog textarea::placeholder {
+  color: #688087;
+  opacity: 1;
+}
+.request-ai-form .request-dialog-footer {
+  margin-top: 10px;
 }
 .request-dialog h2 {
   margin: 0;

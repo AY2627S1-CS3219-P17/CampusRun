@@ -5,7 +5,7 @@
 //        AI-refactored the form sections, paired-field errors and time-picker interaction
 // Author review: Validated form validation, API errors, and input boundaries.
 // Tool: Codex (OpenAI), date: 2026-10-16
-// Scope: Replaced manual latitude/longitude fields with the shared bounded map picker.
+// Scope: Replaced manual latitude/longitude fields with the shared bounded map picker and aligned the type chevron.
 // Author review: <to be completed by author>
 
 import {
@@ -301,7 +301,7 @@ export default function UpdateSupplierDialog({
                       className="supplier-dialog-select"
                     >
                       <Select.Value />
-                      <Select.Icon>
+                      <Select.Icon className="supplier-dialog-select-icon">
                         <ChevronDown size={16} />
                       </Select.Icon>
                     </Select.Trigger>
@@ -369,7 +369,7 @@ export default function UpdateSupplierDialog({
                   <MapPin size={14} aria-hidden="true" />
                   {positionFrom(values)
                     ? `${Number(values.latitude).toFixed(5)}, ${Number(values.longitude).toFixed(5)}`
-                    : 'Click the map to choose a location'}
+                    : 'Click the map to choose a supplier location'}
                 </p>
                 {rowErrors('latitude', 'longitude')}
               </div>

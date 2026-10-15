@@ -1,7 +1,8 @@
 <!--
 AI Assistance Disclosure:
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
-Scope: AI-written "Gateway, root paths and API docs" section and AI Use Summary bullets; the rest was written by the team.
+Tool: OpenAI Codex (GPT-6), date: 2026-10-16
+Scope: AI-written "Gateway, root paths and API docs" section and AI Use Summary bullets, including the frontend AI entry view disclosure; the rest was written by the team.
 Author review: <to be completed by author>
 -->
 

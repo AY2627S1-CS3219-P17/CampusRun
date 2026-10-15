@@ -1,6 +1,6 @@
 /* AI Assistance Disclosure:
  * Tool: Codex (OpenAI), date: 2026-10-16
- * Scope: Added shared-map hint alignment to the supplier editor.
+ * Scope: Added shared-map hint alignment and adjusted the type chevron position in the supplier editor.
  * Author review: <to be completed by author>
  */
 .supplier-dialog-overlay {
@@ -80,6 +80,9 @@
   color: inherit;
   font: inherit;
   font-weight: 400;
+}
+.supplier-dialog-select-icon {
+  transform: translateY(2px);
 }
 .supplier-dialog input::placeholder {
   color: #839697;

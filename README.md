@@ -131,6 +131,19 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 
 **Verification:** `npm run build` and lint passed; nginx configuration was validated with `nginx -t`. <!-- TODO(author): describe your own review and testing -->
 
+### Frontend UI Extensions (Yang Qifeng)
+
+**Tool and mode:** OpenAI Codex (GPT-5), UI generation, refactoring, and debugging (2026-10-15–16).
+
+**Prompts and key results:**
+
+- “okay now abstract the section out as a component, put under components/credit-banner, then import into explore, my-tasks and my-requests concisely” → A shared credit banner on all three pages; credit amounts are placeholders.
+- “okay finally, lets extend the shared-toolbar abstraction, to allow for no tabs, and instead the replacement being a subheader text option, which explore will call and put "Available Tasks"” → One configurable Toolbar serves Explore, My Tasks, My Requests, and Suppliers.
+- “okay, now within supplier-details, lets also import the interactive-map abstraction but lets tweak it minimally, so that its read only (normal/fullscreen, still with teh read boundary)” → Shared React-Leaflet map for request and supplier editing, plus read-only supplier details. It marks the rectangular served-area boundary and shades the outside red; fullscreen editing saves on explicit close.
+- “1) Building, floor, description is set by user, remove the dependence to supplier 2) Rename "your pickup location" as just Location 3) Remove the extra info, make Deliver By and Credits into two separate lines” → The create-request dialog has supplier search, user-defined delivery details, map location, delivery time (default: 30 minutes ahead), credits, and client-side validation. Submission remains UI-only until the Order Service is connected.
+
+**Verification:** `npm run build` and lint passed; nginx configuration was validated with `nginx -t`. <!-- TODO(author): describe your own review and testing -->
+
 **Files affected:** each carries an "AI Assistance Disclosure" header comment.
 
 **Prompts and key exchanges:** see [`ai/usage-log.md`](ai/usage-log.md).

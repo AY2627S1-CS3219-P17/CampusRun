@@ -8,12 +8,12 @@ import {
   validatePassword,
   validateEmail,
   validateConfirmPassword,
-} from '../utils/validation'
+} from '../../utils/validation'
 import { useState, type SubmitEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { ApiError } from '../api/client'
-import { registerUser } from '../api/user'
-import type { RegisterUserValues } from '../types/user'
+import { ApiError } from '../../api/client'
+import { registerUser } from '../../api/user'
+import type { RegisterUserValues } from '../../types/user'
 import {
   Eye,
   EyeOff,

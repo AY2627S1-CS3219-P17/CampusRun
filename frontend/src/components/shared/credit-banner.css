@@ -1,0 +1,72 @@
+/* AI Assistance Disclosure:
+ * Tool: Codex (OpenAI), date: 2026-10-15
+ * Scope: Added styles for the reusable responsive credit banner component.
+ * Author review: <to be completed by author>
+ */
+
+.credit-banner {
+  display: flex;
+  align-items: center;
+  min-height: 132px;
+  padding: 24px clamp(28px, 3vw, 40px);
+  border-radius: 18px;
+  background: #e7f4ef center / cover;
+}
+
+.credit-banner-summary {
+  display: grid;
+  gap: 10px;
+}
+
+.credit-banner-summary p {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.credit-banner-balance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+
+.credit-banner-balance > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.credit-banner-balance small {
+  align-self: flex-end;
+  margin-bottom: 2px;
+  color: #153941;
+  font-size: 14px;
+}
+
+.credit-banner-value {
+  color: #153941;
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.credit-banner-active svg {
+  color: #2d6f9e;
+}
+.credit-banner-reserved svg {
+  color: #c97820;
+}
+
+@media (max-width: 640px) {
+  .credit-banner {
+    min-height: 124px;
+    padding-inline: 24px;
+    background-position: 60% center;
+  }
+
+  .credit-banner-balance {
+    flex-direction: column;
+    gap: 10px;
+  }
+}

@@ -7,12 +7,12 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Navigate, Route, Routes, Outlet } from 'react-router'
-import Login from './pages/login.tsx'
-import Register from './pages/register.tsx'
-import Explore from './pages/explore.tsx'
-import MyTasks from './pages/my-tasks.tsx'
-import MyRequests from './pages/my-requests.tsx'
-import Suppliers from './pages/suppliers.tsx'
+import Login from './pages/auth/login.tsx'
+import Register from './pages/auth/register.tsx'
+import Explore from './pages/main/explore.tsx'
+import MyTasks from './pages/main/my-tasks.tsx'
+import MyRequests from './pages/main/my-requests.tsx'
+import Suppliers from './pages/header/suppliers.tsx'
 import { useSession } from './utils/session'
 
 export default function ProtectedRoute() {

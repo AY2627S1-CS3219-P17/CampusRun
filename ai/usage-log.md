@@ -1,3 +1,10 @@
+<!--
+AI Assistance Disclosure:
+Tool: OpenAI Codex (GPT-5), date: 2026-10-16
+Scope: Added a concise log of frontend UI refactoring and request/map work.
+Author review: <to be completed by author>
+-->
+
 # AI Usage Log
 
 Exact prompts and key responses from AI-assisted sessions, in chronological order.
@@ -800,3 +807,23 @@ now put the frontend behind the gateway, and wire up compose to run the frontend
 ```
 
 **Key response:** Added a two-stage frontend image, nginx configuration with SPA fallback and asset caching, and the Compose frontend service routed by the gateway. The image build and nginx configurations passed `nginx -t`.
+
+---
+
+## Session 9 — 2026-10-15 to 2026-10-16 — frontend UI
+
+- **Tool:** OpenAI Codex (GPT-5)
+- **Author:** Yang Qifeng
+- **Modes:** generate, refactor, debug, explain
+
+**Prompt:** “okay now abstract the section out as a component, put under components/credit-banner, then import into explore, my-tasks and my-requests concisely”
+
+**Key response:** Reused the credit banner across those pages and consolidated their search, tabs, and sort controls into Toolbar; reorganized frontend pages, components, and the shared banner asset.
+
+**Prompt:** “okay, now within supplier-details, lets also import the interactive-map abstraction but lets tweak it minimally, so that its read only (normal/fullscreen, still with teh read boundary)”
+
+**Key response:** Shared the rectangular NUS-bounded React-Leaflet map between supplier and request forms and read-only supplier details; fullscreen edits save only on explicit close.
+
+**Prompt:** “1) Building, floor, description is set by user, remove the dependence to supplier 2) Rename "your pickup location" as just Location 3) Remove the extra info, make Deliver By and Credits into two separate lines”
+
+**Key response:** Updated the create-request dialog with user-entered delivery details, searchable supplier, map location, a 30-minute default deadline, credits, and client validation. Submission remains UI-only pending Order Service integration. Frontend build and lint passed.

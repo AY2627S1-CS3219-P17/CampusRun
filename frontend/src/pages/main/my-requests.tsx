@@ -1,22 +1,36 @@
 // AI Assistance Disclosure:
-// Tool: Codex (OpenAI), date: 2026-10-15
-// Scope: Composed the My Requests page from shared credit-banner and toolbar components.
+// Tool: Codex (OpenAI), dates: 2026-10-15 and 2026-10-16
+// Scope: Composed My Requests with negative-credit sample cards, per-tab pagination, and an Open Active request.
 // Author review: <to be completed by author>
 
 import { useState } from 'react'
 import CreditBanner from '../../components/shared/credit-banner'
+import TaskCard from '../../components/shared/task-card'
+import Pagination from '../../components/shared/pagination'
 import Toolbar from '../../components/shared/toolbar'
 import Header from '../../components/shared/header'
 import { ERRAND_SORTS, ERRAND_TABS } from '../../utils/toolbar'
+import { SAMPLE_REQUEST_CARDS } from '../../utils/sample-task-cards'
 import './explore.css'
+
+const PAGE_SIZE = 2
 
 export default function MyRequestsPage() {
   const [tab, setTab] = useState(ERRAND_TABS[0].value)
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState(ERRAND_SORTS[0].value)
+  const [pages, setPages] = useState<Record<string, number>>({
+    pending: 1,
+    active: 1,
+    completed: 1,
+    inactive: 1,
+  })
+  const page = pages[tab] ?? 1
+  const cards = SAMPLE_REQUEST_CARDS[tab] ?? []
+  const totalPages = Math.max(1, Math.ceil(cards.length / PAGE_SIZE))
 
   return (
-    <div className="explore-page">
+    <div className="explore-page my-requests-page">
       <Header initialSection="My Requests" />
       <main className="explore-content">
         <CreditBanner />
@@ -39,6 +53,18 @@ export default function MyRequestsPage() {
             onChange: setSort,
             label: 'Sort errands',
           }}
+        />
+        <section className="task-card-list" aria-label={`${tab} requests`}>
+          {cards.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((card) => (
+            <TaskCard key={card.type} {...card} negative />
+          ))}
+        </section>
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={(nextPage) =>
+            setPages((current) => ({ ...current, [tab]: nextPage }))
+          }
         />
       </main>
     </div>

@@ -1,3 +1,9 @@
+/* AI Assistance Disclosure:
+ * Tool: Codex (OpenAI), date: 2026-10-16
+ * Scope: Moved supplier pagination styling into the shared component and removed unused or overridden supplier rules.
+ * Author review: <to be completed by author>
+ */
+
 .suppliers-page,
 .suppliers-page * {
   box-sizing: border-box;
@@ -53,9 +59,10 @@
 .supplier-list {
   display: grid;
   gap: 14px;
-  padding-top: 22px;
+  padding-top: 14px;
 }
 .supplier-card {
+  position: relative;
   display: flex;
   justify-content: space-between;
   gap: 24px;
@@ -71,6 +78,8 @@
   box-shadow: 0 8px 20px rgb(21 57 65 / 11%);
 }
 .supplier-card-actions {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -154,6 +163,10 @@
   align-items: flex-start;
 }
 
+.supplier-hours {
+  flex-wrap: wrap;
+}
+
 .supplier-card .supplier-hours {
   margin-top: 11px;
 }
@@ -206,12 +219,7 @@
   }
 }
 
-.suppliers-session {
-  font-size: 14px !important;
-}
-.suppliers-session button,
-.supplier-empty button,
-.supplier-signin button {
+.supplier-empty button {
   padding: 0;
   border: 0;
   background: none;
@@ -220,33 +228,6 @@
   font-weight: 700;
   text-decoration: underline;
   cursor: pointer;
-}
-.supplier-signin {
-  max-width: 520px;
-  margin: 24px auto;
-  padding: 28px;
-  border: 1px solid #e0ebe6;
-  border-radius: 13px;
-  background: #fff;
-  text-align: center;
-}
-.supplier-signin h2 {
-  margin: 0 0 8px;
-  font-size: 20px;
-}
-.supplier-signin p {
-  margin: 0 0 18px;
-  color: #607a80;
-}
-.supplier-signin div {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 16px;
-}
-.supplier-signin a {
-  color: #176849;
-  font-weight: 700;
 }
 .supplier-status-line {
   display: flex;
@@ -273,12 +254,6 @@
   background: #fff;
   box-shadow: 0 8px 24px rgb(22 46 52 / 16%);
 }
-.supplier-list {
-  padding-top: 14px;
-}
-.supplier-card {
-  position: relative;
-}
 /* The name button stretches over the whole card, so clicking anywhere opens the details */
 .supplier-card-open {
   padding: 0;
@@ -302,10 +277,6 @@
   outline: 2px solid #176849;
   outline-offset: 2px;
 }
-.supplier-card-actions {
-  position: relative;
-  z-index: 1;
-}
 .supplier-hours .supplier-open {
   margin-left: 6px;
 }
@@ -319,44 +290,6 @@
 }
 .supplier-empty p {
   margin: 0 0 10px;
-}
-.supplier-pagination {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 6px;
-  margin-top: 24px;
-}
-.supplier-pagination button {
-  display: grid;
-  place-items: center;
-  min-width: 36px;
-  height: 36px;
-  padding: 0 8px;
-  border: 1px solid #cfdeda;
-  border-radius: 8px;
-  background: #fff;
-  color: #34575c;
-  font: inherit;
-  font-size: 14px;
-  cursor: pointer;
-}
-.supplier-pagination button[aria-current='page'] {
-  border-color: #218563;
-  background: #218563;
-  color: #fff;
-  font-weight: 700;
-}
-.supplier-pagination button:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-.supplier-pagination span {
-  color: #607a80;
-}
-.supplier-hours {
-  flex-wrap: wrap;
 }
 .supplier-hours span {
   white-space: nowrap;

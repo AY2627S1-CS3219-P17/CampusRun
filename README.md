@@ -148,3 +148,117 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 **Files affected:** each carries an "AI Assistance Disclosure" header comment.
 
 **Prompts and key exchanges:** see [`ai/usage-log.md`](ai/usage-log.md).
+- **Refactoring** the Explore task card into a shared component (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt:
+
+  ```text
+   <article className="explore-task-card">
+            <h2>Pick up printed notes</h2>
+            <span className="explore-task-status">Open</span>
+            <p className="explore-task-location">
+              <MapPin size={16} aria-hidden="true" />
+              <span>
+                COM3 Print Shop&nbsp;&nbsp;&rarr;&nbsp;&nbsp;Central Library
+              </span>
+            </p>
+            <p className="explore-task-due">
+              <CalendarDays size={16} aria-hidden="true" />
+              <span>Due 21 Apr, 5:00 PM</span>
+            </p>
+            <span className="explore-task-reward">
+              <span>+10</span>
+              <CircleDollarSign size={20} aria-hidden="true" />
+            </span>
+          </article>
+
+  Lets abstract out this shadow card, with a type parameter (for now just put "open" and map it to the green color)
+  ```
+
+  Key response: extracted a shared TaskCard with content props, passed `type="open"` from Explore, and mapped that type to the existing green badge styling.
+
+- **Extending** task card status variants and tab examples (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt:
+
+  ```text
+  okay now add a pending type -> map to orange
+
+  &#x20;                          cancelled and expired types -> map to \<some negative shades>  &#x20;
+
+  &#x20;                          completed tyoe -> map to \<some positive shade
+
+  &#x20;                          accepted, picked up and delivered types -> map to \<some intermediate shades>
+
+  then, under the my-tasks and my-requests
+
+  - pending section: have a single pending type card
+  - active section: have one of each (accepted, picked up and delivered) cards
+  - completed section: have a single completed type card
+  - inactive section: have one of each (canclled, expired) cards
+  ```
+
+  Key response: added orange pending, distinct intermediate active, positive completed, and negative inactive badge colors; both My Tasks and My Requests now display hardcoded sample cards for the selected tab.
+
+- **Unifying** active and inactive task card colors (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt:
+
+  ```text
+  okay for inactive tab, lets just use one  of the two red shades for both expired and cancelled
+  then for active tab, lets just use the delivered shade (but abit more contrast and a slight touch of purple) for all as well
+  ```
+
+  Key response: Accepted, Picked up, and Delivered share a stronger blue-violet badge; Cancelled and Expired share the existing cancelled red badge.
+
+- **Recoloring** the shared active task badge (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt:
+
+  ```text
+  .task-card-status-accepted,
+  .task-card-status-picked-up,
+  .task-card-status-delivered {
+    color: #3b5278;
+    background: #e8edf8;
+  }
+
+  ah fuck never make it a lighter shade of green similar to the delievered shade previously
+  ```
+
+  Key response: Accepted, Picked up, and Delivered share a light mint-green badge, close to the earlier Delivered palette.
+
+- **Distinguishing** active badges from Completed (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt: "hmm feel its still abit too similar to the completed green, can we add a small touch of some other shade (netural or non neutral) that retains the contrast with everything else, but makes it mor edistinct". Key response: shifted the shared active badge toward muted teal while retaining strong text contrast.
+
+- **Separating** active badges from the credit blue (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt: "no too similar to the dollar blue, something else". Key response: changed the shared active badge to muted sage with a light neutral-green background.
+
+- **Trying** the Shopping supplier purple for active task badges (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt: "hm actually lets try the purple for supplier type == Shopping". Key response: Accepted, Picked up, and Delivered now use the Shopping badge's purple text and background colors.
+
+- **Adding** an optional negative credit sign to task cards (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt:
+
+  ```text
+  okay good, so now, lets add a new optional parameter to task-card abstraction
+  is-negative or something concise, where it flips the sign to -
+  then, the my_requests sample entries all has it
+  ```
+
+  Key response: added an optional `negative` prop to TaskCard and enabled it for every My Requests sample card, while the other cards retain positive amounts.
+
+- **Extracting** shared pagination for supplier and task pages (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt:
+
+  ```text
+  Okay now maybe abstraction the pagination out, and give the supplier pagination to the explore/my-request/my-tasks pages
+
+  note that similar to supplier, separate subtabs (eg: active, inactive etc.) have their own pagination
+  ```
+
+  Key response: moved the supplier pager into a shared Pagination component, added it to Explore, My Tasks, and My Requests, and stored separate page numbers for each task/request tab. Supplier keeps its service-side page size; placeholder task cards paginate two per page.
+
+- **Cleaning frontend CSS** (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt:
+
+  ```text
+  okay finally, clean up the explore.css (and in general all .css files for unused or redundant styles)
+  ```
+
+  Key response: removed the stale direct-card selector in Explore, unused supplier sign-in and profile-description rules, and declarations overridden by later CSS; consolidated duplicate supplier and request-input rules while retaining responsive and dynamically generated styles.
+
+- **Adding Open to active My Requests** (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt:
+
+  ```text
+  okay now for my requests active tab only, it should also support open type (liek its our requests) right?
+  if agree, add it in, then make the color purple still
+  ```
+
+  Key response: added an Open sample card only to the My Requests Active tab and styled that card's Open badge purple; Explore Open badges remain green.

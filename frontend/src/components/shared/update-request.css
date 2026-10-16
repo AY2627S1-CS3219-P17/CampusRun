@@ -1,6 +1,6 @@
 /* AI Assistance Disclosure:
  * Tool: Codex (OpenAI), date: 2026-10-16
- * Scope: Styled the request dialog, scrollable supplier menu, validation, grouped form sections, and simplified AI Autofill view.
+ * Scope: Styled the request dialog, scrollable supplier menu, validation, grouped form sections, AI Autofill view, and consolidated duplicate input declarations.
  * Author review: <to be completed by author>
  */
 .request-dialog-overlay {
@@ -125,17 +125,14 @@
 .request-supplier-trigger {
   width: 100%;
   min-width: 0;
+  height: 40px;
+  padding: 0 10px;
   border: 1px solid #cfdeda;
   border-radius: 8px;
   background: #fff;
   color: inherit;
   font: inherit;
   font-weight: 400;
-}
-.request-dialog input,
-.request-supplier-trigger {
-  height: 40px;
-  padding: 0 10px;
 }
 .request-supplier-trigger {
   justify-content: space-between;

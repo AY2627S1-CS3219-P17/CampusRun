@@ -1,0 +1,45 @@
+/* AI Assistance Disclosure:
+ * Tool: Codex (OpenAI), date: 2026-10-16
+ * Scope: Moved the supplier pagination appearance into reusable shared styles.
+ * Author review: <to be completed by author>
+ */
+
+.shared-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 24px;
+}
+
+.shared-pagination button {
+  display: grid;
+  place-items: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid #cfdeda;
+  border-radius: 8px;
+  background: #fff;
+  color: #34575c;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.shared-pagination button[aria-current='page'] {
+  border-color: #218563;
+  background: #218563;
+  color: #fff;
+  font-weight: 700;
+}
+
+.shared-pagination button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.shared-pagination span {
+  color: #607a80;
+}

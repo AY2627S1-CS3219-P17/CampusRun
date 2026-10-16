@@ -10,20 +10,15 @@
 // Tool: Codex (OpenAI), date: 2026-10-16
 // Scope: Restored the supplier settings menu using the shared toolbar dropdown styles.
 // Author review: <to be completed by author>
+// Tool: Codex (OpenAI), date: 2026-10-16
+// Scope: Replaced inline supplier pagination controls with the shared Pagination component.
+// Author review: <to be completed by author>
 
 import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { DropdownMenu, Toast } from 'radix-ui'
-import {
-  ArrowLeft,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  MapPin,
-  Pencil,
-  Power,
-  Settings,
-} from 'lucide-react'
+import { ArrowLeft, Clock, MapPin, Pencil, Power, Settings } from 'lucide-react'
+import Pagination from '../../components/shared/pagination'
 import Toolbar from '../../components/shared/toolbar'
 import './suppliers.css'
 import UpdateSupplierDialog from '../../components/supplier/update-supplier'
@@ -60,16 +55,6 @@ const SUPPLIER_TYPES: ToolbarOption[] = [
   { value: 'All Types', label: 'All Types' },
   ...SUPPLIER_CATEGORIES.map((type) => ({ value: type, label: type })),
 ]
-
-// 1 … 4 5 6 … 12
-function pageNumbers(page: number, total: number): (number | 'gap')[] {
-  const wanted = [...new Set([1, page - 1, page, page + 1, total])]
-    .filter((p) => p >= 1 && p <= total)
-    .sort((a, b) => a - b)
-  return wanted.flatMap((p, i) =>
-    i > 0 && p - wanted[i - 1] > 1 ? ['gap' as const, p] : [p],
-  )
-}
 
 function messageOf(error: unknown) {
   return error instanceof ApiError
@@ -400,41 +385,11 @@ export default function SuppliersPage() {
             )}
 
             {data && data.totalPages > 1 && (
-              <nav className="supplier-pagination" aria-label="Pages">
-                <button
-                  type="button"
-                  aria-label="Previous page"
-                  disabled={page <= 1}
-                  onClick={() => setCurrentPage(page - 1)}
-                >
-                  <ChevronLeft size={18} aria-hidden="true" />
-                </button>
-                {pageNumbers(page, data.totalPages).map((p, i) =>
-                  p === 'gap' ? (
-                    <span key={`gap-${i}`} aria-hidden="true">
-                      …
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      key={p}
-                      aria-label={`Page ${p}`}
-                      aria-current={p === page ? 'page' : undefined}
-                      onClick={() => setCurrentPage(p)}
-                    >
-                      {p}
-                    </button>
-                  ),
-                )}
-                <button
-                  type="button"
-                  aria-label="Next page"
-                  disabled={page >= data.totalPages}
-                  onClick={() => setCurrentPage(page + 1)}
-                >
-                  <ChevronRight size={18} aria-hidden="true" />
-                </button>
-              </nav>
+              <Pagination
+                page={page}
+                totalPages={data.totalPages}
+                onPageChange={setCurrentPage}
+              />
             )}
           </section>
         </main>

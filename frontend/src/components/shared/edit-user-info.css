@@ -1,3 +1,9 @@
+/* AI Assistance Disclosure:
+ * Tool: Codex (OpenAI), date: 2026-10-16
+ * Scope: Removed an unused description rule and consolidated the save button weight.
+ * Author review: <to be completed by author>
+ */
+
 .edit-info-overlay {
   position: fixed;
   inset: 0;
@@ -39,13 +45,6 @@
 .edit-info-title {
   margin: 0;
   font-size: 22px;
-}
-
-.edit-info-description {
-  margin: 0;
-  color: #587077;
-  font-size: 13px;
-  line-height: 1.5;
 }
 
 .edit-info-close,
@@ -163,7 +162,7 @@
   background: #176849;
   color: white;
   font: inherit;
-  font-weight: 650;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -200,10 +199,6 @@
 .edit-info-save:hover:not(:disabled),
 .edit-info-photo:hover {
   background: #10583d;
-}
-
-.edit-info-save {
-  font-weight: 700;
 }
 
 .edit-info-close:hover {

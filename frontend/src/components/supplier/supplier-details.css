@@ -4,6 +4,9 @@
 /* Tool: Codex (OpenAI), date: 2026-10-16.
    Scope: Sized the shared read-only map and removed its duplicate pin styles.
    Author review: <to be completed by author> */
+/* Tool: Codex (OpenAI), date: 2026-10-17.
+   Scope: Removed unused supplier-details footer rules.
+   Author review: <to be completed by author> */
 .supplier-dialog.supplier-details {
   width: min(560px, calc(100% - 32px));
 }
@@ -70,17 +73,4 @@
   border-radius: 10px;
   object-fit: cover;
   background: #eef5f2;
-}
-.supplier-dialog-footer button.supplier-details-primary {
-  border-color: #218563;
-  background: #218563;
-  color: white;
-}
-@media (max-width: 420px) {
-  .supplier-details .supplier-dialog-footer {
-    flex-wrap: wrap;
-  }
-  .supplier-details .supplier-dialog-footer button {
-    flex: 1;
-  }
 }

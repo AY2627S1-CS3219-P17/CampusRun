@@ -1,6 +1,6 @@
 /* AI Assistance Disclosure:
  * Tool: Codex (OpenAI), date: 2026-10-16
- * Scope: AI-generated shared interactive-map sizing, supplier-style pin, and fullscreen save control.
+ * Scope: AI-generated shared interactive-map sizing, supplier-style pins, optional two-pin legend, and fullscreen save control.
  * Author review: <to be completed by author>
  */
 .interactive-map,
@@ -88,4 +88,44 @@
   border-radius: 50%;
   background: white;
   content: '';
+}
+
+.interactive-map-pin-dropoff {
+  background: #2563b8;
+}
+
+.interactive-map-legend {
+  position: absolute;
+  z-index: 1000;
+  top: 52px;
+  right: 10px;
+  display: grid;
+  gap: 5px;
+  padding: 8px 10px;
+  border: 1px solid #cfdeda;
+  border-radius: 6px;
+  background: white;
+  color: #153941;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.interactive-map-legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.interactive-map-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.interactive-map-legend-pickup {
+  background: #218563;
+}
+
+.interactive-map-legend-dropoff {
+  background: #2563b8;
 }

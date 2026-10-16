@@ -1,6 +1,8 @@
 /* AI Assistance Disclosure:
  * Tool: Codex (OpenAI), date: 2026-10-16
  * Scope: Added shared-map hint alignment and adjusted the type chevron position in the supplier editor.
+ * Tool: Codex (OpenAI), date: 2026-10-17
+ * Scope: Removed unused supplier editor danger and code styles.
  * Author review: <to be completed by author>
  */
 .supplier-dialog-overlay {
@@ -194,14 +196,4 @@
   display: flex;
   align-items: center;
   gap: 5px;
-}
-.supplier-dialog-footer button.supplier-dialog-danger {
-  border-color: #b42318;
-  background: #b42318;
-  color: white;
-}
-
-.supplier-dialog code {
-  font-size: 12px;
-  overflow-wrap: anywhere;
 }

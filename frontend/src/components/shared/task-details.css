@@ -1,0 +1,167 @@
+/* AI Assistance Disclosure:
+ * Tool: Codex (OpenAI), date: 2026-10-17
+ * Scope: Styled the mock task details dialog to follow supplier details spacing and controls.
+ * Tool: Codex (OpenAI), date: 2026-10-17
+ * Scope: Grouped status and credits on the left and placed settings beside the title.
+ * Tool: Codex (OpenAI), date: 2026-10-17
+ * Scope: Restricted the automatic left margin to the close button so settings stays beside the title.
+ * Tool: Codex (OpenAI), date: 2026-10-17
+ * Scope: Styled the header CTA beside Close and removed unused settings-menu styles.
+ * Author review: <to be completed by author>
+ */
+
+.task-details-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgb(15 35 30 / 40%);
+}
+
+.task-details,
+.task-details * {
+  box-sizing: border-box;
+}
+
+.task-details {
+  position: fixed;
+  z-index: 21;
+  top: 50%;
+  left: 50%;
+  width: min(560px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: 24px;
+  border-radius: 16px;
+  background: white;
+  color: #153941;
+  box-shadow: 0 16px 64px rgb(21 57 65 / 20%);
+  font:
+    14px Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+  transform: translate(-50%, -50%);
+}
+
+.task-details-heading,
+.task-details-summary {
+  display: flex;
+  align-items: center;
+}
+
+.task-details-heading {
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.task-details-heading h2 {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 22px;
+}
+
+.task-details-icon-button {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #607a80;
+  cursor: pointer;
+}
+
+.task-details-header-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.task-details-cta {
+  padding: 7px 12px;
+  border: 1px solid #e7c6c4;
+  border-radius: 8px;
+  background: #fbeeee;
+  color: #a34440;
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.task-details-cta:hover {
+  background: #f6dfdd;
+}
+
+.task-details-icon-button:hover {
+  background: #eef5f2;
+  color: #176849;
+}
+
+.task-details-summary {
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.task-details .task-details-request-open {
+  color: #7a558b;
+  background: #f6eefe;
+}
+
+.task-details-reward {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #2563a6;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.task-details-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: #34575c;
+  line-height: 1.5;
+}
+
+.task-details-row svg {
+  flex: none;
+  margin-top: 3px;
+  color: #607a80;
+}
+
+.task-details-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.task-details-map.interactive-map,
+.task-details-map .leaflet-container {
+  height: 220px;
+}
+
+.task-details-map.interactive-map {
+  margin-top: 20px;
+}
+
+.task-details-map.interactive-map:fullscreen,
+.task-details-map.interactive-map:fullscreen .leaflet-container {
+  height: 100vh;
+  margin-top: 0;
+}
+
+.task-details :focus-visible {
+  outline: 2px solid #218563;
+  outline-offset: 2px;
+}

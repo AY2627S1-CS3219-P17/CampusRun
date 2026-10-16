@@ -6,14 +6,14 @@ Scope: AI-written "Gateway, root paths and API docs" section and AI Use Summary 
 Author review: <to be completed by author>
 -->
 
-# CS3219 — Software Design and Architecture (AY2627 Sem 1)
+# CS3219 â€” Software Design and Architecture (AY2627 Sem 1)
 
 ## CampusRun
 
 **CampusRun** is a peer-to-peer campus errand platform where
 students can request items to be collected from stores or facilities on
 campus, and other students can fulfil (and deliver) those requests. The
-platform runs on a closed credit economy — credits cannot be bought,
+platform runs on a closed credit economy â€” credits cannot be bought,
 withdrawn, or exchanged for money, and only circulate within the platform.
 
 ---
@@ -58,12 +58,12 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 
 ```text
 .
-├── user-service/
-├── supplier-service/
-├── order-service/
-├── credit-service/
-├── <n2h-service>/
-└── README.md
+â”œâ”€â”€ user-service/
+â”œâ”€â”€ supplier-service/
+â”œâ”€â”€ order-service/
+â”œâ”€â”€ credit-service/
+â”œâ”€â”€ <n2h-service>/
+â””â”€â”€ README.md
 ```
 
 - Any **nice-to-have (N2H)** feature that warrants its own service should
@@ -82,7 +82,7 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 **Decisions made by the team before AI assistance:** FastAPI with SQLAlchemy Core for the user service; a `users` table with an auto-increment integer id; a separate admin table (later replaced by an admin role on `users`, see below).
 
 **Used for:**
-- **Explaining** implementation order (tables → Alembic → FastAPI), Docker Compose networking and service-name DNS, environment variable handling (`pydantic-settings` precedence, root vs. service `.env`), Docker layer caching with uv, and how a Compose setup differs from a Google Cloud Run deployment.
+- **Explaining** implementation order (tables â†’ Alembic â†’ FastAPI), Docker Compose networking and service-name DNS, environment variable handling (`pydantic-settings` precedence, root vs. service `.env`), Docker layer caching with uv, and how a Compose setup differs from a Google Cloud Run deployment.
 - **Suggesting** separate admin accounts (their own credentials, not a foreign key to `users`), which the team adopted, plus case-insensitive unique indexes on email and username.
 - **Suggesting** a local Compose layout (separate `user-db`, `user-migrate` and `user-service` containers). This was an AI suggestion; the AI retracted its initial claim that a separate migration service is "standard practice" after being asked for documentation.
 - **Generating** boilerplate for the user service: root `compose.yaml` and `.env.example` entries, `user-service/Dockerfile`, `user-service/.dockerignore`, `user-service/.env.example`, `src/user_service/{config,db,main}.py` (settings, database engine and `GET /health`), and `src/user_service/tables.py` (the `users` and `admins` table definitions, to the team's column spec). The AI also added the `pydantic-settings` dependency to `user-service/pyproject.toml`.
@@ -134,14 +134,14 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 
 ### Frontend UI Extensions (Yang Qifeng)
 
-**Tool and mode:** OpenAI Codex (GPT-5), UI generation, refactoring, and debugging (2026-10-15–16).
+**Tool and mode:** OpenAI Codex (GPT-5), UI generation, refactoring, and debugging (2026-10-15â€“16).
 
 **Prompts and key results:**
 
-- “okay now abstract the section out as a component, put under components/credit-banner, then import into explore, my-tasks and my-requests concisely” → A shared credit banner on all three pages; credit amounts are placeholders.
-- “okay finally, lets extend the shared-toolbar abstraction, to allow for no tabs, and instead the replacement being a subheader text option, which explore will call and put "Available Tasks"” → One configurable Toolbar serves Explore, My Tasks, My Requests, and Suppliers.
-- “okay, now within supplier-details, lets also import the interactive-map abstraction but lets tweak it minimally, so that its read only (normal/fullscreen, still with teh read boundary)” → Shared React-Leaflet map for request and supplier editing, plus read-only supplier details. It marks the rectangular served-area boundary and shades the outside red; fullscreen editing saves on explicit close.
-- “1) Building, floor, description is set by user, remove the dependence to supplier 2) Rename "your pickup location" as just Location 3) Remove the extra info, make Deliver By and Credits into two separate lines” → The create-request dialog has supplier search, user-defined delivery details, map location, delivery time (default: 30 minutes ahead), credits, and client-side validation. Submission remains UI-only until the Order Service is connected.
+- â€œokay now abstract the section out as a component, put under components/credit-banner, then import into explore, my-tasks and my-requests conciselyâ€ â†’ A shared credit banner on all three pages; credit amounts are placeholders.
+- â€œokay finally, lets extend the shared-toolbar abstraction, to allow for no tabs, and instead the replacement being a subheader text option, which explore will call and put "Available Tasks"â€ â†’ One configurable Toolbar serves Explore, My Tasks, My Requests, and Suppliers.
+- â€œokay, now within supplier-details, lets also import the interactive-map abstraction but lets tweak it minimally, so that its read only (normal/fullscreen, still with teh read boundary)â€ â†’ Shared React-Leaflet map for request and supplier editing, plus read-only supplier details. It marks the rectangular served-area boundary and shades the outside red; fullscreen editing saves on explicit close.
+- â€œ1) Building, floor, description is set by user, remove the dependence to supplier 2) Rename "your pickup location" as just Location 3) Remove the extra info, make Deliver By and Credits into two separate linesâ€ â†’ The create-request dialog has supplier search, user-defined delivery details, map location, delivery time (default: 30 minutes ahead), credits, and client-side validation. Submission remains UI-only until the Order Service is connected.
 
 **Verification:** `npm run build` and lint passed; nginx configuration was validated with `nginx -t`. <!-- TODO(author): describe your own review and testing -->
 
@@ -262,3 +262,90 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
   ```
 
   Key response: added an Open sample card only to the My Requests Active tab and styled that card's Open badge purple; Explore Open badges remain green.
+
+- **Extending the interactive map with two pins** (OpenAI Codex, GPT-6, 2026-10-17). Exact prompt: "okay implement jsut the extension to the abstraction (preserve the existing behaviour ofc)". Key response: added an optional read-only pickup/dropoff mode with green and blue pins, a legend, and automatic fitting of both coordinates, preserving the existing single-pin editing and fullscreen behavior.
+
+- **Adding task details preview** (OpenAI Codex, GPT-6, 2026-10-17). Exact prompt:
+
+  ```text
+  okay now for the task-card abstraction, on click the card (same as supplier-card basically), open up a task-details modal
+
+  Top line: Title, settings icon that has edit/delete dropdown right beside it, and a close button on flushedright
+  Next line: Pill of state, + / - credit value
+  Next line: Pin icon + line carried over from outer
+  Next line: Calendar icon + value carried over from outer
+  Next line: User icon + <random ass name for now> carried over from outer
+
+  Final: Interactive map with 2-pin option
+
+  just mock sensible values for now, and use the supplier-details.tsx as a style reference
+  ```
+
+  Key response: task cards now open a supplier-style details dialog with matching status and signed credits, route, due time, mock user, and two-pin map. Edit and Delete appear in the settings menu as preview actions and state that they are not connected yet; sample cards include approximate NUS coordinates.
+
+- **Refining task card and details layout** (OpenAI Codex, GPT-6, 2026-10-17). Exact prompt:
+
+  ```text
+  1) User name dont show on outer view, only on inner view
+  2) (refer to attached pic): current state is wrong, i just want the dollar value to be right next to the state pill with adequate spacing, feel free to slightly lower the font for the dollar value
+
+  3) The setting icon put right next to the Title with adequate spacing, and only show for my-requests -> open
+  ```
+
+  Key response: removed the outer card's user row, aligned credits beside the status pill in the dialog, and placed settings beside the title only for Open cards in My Requests.
+
+- **Fixing task details settings spacing** (OpenAI Codex, GPT-6, 2026-10-17). Exact prompt: "1) oh ffs the setting icon put just a few pixels away from the title you dumb fuck". Key response: applied the automatic left margin only to the close button, leaving the settings icon a few pixels after the title.
+
+- **Showing suppliers in task details** (OpenAI Codex, GPT-6, 2026-10-17). Exact prompt: "so above that first line, lets insert a new line with supplier icon: supplier name thanks". Key response: added a Store icon and supplier name above the route, backed by explicit mock supplier names on sample task cards.
+
+- **Correcting mock supplier names** (OpenAI Codex, GPT-6, 2026-10-17). Exact prompt:
+
+  ```text
+  no the supplier name should not be the same as the from location (that is a building of the supplier)
+  so letrs just fill in random supplier names (No need to align with fake location) from tyhe supplier list
+  ```
+
+  Key response: replaced the sample supplier labels with names from `supplier-service/seed/suppliers.csv`, while leaving the pickup building labels unchanged.
+
+- **Labelling the current user in My Requests** (OpenAI Codex, GPT-6, 2026-10-17). Exact prompt: "okay and for my_requests, the user icon shoudl just be You and not whatever generic name". Key response: My Requests overrides the task details user label with "You"; Explore and My Tasks retain their sample names.
+
+- **Changing the Cancel icon** (OpenAI Codex, GPT-6, 2026-10-17). Exact prompt:
+
+  ```text
+                        <Trash2 size={16} aria-hidden="true" />
+  use a different icon for cancel (same dimmension tho and color)
+  ```
+
+  Key response: used the 16px Ban icon in the Cancel menu item, inheriting its existing color.
+
+- **Adding task details header actions** (OpenAI Codex, GPT-6, 2026-10-17). Exact prompt:
+
+  ```text
+  Okay now for the task-details header, lets conditionally render a CTA button right next to the cross symbol (maybe muted red)
+
+  The following are the cases where we want to render, and the content to render
+  1) Explore (only open tasks -> render accept)
+  2) My tasks -> active
+         - accepted -> render picked up
+         - picked up -> render delivered
+
+  3) My requests -> active
+          - open -> render cancel (also, change settings wheel to just pen icon, and it just means edit)
+          - delivered -> render completed
+
+  simple concise aligned changes, go
+  ```
+
+  Key response: added conditional muted-red header buttons for those page and state combinations, with a direct edit icon on Open requests. These mock controls are ready for action handlers.
+
+- **Cleaning up frontend code and styles** (OpenAI Codex, GPT-6, 2026-10-17). Exact prompt:
+
+  ```text
+  okay finally
+  1) clean up the frontend files (redundant/overengineered/overly verbose code)
+  2) any glaring issues flag out concisely
+
+  go
+  ```
+
+  Key response: simplified task prop forwarding and action labels, removed redundant page state and stale map comments, and deleted unused supplier CSS. Flagged the remaining mock task controls and search/sort behavior for backend integration.

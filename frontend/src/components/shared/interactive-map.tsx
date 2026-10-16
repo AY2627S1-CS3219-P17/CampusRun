@@ -1,6 +1,8 @@
 // AI Assistance Disclosure:
 // Tool: Codex (OpenAI), date: 2026-10-16
-// Scope: AI-generated NUS-bounded Leaflet map with editable and read-only fullscreen modes.
+// Scope: AI-generated NUS-bounded Leaflet map with editable and read-only fullscreen modes; optional two-pin pickup/dropoff display.
+// Tool: Codex (OpenAI), date: 2026-10-17
+// Scope: Removed redundant usage comments from the typed single- and two-pin map modes.
 // Author review: <to be completed by author>
 
 import { useEffect, useRef, useState } from 'react'
@@ -16,6 +18,7 @@ import {
   Polygon,
   Rectangle,
   TileLayer,
+  useMap,
   useMapEvents,
 } from 'react-leaflet'
 import {
@@ -36,6 +39,43 @@ const markerIcon = divIcon({
   iconSize: [40, 40],
   iconAnchor: [20, 38],
 })
+
+const dropoffIcon = divIcon({
+  className: 'interactive-map-marker',
+  html: '<span class="interactive-map-pin interactive-map-pin-dropoff"></span>',
+  iconSize: [40, 40],
+  iconAnchor: [20, 38],
+})
+
+type TwoPins = { pickup: MapPosition; dropoff: MapPosition }
+
+function FitTwoPins({
+  pins,
+  fullscreen,
+}: {
+  pins: TwoPins
+  fullscreen: boolean
+}) {
+  const map = useMap()
+  const { latitude: pickupLat, longitude: pickupLng } = pins.pickup
+  const { latitude: dropoffLat, longitude: dropoffLng } = pins.dropoff
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      map.invalidateSize()
+      map.fitBounds(
+        [
+          [pickupLat, pickupLng],
+          [dropoffLat, dropoffLng],
+        ],
+        { padding: [40, 40], maxZoom: 17, animate: false },
+      )
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [map, pickupLat, pickupLng, dropoffLat, dropoffLng, fullscreen])
+
+  return null
+}
 
 function Pin({
   position,
@@ -78,26 +118,29 @@ function Pin({
 }
 
 type Props = {
-  value: MapPosition | null
   ariaLabel?: string
   className?: string
 } & (
-  | { readOnly: true; onChange?: never }
-  | { readOnly?: false; onChange: (position: MapPosition) => void }
+  | ({ value: MapPosition | null; pins?: never } & (
+      | { readOnly: true; onChange?: never }
+      | { readOnly?: false; onChange: (position: MapPosition) => void }
+    ))
+  | { pins: TwoPins; value?: never; readOnly: true; onChange?: never }
 )
 
 export default function InteractiveMap({
   value,
+  pins,
   onChange,
   readOnly = false,
-  ariaLabel = 'Choose a location on the map',
+  ariaLabel,
   className,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<LeafletMap>(null)
   const editingRef = useRef(false)
   const [fullscreen, setFullscreen] = useState(false)
-  const [draft, setDraft] = useState(value)
+  const [draft, setDraft] = useState<MapPosition | null>(value ?? null)
 
   useEffect(() => {
     const handleChange = () => {
@@ -106,7 +149,7 @@ export default function InteractiveMap({
 
       if (!active && editingRef.current) {
         editingRef.current = false
-        setDraft(value)
+        setDraft(value ?? null)
       }
       requestAnimationFrame(() => mapRef.current?.invalidateSize())
     }
@@ -115,7 +158,7 @@ export default function InteractiveMap({
   }, [value])
 
   async function openFullscreen() {
-    setDraft(value)
+    setDraft(value ?? null)
     if (!readOnly) editingRef.current = true
     try {
       await containerRef.current?.requestFullscreen()
@@ -137,13 +180,18 @@ export default function InteractiveMap({
     else onChange?.(position)
   }
 
-  const displayedPosition = fullscreen ? draft : value
+  const displayedPosition = fullscreen ? draft : (value ?? null)
 
   return (
     <div
       ref={containerRef}
       className={`interactive-map${className ? ` ${className}` : ''}`}
-      aria-label={ariaLabel}
+      aria-label={
+        ariaLabel ??
+        (pins
+          ? 'Pickup and dropoff locations on the map'
+          : 'Choose a location on the map')
+      }
     >
       <MapContainer
         ref={mapRef}
@@ -176,12 +224,43 @@ export default function InteractiveMap({
           interactive={false}
           pathOptions={{ color: '#b42318', weight: 2, fill: false }}
         />
-        <Pin
-          position={displayedPosition}
-          onChange={changePosition}
-          readOnly={readOnly}
-        />
+        {pins ? (
+          <>
+            <FitTwoPins pins={pins} fullscreen={fullscreen} />
+            <Marker
+              position={[pins.pickup.latitude, pins.pickup.longitude]}
+              icon={markerIcon}
+              alt="Pickup location"
+              interactive={false}
+            />
+            <Marker
+              position={[pins.dropoff.latitude, pins.dropoff.longitude]}
+              icon={dropoffIcon}
+              alt="Dropoff location"
+              interactive={false}
+            />
+          </>
+        ) : (
+          <Pin
+            position={displayedPosition}
+            onChange={changePosition}
+            readOnly={readOnly}
+          />
+        )}
       </MapContainer>
+
+      {pins && (
+        <div className="interactive-map-legend" aria-label="Map pins">
+          <span>
+            <i className="interactive-map-legend-pickup" aria-hidden="true" />
+            Pickup
+          </span>
+          <span>
+            <i className="interactive-map-legend-dropoff" aria-hidden="true" />
+            Dropoff
+          </span>
+        </div>
+      )}
 
       {document.fullscreenEnabled && (
         <button

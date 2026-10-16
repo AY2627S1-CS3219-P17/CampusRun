@@ -8,6 +8,8 @@
 // Author review: <to be completed by author>
 // Tool: Codex (OpenAI), date: 2026-10-15
 // Scope: Wired the create-request header action to the shared request editor dialog.
+// Tool: Codex (OpenAI), date: 2026-10-17
+// Scope: Removed duplicated navigation state and derived the active section from the page prop.
 // Author review: <to be completed by author>
 
 import { useRef, useState } from 'react'
@@ -33,7 +35,6 @@ type HeaderProps = {
 }
 
 export default function Header({ initialSection }: HeaderProps) {
-  const [activeSection, setActiveSection] = useState(initialSection)
   const [editingInfo, setEditingInfo] = useState(false)
   const [creatingRequest, setCreatingRequest] = useState(false)
   const createRef = useRef<HTMLButtonElement>(null)
@@ -47,8 +48,7 @@ export default function Header({ initialSection }: HeaderProps) {
             key={section}
             to={sectionPaths[section]}
             className="header-nav-item"
-            aria-current={activeSection === section ? 'page' : undefined}
-            onClick={() => setActiveSection(section)}
+            aria-current={initialSection === section ? 'page' : undefined}
           >
             <span>{section}</span>
           </Link>

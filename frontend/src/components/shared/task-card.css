@@ -1,6 +1,10 @@
 /* AI Assistance Disclosure:
  * Tool: Codex (OpenAI), date: 2026-10-16
  * Scope: Styled the reusable task card and grouped active and inactive status types into shared badge palettes.
+ * Tool: Codex (OpenAI), date: 2026-10-17
+ * Scope: Added full-card click target and a user row aligned with the reward.
+ * Tool: Codex (OpenAI), date: 2026-10-17
+ * Scope: Removed the outer user row and restored reward alignment with the due date.
  * Author review: <to be completed by author>
  */
 
@@ -10,6 +14,7 @@
 }
 
 .task-card {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-rows: auto auto auto;
@@ -25,6 +30,32 @@
 
 .task-card:hover {
   box-shadow: 0 8px 20px rgb(21 57 65 / 11%);
+}
+
+.task-card-open {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.task-card-open::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  content: '';
+}
+
+.task-card-open:focus-visible {
+  outline: none;
+}
+
+.task-card:has(.task-card-open:focus-visible) {
+  outline: 2px solid #176849;
+  outline-offset: 2px;
 }
 
 .task-card h2 {
@@ -70,11 +101,14 @@
   grid-row: 3;
 }
 
-.task-card-status {
+.task-card > .task-card-status {
   grid-column: 2;
   grid-row: 1;
   justify-self: end;
   align-self: start;
+}
+
+.task-card-status {
   padding: 5px 10px;
   border-radius: 999px;
   font-size: 12px;

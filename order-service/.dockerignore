@@ -1,0 +1,11 @@
+# AI Assistance Disclosure:
+# Tool: OpenAI Codex (GPT-6), date: 2026-10-17
+# Scope: Excluded local environments, secrets, and caches from the order-service image.
+# Author review: <to be completed by author>
+
+.venv
+__pycache__
+*.pyc
+.env
+.env.*
+.pytest_cache

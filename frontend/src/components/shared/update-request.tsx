@@ -1,12 +1,16 @@
 // AI Assistance Disclosure:
 // Tool: Codex (OpenAI), date: 2026-10-16
 // Scope: Added the request dialog with supplier lookup, user-defined delivery location, validation, scrollable supplier menu, and a text-only AI Autofill view.
+// Tool: OpenAI Codex (GPT-6), date: 2026-10-17
+// Scope: Connected AI Autofill to order-service with prompt validation, loading lock, errors, partial form updates, prompt reset, and unmount cancellation.
 // Author review: <to be completed by author>
 
-import { useEffect, useState, type SubmitEvent } from 'react'
+import { useEffect, useRef, useState, type SubmitEvent } from 'react'
 import { Dialog, DropdownMenu } from 'radix-ui'
 import { Check, ChevronDown, MapPin, Search, Sparkles, X } from 'lucide-react'
 import { listSuppliers } from '../../api/supplier'
+import { autofillRequest } from '../../api/order'
+import { ApiError } from '../../api/client'
 import type { Supplier } from '../../types/supplier'
 import { type MapPosition } from '../../utils/map'
 import InteractiveMap from './interactive-map'
@@ -24,6 +28,7 @@ type Field =
   | 'form'
 
 type Errors = Partial<Record<Field, string>>
+type SupplierRef = Pick<Supplier, 'id' | 'name'>
 
 type Props = {
   onClose: () => void
@@ -37,7 +42,7 @@ function inputDate(date: Date) {
 
 function validate(
   title: string,
-  supplier: Supplier | null,
+  supplier: SupplierRef | null,
   building: string,
   floor: string,
   description: string,
@@ -82,7 +87,7 @@ export default function UpdateRequestDialog({
   onRestoreFocus,
 }: Props) {
   const [title, setTitle] = useState('')
-  const [supplier, setSupplier] = useState<Supplier | null>(null)
+  const [supplier, setSupplier] = useState<SupplierRef | null>(null)
   const [supplierQuery, setSupplierQuery] = useState('')
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [supplierOpen, setSupplierOpen] = useState(false)
@@ -103,6 +108,12 @@ export default function UpdateRequestDialog({
   const [serverErrors, setServerErrors] = useState<Errors>({})
   const [aiView, setAiView] = useState(false)
   const [aiPrompt, setAiPrompt] = useState('')
+  const [aiSubmitted, setAiSubmitted] = useState(false)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState('')
+  const aiRequest = useRef<AbortController | null>(null)
+
+  useEffect(() => () => aiRequest.current?.abort(), [])
 
   useEffect(() => {
     if (!supplierOpen) return
@@ -174,28 +185,83 @@ export default function UpdateRequestDialog({
     dialogContent?.scrollTo({ top: 0 })
   }
 
-  function handleAiSubmit(event: SubmitEvent<HTMLFormElement>) {
+  async function handleAiSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
-    showRequestForm()
+    if (aiLoading) return
+
+    setAiSubmitted(true)
+    setAiError('')
+
+    const prompt = aiPrompt.trim()
+    if (prompt.length < 20 || prompt.length > 500) return
+
+    const controller = new AbortController()
+    aiRequest.current = controller
+    setAiLoading(true)
+    try {
+      const suggestion = await autofillRequest(prompt, controller.signal)
+      if (suggestion.title !== null) setTitle(suggestion.title)
+      if (suggestion.supplier !== null) {
+        setSupplier(suggestion.supplier)
+        setSupplierQuery(suggestion.supplier.name)
+      }
+
+      if (suggestion.building !== null) setBuilding(suggestion.building)
+      if (suggestion.floor !== null) setFloor(suggestion.floor)
+      if (suggestion.description !== null) {
+        setDescription(suggestion.description)
+      }
+
+      if (suggestion.deliveryBy !== null) setDeliveryBy(suggestion.deliveryBy)
+      if (suggestion.credits !== null) setCredits(String(suggestion.credits))
+
+      setServerErrors({})
+      setSubmitted(false)
+
+      setTouched(new Set())
+      setAiPrompt('')
+      setAiSubmitted(false)
+      showRequestForm()
+    } catch (error) {
+      if (controller.signal.aborted) return
+      setAiError(
+        error instanceof ApiError
+          ? error.message
+          : 'Could not autofill the request. Try again.',
+      )
+    } finally {
+      if (aiRequest.current === controller) aiRequest.current = null
+      if (!controller.signal.aborted) setAiLoading(false)
+    }
   }
+
+  const aiPromptError =
+    aiSubmitted && aiPrompt.trim().length < 20 ? 'At least 20 characters' : ''
 
   const now = new Date()
   const minDelivery = inputDate(new Date(now.getTime() + 15 * 60_000))
   const maxDelivery = inputDate(new Date(now.getTime() + 24 * 60 * 60_000))
 
   return (
-    <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
+    <Dialog.Root open onOpenChange={(open) => !open && !aiLoading && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="request-dialog-overlay" />
         <Dialog.Content
           ref={setDialogContent}
           className="request-dialog"
+          aria-busy={aiLoading}
+          onEscapeKeyDown={(event) => {
+            if (aiLoading) event.preventDefault()
+          }}
+          onPointerDownOutside={(event) => {
+            if (aiLoading) event.preventDefault()
+          }}
           onCloseAutoFocus={(event) => {
             event.preventDefault()
             onRestoreFocus()
           }}
         >
-          <div className="request-dialog-heading">
+          <div className="request-dialog-heading" inert={aiLoading}>
             <div className="request-dialog-heading-main">
               <Dialog.Title>
                 {aiView ? 'AI Autofill' : 'Create Request'}
@@ -217,7 +283,14 @@ export default function UpdateRequestDialog({
           </div>
 
           {aiView ? (
-            <form className="request-ai-form" onSubmit={handleAiSubmit}>
+            <form
+              className="request-ai-form"
+              noValidate
+              inert={aiLoading}
+              onSubmit={(event) => {
+                void handleAiSubmit(event)
+              }}
+            >
               <p className="request-ai-description">
                 Describe your request, the supplier, where to deliver it, when
                 you need it by, and the credits you are offering. Try to include
@@ -228,12 +301,30 @@ export default function UpdateRequestDialog({
                 id="request-ai-prompt"
                 autoFocus
                 required
-                maxLength={2000}
+                minLength={20}
+                maxLength={500}
+                aria-invalid={aiPromptError ? true : undefined}
+                aria-describedby="request-ai-prompt-help"
                 rows={8}
                 value={aiPrompt}
                 placeholder="Pick up my printed notes from the COM3 print shop and deliver them to the Central Library entrance by 5 pm. I can offer 10 credits."
-                onChange={(event) => setAiPrompt(event.target.value)}
+                onChange={(event) => {
+                  setAiPrompt(event.target.value)
+                  setAiError('')
+                }}
               />
+              <div
+                id="request-ai-prompt-help"
+                className="request-ai-prompt-help"
+              >
+                <span>{aiPromptError || '\u00a0'}</span>
+                <span>{aiPrompt.length}/500</span>
+              </div>
+              {aiError && (
+                <p className="request-dialog-error" role="alert">
+                  {aiError}
+                </p>
+              )}
               <div className="request-dialog-footer">
                 <button type="button" onClick={showRequestForm}>
                   Back
@@ -242,7 +333,7 @@ export default function UpdateRequestDialog({
               </div>
             </form>
           ) : (
-            <form noValidate onSubmit={handleSubmit}>
+            <form noValidate inert={aiLoading} onSubmit={handleSubmit}>
               <div className="request-dialog-section">
                 <label>
                   Title
@@ -463,6 +554,16 @@ export default function UpdateRequestDialog({
                 <button type="submit">Create</button>
               </div>
             </form>
+          )}
+          {aiLoading && (
+            <div
+              className="request-ai-loading"
+              role="status"
+              aria-live="polite"
+            >
+              <span className="request-ai-spinner" aria-hidden="true" />
+              Filling your request...
+            </div>
           )}
         </Dialog.Content>
       </Dialog.Portal>

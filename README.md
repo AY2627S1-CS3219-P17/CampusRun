@@ -1,7 +1,7 @@
 <!--
 AI Assistance Disclosure:
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
-Tool: OpenAI Codex (GPT-6), date: 2026-10-16
+Tool: OpenAI Codex (GPT-6), date: 2026-10-16; 2026-10-17
 Scope: AI-written "Gateway, root paths and API docs" section and AI Use Summary bullets, including the frontend AI entry view disclosure; the rest was written by the team.
 Author review: <to be completed by author>
 -->
@@ -31,7 +31,7 @@ For cloud deployments, separate configuration will be required.
 ### Gateway, root paths and API docs
 
 - **One entry point.** Browsers reach every service through a single nginx gateway ([`gateway/nginx.conf`](gateway/nginx.conf)) at http://localhost:8080. It's the only container published on the host. The services are reachable only on the Compose private network, by service name (e.g. `http://user-service:8000`). The databases are also published, but bound to `127.0.0.1` for host tooling. The reasoning is in [`docs/auth-plan.md`](docs/auth-plan.md).
-- **Routing.** `/api/users/...` goes to user-service and `/api/suppliers/...` to supplier-service; every other path goes to the `frontend` container, which serves the built web app. So the app runs at http://localhost:8080 and calls the API on the same origin, with relative `/api/...` URLs. For the API routes, nginx strips the prefix, so each service defines its routes relative to its own root and doesn't repeat its name: `GET /api/suppliers/{id}` is `GET /{id}` in supplier-service.
+- **Routing.** `/api/users/...` goes to user-service, `/api/suppliers/...` to supplier-service, and `/api/orders/...` to order-service; every other path goes to the `frontend` container, which serves the built web app. So the app runs at http://localhost:8080 and calls the API on the same origin, with relative `/api/...` URLs. For the API routes, nginx strips the prefix, so each service defines its routes relative to its own root and doesn't repeat its name: `GET /api/suppliers/{id}` is `GET /{id}` in supplier-service.
 - **Root paths.** The services never see the prefix, so each one reads a `ROOT_PATH` setting (e.g. `/api/users`, set in `compose.yaml`) and passes it to FastAPI's `root_path`. That keeps the docs pages, the OpenAPI schema and any URLs a service builds itself (such as `Location` headers) pointing at the gateway path. Leave it empty when running a service directly on your machine.
 - **Opt-in API docs.** `/docs`, `/redoc` and `/openapi.json` are off unless `ENABLE_DOCS=true`. `compose.yaml` and each service's `.env.example` turn them on for local development; deployed environments leave the setting unset, so they don't publish the API schema. Through the gateway, the docs are at `http://localhost:8080/api/<service>/docs`.
 - **Adding a service:**
@@ -132,7 +132,7 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 
 **Verification:** `npm run build` and lint passed; nginx configuration was validated with `nginx -t`. <!-- TODO(author): describe your own review and testing -->
 
-### Frontend UI Extensions (Yang Qifeng)
+### Frontend UI Extensions
 
 **Tool and mode:** OpenAI Codex (GPT-5), UI generation, refactoring, and debugging (2026-10-15â€“16).
 
@@ -145,207 +145,17 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 
 **Verification:** `npm run build` and lint passed; nginx configuration was validated with `nginx -t`. <!-- TODO(author): describe your own review and testing -->
 
+
+### Order Service AI Autofill
+
+**Tool and mode:** OpenAI Codex (GPT-6), planning, generation, debugging, and explanation (2026-10-17).
+
+**Prompt (verbatim):** "okay good, execute concisely and codebase aligned now"
+
+**Key response:** Added a database-free FastAPI order-service with authenticated `POST /autofill`, backend-only Groq structured extraction, active supplier matching, and gateway/Compose wiring. Connected the frontend AI Autofill view with a 20–500-character prompt, counter, blocking loading state, errors, and partial suggestions that replace existing values when non-null. Request creation remains a separate unimplemented operation. The preceding planning request specified these requirements.
+
+**Files affected:** Each changed source and configuration file carries an AI Assistance Disclosure header. The generated `order-service/uv.lock` also identifies AI assistance.
+
 **Files affected:** each carries an "AI Assistance Disclosure" header comment.
 
 **Prompts and key exchanges:** see [`ai/usage-log.md`](ai/usage-log.md).
-- **Refactoring** the Explore task card into a shared component (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt:
-
-  ```text
-   <article className="explore-task-card">
-            <h2>Pick up printed notes</h2>
-            <span className="explore-task-status">Open</span>
-            <p className="explore-task-location">
-              <MapPin size={16} aria-hidden="true" />
-              <span>
-                COM3 Print Shop&nbsp;&nbsp;&rarr;&nbsp;&nbsp;Central Library
-              </span>
-            </p>
-            <p className="explore-task-due">
-              <CalendarDays size={16} aria-hidden="true" />
-              <span>Due 21 Apr, 5:00 PM</span>
-            </p>
-            <span className="explore-task-reward">
-              <span>+10</span>
-              <CircleDollarSign size={20} aria-hidden="true" />
-            </span>
-          </article>
-
-  Lets abstract out this shadow card, with a type parameter (for now just put "open" and map it to the green color)
-  ```
-
-  Key response: extracted a shared TaskCard with content props, passed `type="open"` from Explore, and mapped that type to the existing green badge styling.
-
-- **Extending** task card status variants and tab examples (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt:
-
-  ```text
-  okay now add a pending type -> map to orange
-
-  &#x20;                          cancelled and expired types -> map to \<some negative shades>  &#x20;
-
-  &#x20;                          completed tyoe -> map to \<some positive shade
-
-  &#x20;                          accepted, picked up and delivered types -> map to \<some intermediate shades>
-
-  then, under the my-tasks and my-requests
-
-  - pending section: have a single pending type card
-  - active section: have one of each (accepted, picked up and delivered) cards
-  - completed section: have a single completed type card
-  - inactive section: have one of each (canclled, expired) cards
-  ```
-
-  Key response: added orange pending, distinct intermediate active, positive completed, and negative inactive badge colors; both My Tasks and My Requests now display hardcoded sample cards for the selected tab.
-
-- **Unifying** active and inactive task card colors (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt:
-
-  ```text
-  okay for inactive tab, lets just use one  of the two red shades for both expired and cancelled
-  then for active tab, lets just use the delivered shade (but abit more contrast and a slight touch of purple) for all as well
-  ```
-
-  Key response: Accepted, Picked up, and Delivered share a stronger blue-violet badge; Cancelled and Expired share the existing cancelled red badge.
-
-- **Recoloring** the shared active task badge (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt:
-
-  ```text
-  .task-card-status-accepted,
-  .task-card-status-picked-up,
-  .task-card-status-delivered {
-    color: #3b5278;
-    background: #e8edf8;
-  }
-
-  ah fuck never make it a lighter shade of green similar to the delievered shade previously
-  ```
-
-  Key response: Accepted, Picked up, and Delivered share a light mint-green badge, close to the earlier Delivered palette.
-
-- **Distinguishing** active badges from Completed (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt: "hmm feel its still abit too similar to the completed green, can we add a small touch of some other shade (netural or non neutral) that retains the contrast with everything else, but makes it mor edistinct". Key response: shifted the shared active badge toward muted teal while retaining strong text contrast.
-
-- **Separating** active badges from the credit blue (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt: "no too similar to the dollar blue, something else". Key response: changed the shared active badge to muted sage with a light neutral-green background.
-
-- **Trying** the Shopping supplier purple for active task badges (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt: "hm actually lets try the purple for supplier type == Shopping". Key response: Accepted, Picked up, and Delivered now use the Shopping badge's purple text and background colors.
-
-- **Adding** an optional negative credit sign to task cards (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt:
-
-  ```text
-  okay good, so now, lets add a new optional parameter to task-card abstraction
-  is-negative or something concise, where it flips the sign to -
-  then, the my_requests sample entries all has it
-  ```
-
-  Key response: added an optional `negative` prop to TaskCard and enabled it for every My Requests sample card, while the other cards retain positive amounts.
-
-- **Extracting** shared pagination for supplier and task pages (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt:
-
-  ```text
-  Okay now maybe abstraction the pagination out, and give the supplier pagination to the explore/my-request/my-tasks pages
-
-  note that similar to supplier, separate subtabs (eg: active, inactive etc.) have their own pagination
-  ```
-
-  Key response: moved the supplier pager into a shared Pagination component, added it to Explore, My Tasks, and My Requests, and stored separate page numbers for each task/request tab. Supplier keeps its service-side page size; placeholder task cards paginate two per page.
-
-- **Cleaning frontend CSS** (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt:
-
-  ```text
-  okay finally, clean up the explore.css (and in general all .css files for unused or redundant styles)
-  ```
-
-  Key response: removed the stale direct-card selector in Explore, unused supplier sign-in and profile-description rules, and declarations overridden by later CSS; consolidated duplicate supplier and request-input rules while retaining responsive and dynamically generated styles.
-
-- **Adding Open to active My Requests** (OpenAI Codex, GPT-6, 2026-10-16). Exact prompt:
-
-  ```text
-  okay now for my requests active tab only, it should also support open type (liek its our requests) right?
-  if agree, add it in, then make the color purple still
-  ```
-
-  Key response: added an Open sample card only to the My Requests Active tab and styled that card's Open badge purple; Explore Open badges remain green.
-
-- **Extending the interactive map with two pins** (OpenAI Codex, GPT-6, 2026-10-17). Exact prompt: "okay implement jsut the extension to the abstraction (preserve the existing behaviour ofc)". Key response: added an optional read-only pickup/dropoff mode with green and blue pins, a legend, and automatic fitting of both coordinates, preserving the existing single-pin editing and fullscreen behavior.
-
-- **Adding task details preview** (OpenAI Codex, GPT-6, 2026-10-17). Exact prompt:
-
-  ```text
-  okay now for the task-card abstraction, on click the card (same as supplier-card basically), open up a task-details modal
-
-  Top line: Title, settings icon that has edit/delete dropdown right beside it, and a close button on flushedright
-  Next line: Pill of state, + / - credit value
-  Next line: Pin icon + line carried over from outer
-  Next line: Calendar icon + value carried over from outer
-  Next line: User icon + <random ass name for now> carried over from outer
-
-  Final: Interactive map with 2-pin option
-
-  just mock sensible values for now, and use the supplier-details.tsx as a style reference
-  ```
-
-  Key response: task cards now open a supplier-style details dialog with matching status and signed credits, route, due time, mock user, and two-pin map. Edit and Delete appear in the settings menu as preview actions and state that they are not connected yet; sample cards include approximate NUS coordinates.
-
-- **Refining task card and details layout** (OpenAI Codex, GPT-6, 2026-10-17). Exact prompt:
-
-  ```text
-  1) User name dont show on outer view, only on inner view
-  2) (refer to attached pic): current state is wrong, i just want the dollar value to be right next to the state pill with adequate spacing, feel free to slightly lower the font for the dollar value
-
-  3) The setting icon put right next to the Title with adequate spacing, and only show for my-requests -> open
-  ```
-
-  Key response: removed the outer card's user row, aligned credits beside the status pill in the dialog, and placed settings beside the title only for Open cards in My Requests.
-
-- **Fixing task details settings spacing** (OpenAI Codex, GPT-6, 2026-10-17). Exact prompt: "1) oh ffs the setting icon put just a few pixels away from the title you dumb fuck". Key response: applied the automatic left margin only to the close button, leaving the settings icon a few pixels after the title.
-
-- **Showing suppliers in task details** (OpenAI Codex, GPT-6, 2026-10-17). Exact prompt: "so above that first line, lets insert a new line with supplier icon: supplier name thanks". Key response: added a Store icon and supplier name above the route, backed by explicit mock supplier names on sample task cards.
-
-- **Correcting mock supplier names** (OpenAI Codex, GPT-6, 2026-10-17). Exact prompt:
-
-  ```text
-  no the supplier name should not be the same as the from location (that is a building of the supplier)
-  so letrs just fill in random supplier names (No need to align with fake location) from tyhe supplier list
-  ```
-
-  Key response: replaced the sample supplier labels with names from `supplier-service/seed/suppliers.csv`, while leaving the pickup building labels unchanged.
-
-- **Labelling the current user in My Requests** (OpenAI Codex, GPT-6, 2026-10-17). Exact prompt: "okay and for my_requests, the user icon shoudl just be You and not whatever generic name". Key response: My Requests overrides the task details user label with "You"; Explore and My Tasks retain their sample names.
-
-- **Changing the Cancel icon** (OpenAI Codex, GPT-6, 2026-10-17). Exact prompt:
-
-  ```text
-                        <Trash2 size={16} aria-hidden="true" />
-  use a different icon for cancel (same dimmension tho and color)
-  ```
-
-  Key response: used the 16px Ban icon in the Cancel menu item, inheriting its existing color.
-
-- **Adding task details header actions** (OpenAI Codex, GPT-6, 2026-10-17). Exact prompt:
-
-  ```text
-  Okay now for the task-details header, lets conditionally render a CTA button right next to the cross symbol (maybe muted red)
-
-  The following are the cases where we want to render, and the content to render
-  1) Explore (only open tasks -> render accept)
-  2) My tasks -> active
-         - accepted -> render picked up
-         - picked up -> render delivered
-
-  3) My requests -> active
-          - open -> render cancel (also, change settings wheel to just pen icon, and it just means edit)
-          - delivered -> render completed
-
-  simple concise aligned changes, go
-  ```
-
-  Key response: added conditional muted-red header buttons for those page and state combinations, with a direct edit icon on Open requests. These mock controls are ready for action handlers.
-
-- **Cleaning up frontend code and styles** (OpenAI Codex, GPT-6, 2026-10-17). Exact prompt:
-
-  ```text
-  okay finally
-  1) clean up the frontend files (redundant/overengineered/overly verbose code)
-  2) any glaring issues flag out concisely
-
-  go
-  ```
-
-  Key response: simplified task prop forwarding and action labels, removed redundant page state and stale map comments, and deleted unused supplier CSS. Flagged the remaining mock task controls and search/sort behavior for backend integration.

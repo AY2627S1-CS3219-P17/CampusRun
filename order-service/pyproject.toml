@@ -1,0 +1,29 @@
+# AI Assistance Disclosure:
+# Tool: OpenAI Codex (GPT-6), date: 2026-10-17
+# Scope: Defined the minimal database-free FastAPI order service for AI autofill.
+# Author review: <to be completed by author>
+
+[project]
+name = "order-service"
+version = "0.1.0"
+description = "CampusRun order service: request autofill"
+readme = "README.md"
+requires-python = ">=3.14.7"
+dependencies = [
+    "fastapi[standard-no-fastapi-cloud-cli]>=0.141.1",
+    "httpx>=0.28.1",
+    "pydantic-settings>=2.15.0",
+    "pyjwt>=2.15.0",
+    "tzdata>=2026.4",
+]
+
+[dependency-groups]
+dev = ["pytest>=9.1.1"]
+
+[build-system]
+requires = ["uv_build>=0.12.7,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

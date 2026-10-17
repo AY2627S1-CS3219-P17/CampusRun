@@ -1,6 +1,8 @@
 /* AI Assistance Disclosure:
  * Tool: Codex (OpenAI), date: 2026-10-16
  * Scope: Styled the request dialog, scrollable supplier menu, validation, grouped form sections, AI Autofill view, and consolidated duplicate input declarations.
+ * Tool: OpenAI Codex (GPT-6), date: 2026-10-17
+ * Scope: Styled the AI prompt counter, validation feedback, and blocking loading overlay.
  * Author review: <to be completed by author>
  */
 .request-dialog-overlay {
@@ -76,6 +78,43 @@
   font-size: 14px;
   font-weight: 400;
   line-height: 1.5;
+}
+.request-ai-prompt-help {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: -8px;
+  color: #607a80;
+  font-size: 13px;
+}
+.request-ai-prompt-help span:first-child {
+  color: #b42318;
+}
+.request-ai-loading {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border-radius: inherit;
+  background: rgb(255 255 255 / 84%);
+  color: #153941;
+  font-weight: 600;
+}
+.request-ai-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #cfdeda;
+  border-top-color: #218563;
+  border-radius: 50%;
+  animation: request-ai-spin 0.8s linear infinite;
+}
+@keyframes request-ai-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .request-dialog textarea {
   width: 100%;

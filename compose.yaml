@@ -1,4 +1,8 @@
 # AI Assistance Disclosure:
+# Tool: OpenAI Codex (GPT-6), date: 2026-10-17
+# Scope: Added database-free order-service Compose startup and backend-only Groq settings.
+# Author review: <to be completed by author>
+# AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
 # Scope: AI-generated local development Compose setup for the user service, its Postgres database and its one-off migration step.
 #        AI-added the gateway, the supplier-service ROOT_PATH/ENABLE_DOCS settings and the frontend service (2026-09-27);
@@ -115,6 +119,18 @@ services:
       supplier-migrate:
         condition: service_completed_successfully
 
+  order-service:
+    build: ./order-service
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
+      SUPPLIER_SERVICE_URL: http://supplier-service:8000
+      ENABLE_DOCS: "true"
+      ROOT_PATH: "/api/orders"
+    depends_on:
+      - supplier-service
+
   # The built web app, served by nginx; reached only through the gateway
   frontend:
     build: ./frontend
@@ -129,6 +145,7 @@ services:
     depends_on:
       - user-service
       - supplier-service
+      - order-service
       - frontend
 
 volumes:

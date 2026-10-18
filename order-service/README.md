@@ -2,18 +2,45 @@
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-10-17
 Scope: Documented the database-free AI autofill endpoint, local settings, and Groq free-plan limits.
+Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
+Scope: Documented the database, the order-worker process and the local development commands.
 Author review: <to be completed by author>
 -->
 
 # Order service
 
-This service currently provides AI suggestions for the create-request form. It does not create or store errands, and it currently has no database.
+The Order Service will run the errand lifecycle and send the matching credit commands to the Credit Service over
+RabbitMQ (see [docs/order-service-plan.md](../docs/order-service-plan.md)). It's being built step by step: so far it
+has its database, migrations, the `order-worker` process and AI autofill for the create-request form.
+
+It has two processes built from one image:
+
+- **order-service**: the HTTP API. It never connects to RabbitMQ.
+- **order-worker**: publishes queued credit commands, applies the credit service's replies and expires errands past
+  their deadline. For now it only connects to the database and RabbitMQ and waits.
 
 ## Run locally with the full app
 
-Set `GROQ_API_KEY` in the ignored root `.env`, then run `docker compose up --build` from the repository root. The gateway exposes the service at `http://localhost:8080/api/orders`; local API docs are at `/api/orders/docs`. The service can start without the key, but autofill returns 503 until it is configured.
+In the root `.env`, set `ORDER_DB_PASSWORD` (any random string) and, for autofill, `GROQ_API_KEY`. Then run
+`docker compose up --build` from the repository root. The gateway exposes the service at
+`http://localhost:8080/api/orders`; local API docs are at `/api/orders/docs`. The service can start without the
+Groq key, but autofill returns 503 until it is configured.
 
-To run this service directly, copy `.env.example` to `.env`, set `JWT_SECRET` to the user-service signing secret and `SUPPLIER_SERVICE_URL` to the gateway supplier URL, then run `uv run --python 3.14.7 fastapi dev src/order_service/main.py`.
+`credit-demo` logs in to RabbitMQ as `order-service` and reads the same reply queue as `order-worker`. Run
+`docker compose stop order-worker` before using it, or the two split the replies between them.
+
+## Run directly on your machine
+
+[Install uv](https://docs.astral.sh/uv/getting-started/installation/) and Docker Desktop. Copy `.env.example` to
+`.env` and fill in the passwords and `JWT_SECRET` to match the root `.env`. Then, in `order-service`:
+
+| With mise | Without mise | What it does |
+|---|---|---|
+| `mise run order-db` | `docker compose up -d --wait order-db rabbitmq` | Starts Postgres on `127.0.0.1:5436` and RabbitMQ on `127.0.0.1:5672` |
+| `mise run migrate` | `uv run alembic upgrade head` | Creates or updates the tables |
+| `mise run serve` | `uv run fastapi dev src/order_service/main.py --port 8004` | API at http://localhost:8004, docs at http://localhost:8004/docs |
+| `mise run worker` | `uv run order-worker` | Runs the background worker |
+| `mise run test` | `uv run pytest --cov=order_service` | Tests, in a throwaway Postgres container (Docker must be running; RabbitMQ not needed) |
 
 ## Autofill
 

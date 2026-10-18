@@ -176,3 +176,24 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 **Files affected:** each carries an "AI Assistance Disclosure" header comment.
 
 **Prompts and key exchanges:** see [`ai/usage-log.md`](ai/usage-log.md).
+### Order Service (Nathan)
+
+**Tool and mode:** Claude Code (model: Claude Opus 5.5), review, explain and generate (2026-10-18).
+
+**Decisions made by the team before or during AI assistance:**
+- The Order Service integrates with the Credit Service through the asynchronous credit-transaction workflow.
+- Only the requester cancels, and only while OPEN. Unfinished errands expire after a soft deadline plus a 5-minute grace period, and the reserved credits are returned.
+- Supplier details are not copied onto errands.
+- Delivery locations move from supplier-service to order-service.
+- Supplier-name search runs on the server.
+- The work is built one reviewed task at a time.
+
+**Used for:**
+- **Reviewing** the other services against the D3 milestone and **planning** the Order Service in [`docs/order-service-plan.md`](docs/order-service-plan.md): schema, state machine, credit commands over RabbitMQ, API, and task order.
+- **Generating** the Order Service infrastructure and skeleton (Task 1):
+  - the `order-db`, `order-migrate` and `order-worker` Compose services and the exact-match `/api/orders` gateway route;
+  - Alembic, `db.py`, `auth.py`, `errors.py`, `broker.py`, `/health`, and a placeholder worker;
+  - autofill moved into `routes/autofill.py`;
+  - Testcontainers-based tests.
+
+**Verification:** 9 order-service tests pass; `docker compose config`, `nginx -t` and the image build pass. <!-- TODO(author): describe your own review and testing -->

@@ -1,24 +1,39 @@
 # AI Assistance Disclosure:
 # Tool: OpenAI Codex (GPT-6), date: 2026-10-17
 # Scope: Defined the minimal database-free FastAPI order service for AI autofill.
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
+# Scope: AI-added the database, Alembic and RabbitMQ dependencies (via 'uv add'), the order-worker script,
+#        and the pytest-cov/testcontainers dev dependencies.
 # Author review: <to be completed by author>
 
 [project]
 name = "order-service"
 version = "0.1.0"
-description = "CampusRun order service: request autofill"
+description = "CampusRun Order Service: the errand lifecycle and request autofill"
 readme = "README.md"
 requires-python = ">=3.14.7"
 dependencies = [
+    "aio-pika>=10.1.1",
+    "alembic>=1.20.0",
+    "asyncpg>=0.31.0",
     "fastapi[standard-no-fastapi-cloud-cli]>=0.141.1",
     "httpx>=0.28.1",
     "pydantic-settings>=2.15.0",
     "pyjwt>=2.15.0",
+    "sqlalchemy[asyncio]>=2.1.0",
     "tzdata>=2026.4",
 ]
 
+[project.scripts]
+# Publishes the outbox, applies the credit service's replies and runs the time-based transitions (own container)
+order-worker = "order_service.worker:main"
+
 [dependency-groups]
-dev = ["pytest>=9.1.1"]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "testcontainers[postgres]>=4.15.0",
+]
 
 [build-system]
 requires = ["uv_build>=0.12.7,<0.13.0"]

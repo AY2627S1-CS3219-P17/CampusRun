@@ -367,6 +367,14 @@ Stop for review after each task. Every task ends with passing tests (testcontain
   usernames only, never emails.
 - Gateway: `location /api/users/internal/ { return 404; }`, so only services on the private network can call it.
 - **Tests:** returns the requested users only; more than 100 ids → 422; no token → 401; email never in the body.
+- **Also align user-service `auth.py` with the other services:**
+  - separate "Your session has expired. Sign in again." from "Your session is not valid. Sign in again.", and give
+    a full sentence for a wrong role;
+  - reject a token whose `role` isn't `student` or `admin`;
+  - rename to the shared names: the dataclass `Account` → `CurrentUser`, the dependency `CurrentUser` → `AnyUser`,
+    and `CurrentAdmin` → `AdminUser`. Nathan does these renames with VS Code's symbol rename before the other edits.
+  - Keep `OAuth2PasswordBearer`: user-service issues tokens, so its `/docs` can log in with a password.
+  - Update the tests that assert the old messages.
 
 ### Task 6: Create, read and list errands
 - **Files:** `schemas.py`, `routes/errands.py`, `routes/mine.py`, `routes/admin.py` (`/admin/errands`), tests.

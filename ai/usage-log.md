@@ -959,3 +959,105 @@ Update these two files so that there are a total of 100 suppliers and 100 delive
 - **Existing rows:** the AI flagged 14 supplier rows and the YIH delivery location as 240–1,080 m from their buildings. These were not changed.
 
 ---
+
+## Session 12 — 2026-10-18 — order-service plan and set-up (Task 1)
+
+- **Tool:** Claude Code (model: Claude Opus 5.5)
+- **Author:** nathantew14
+- **Modes:** explain, review, generate
+- **Timestamps:** only the date was recorded for this session; individual prompt times were not captured.
+- **Decisions made before the session (by the team, not AI):** the Order Service integrates with the Credit Service through the asynchronous credit-transaction workflow; the D3 milestone document defines the scope.
+
+### 1. D3 gap check and order-service plan (review, explain)
+
+```text
+@frontend/CS3219-Milestone-D3.docx we need to implement everything required in this document. the credit service, and frontend should already be done. the asynchronous worfklow we picked should be the processing of credit transactions, which the order service will have to integrate with.
+check that everything except the order service has been implemented, then draft a plan for building the order service.
+
+for the structure of the service directory/code, evaluate which existing service to follow. my initial thought is to follow user-service but split the endpoints into routes like the other services.
+```
+
+**Key response:** Checked the other services by reading the code. User, supplier and credit services were implemented. Gaps found:
+- The frontend's errand pages still used sample data, and the create form had no backend.
+- `docs/credit-service-plan.md` was cited in several places but never committed.
+- The local `.env` was missing the RabbitMQ and credit variables.
+- user-service had no way to look up another user's username.
+- The gateway was missing an exact-match `/api/orders` route.
+
+Recommended credit-service as the code skeleton (separate worker process, reply consumer, `routes/` package, field-level 422 errors), with the outbox taken from user-service. Wrote `docs/order-service-plan.md`: schema, state machine, credit commands over RabbitMQ, API, tasks and open questions.
+
+### 2. Team decisions on the open questions (explain, generate)
+
+```text
+2. getting the plan, we'll do what we can without assuming steps first
+3. do i need to fill all the env vars for the rabbitmq service?
+4. do we need a usernames GET, or can we just return them with the errands?
+5. add the corresponding nginx block for orders
+6. yes, non of the infra is in place yet. we will need to do it. is it in the plan?
+7. we are decided to move the delivery_lcoations table to the order service. in the plan, make a copy of it first, then remove it from the supplier service after when the switch is confirmed
+8. we don't want to copy supplier details, and will accept the tradeoff of supplier edits changing existing errands
+9. is the background sweeper run on some kind of cronjob?
+
+answers that you needed
+a. only requester can cancel when the order is in OPEN state. keeps it simple.
+b. once deadline is passed, errand switches to expired state. perhaps with the background switcher? the in-progress errand is thus effectively suspended. no credit is transferred to the courier; reserved credit is returned to the requester's wallet balance
+c. ignore the pending tab; it is for pending orders, but we'll just put the pending orders with the rest of the orders with a different visual. pending orders are orders that have pending credit transaction. they can either be open and pending (which actually means the order is not open yet, not sure if we should have a separate state for that), completed and pending (transaction from requester to courier in progress), or cancelled/expired and pending (transaction to return reserved credits back to the requester's wallet in progress).
+d. delivered but unconfirmed errands stay unconfirmed until they are confirmed, or until they expire, where it then transits to expired. same as in point b.
+e. write the frontend connection into the plan, at the end.
+f. no need, lets just keep it simple for now.
+
+build method: I want it to happen step by step, so I can manually review each stop and talk through it, ask questions, discuss and maybe make changes.
+
+update and confirm the plan again, don't start building yet
+```
+
+**Key response:** Added the `location = /api/orders` gateway block. Updated the plan with the team's decisions:
+- requester-only cancel while OPEN;
+- every unfinished errand expires at the deadline, and the reserved credits are released;
+- usernames are returned inside errand responses, via an internal user-service endpoint blocked at the gateway;
+- delivery locations move to order-service, copied first and removed from supplier-service afterwards;
+- no copying of supplier details.
+
+Recommended no separate "reserving" state, since a `credit_status` column covers every pending case. Explained that the sweeper is a polling loop in the worker, not a cronjob. Moved the infrastructure to Task 1.
+
+### 3. Supplier-name search and remaining rules (explain)
+
+```text
+8. i would think searching by supplier names is important. how does the frontend do it currently? when the filter updates, does it filter the loaded errands on the client, or is every change to the filter a backend request?
+
+separate points:
+1. alright, we'll skip the "reserving" state, and just use the combination of the errand state and its credit_status
+2. delivering just before the deadline: how about just a 5 minute grace period after the deadline before its marked as expired? so the deadline that the requester sets is actually the soft "delivery" deadline.
+3. editing: requester can only edit before courier accepts, i.e. when the errand is still in OPEN state
+4. just active. we won't manage whether the supplier is open or not.
+
+we can start after the mechanism for supplier name searching is decided.
+```
+
+**Key response:** Found that the errand pages stored the search text but never used it, while the Suppliers page sends a debounced backend request on every change. Proposed server-side search: order-service asks supplier-service for the ids of matching suppliers, then filters errands by title, delivery location or those ids in one query, so pagination stays correct. The team accepted this. Added the 5-minute grace period, with separate time rules for accept and edit (before the deadline) and for pick-up, deliver, complete and cancel (before the deadline plus grace).
+
+### 4. Task 1: infrastructure and service skeleton (generate, review)
+
+```text
+this works. lets start with Task 1. i've moved us to a new branch, and also started docker so you can do any syntax checks necessary
+```
+
+**Key response:** Added `order-db`, `order-migrate` and `order-worker` to `compose.yaml`, and `ORDER_DB_*` to both `.env.example` files. In order-service:
+- Copied `db.py`, `errors.py`, `auth.py` and `broker.py` from credit-service.
+- Set up Alembic with an empty schema.
+- Moved autofill into `routes/autofill.py` without logic changes.
+- Added `/health` and a placeholder `order-worker`.
+- Added Testcontainers-based tests (9 passing).
+
+`docker compose config`, `nginx -t` and the image build passed. The stack itself was not started. The AI noted one behaviour change: autofill's 422 body now uses the shared field-error format.
+
+### 5. Alembic template and auth consistency (explain)
+
+```text
+1. what is script.py.mako?
+2. it seems that you've matched @order-service/src/order_service/auth.py to @credit-service/src/credit_service/auth.py. should we match @user-service/src/user_service/auth.py to the rest as well?
+```
+
+**Key response:** Explained that `script.py.mako` is the template Alembic fills in when generating a migration file. Compared the three `auth.py` files and recommended aligning user-service's error messages and role check while keeping `OAuth2PasswordBearer`, since user-service issues the tokens. The team chose to fold this into Task 5, including renaming to the shared names, which Nathan will do with VS Code's symbol rename.
+
+---

@@ -1,6 +1,8 @@
 # AI Assistance Disclosure:
 # Tool: OpenAI Codex (GPT-6), date: 2026-10-17
 # Scope: Excluded local environments, secrets, and caches from the order-service image.
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
+# Scope: Also excluded test coverage output, as in credit-service/.dockerignore.
 # Author review: <to be completed by author>
 
 .venv
@@ -9,3 +11,5 @@ __pycache__
 .env
 .env.*
 .pytest_cache
+.coverage
+htmlcov

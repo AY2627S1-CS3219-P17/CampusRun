@@ -382,11 +382,9 @@ Stop for review after each task. Every task ends with passing tests (testcontain
 - **Also align user-service `auth.py` with the other services:**
   - separate "Your session has expired. Sign in again." from "Your session is not valid. Sign in again.", and give
     a full sentence for a wrong role;
-  - reject a token whose `role` isn't `student` or `admin`;
-  - rename to the shared names: the dataclass `Account` → `CurrentUser`, the dependency `CurrentUser` → `AnyUser`,
-    and `CurrentAdmin` → `AdminUser`. Nathan does these renames with VS Code's symbol rename before the other edits.
-  - Keep `OAuth2PasswordBearer`: user-service issues tokens, so its `/docs` can log in with a password.
-  - Update the tests that assert the old messages.
+  - reject a token whose `role` isn't `student` or `admin`, or whose `sub` isn't a number;
+  - keep `OAuth2PasswordBearer`: user-service issues tokens, so its `/docs` can log in with a password;
+  - keep user-service's names (`Account`, `CurrentUser`, `CurrentAdmin`). The team decided against renaming them.
 
 ### Task 6: Create, read and list errands
 - **Files:** `schemas.py`, `routes/errands.py`, `routes/mine.py`, `routes/admin.py` (`/admin/errands`), tests.

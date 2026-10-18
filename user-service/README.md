@@ -4,6 +4,8 @@ Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 Scope: AI-assisted Markdown formatting, environment variable setup instructions, the full-stack build step, the interactive API docs section (including the ENABLE_DOCS note), the initial admin setup section, the running tests section, and the protecting an endpoint section (2026-09-27); AI-updated the admin and endpoint sections for the admin role, and the Compose seeding step (2026-09-28); AI-updated them so admins keep student capabilities (2026-09-28).
 Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 Scope: AI-written "Opening the user's wallet" section.
+Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
+Scope: AI-added the internal endpoints section and the 401 messages.
 Author review: Originally written and then verified by Nathan
 -->
 
@@ -120,12 +122,18 @@ async def read_current_user(account: CurrentUser, conn: Connection) -> UserRespo
 
 FastAPI looks at the parameter's **type**, not its name, so `account` could be called anything. `CurrentUser` is `Annotated[Account, Depends(require_user)]`, which makes FastAPI run `require_user` before the endpoint. `require_user` reads the `Authorization: Bearer <token>` header and checks the JWT:
 
-- A missing, invalid or expired token gets a `401`.
+- A missing, invalid or expired token gets a `401`, with "Your session has expired. Sign in again." or "Your session is not valid. Sign in again." (the same wording as the other services). A token whose `role` isn't `student` or `admin` is invalid.
 - Otherwise the endpoint runs, with `account` set to the decoded `Account(id, role)`.
 
 `CurrentUser` accepts any role, since an admin can do everything a student can. `CurrentAdmin` runs the same checks, then also requires the token's `role` claim to be `admin`. A student's token on a `CurrentAdmin` route gets a `403`. There's deliberately no student-only dependency.
 
 > **Warning:** nothing marks an endpoint as public. **If you leave out the parameter, anyone can call the endpoint.** Only login, registration, password-recovery start and `/health` should be unprotected.
+
+## Internal endpoints
+
+Paths under `/internal/` are for other services only. The gateway answers `/api/users/internal/...` with a 404, so browsers can't reach them; services call user-service directly on the Compose network (`http://user-service:8000`).
+
+- `GET /internal/usernames?ids=1&ids=2` (signed in; up to 100 ids): `[{"id": 1, "username": "alice"}, ...]`, ordered by id, with unknown ids left out. It never returns email addresses. The Order Service uses it to show requester and courier names on errands, forwarding the signed-in user's token.
 
 ## Running tests
 

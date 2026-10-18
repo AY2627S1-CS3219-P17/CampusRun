@@ -960,7 +960,7 @@ Update these two files so that there are a total of 100 suppliers and 100 delive
 
 ---
 
-## Session 12 — 2026-10-18 to 2026-10-19 — order-service plan and Tasks 1 to 4
+## Session 12 — 2026-10-18 to 2026-10-19 — order-service plan and Tasks 1 to 5
 
 - **Tool:** Claude Code (model: Claude Opus 5.5)
 - **Author:** nathantew14
@@ -1174,5 +1174,28 @@ looks good. add the point on communication isolation to the @CS3219-Milestone-D3
 - service addresses as configuration, and what changes outside one Docker network.
 
 The document passed XML validation.
+
+### 13. Task 5: username lookup and user-service auth messages (generate)
+
+```text
+on second thought, i think my naming still makes more sense. i'll leave it as-is for now. proceed to task 5.
+```
+
+**Key response:** Kept user-service's names, as the author decided. Changed `auth.py`:
+- "expired" and "not valid" session messages, the same as the other services;
+- a token whose role isn't `student` or `admin`, or whose `sub` isn't a number, is rejected;
+- a full-sentence message for a wrong role.
+
+Added `GET /internal/usernames?ids=1&ids=2`: up to 100 ids, returning only ids and usernames, never emails. Added a gateway block that answers `/api/users/internal/` with a 404. A throwaway nginx container confirmed the block also catches `//`, `./`, `../` and URL-encoded variants of the path. 118 user-service tests passed (16 new).
+
+### 14. Checking the gateway block (explain)
+
+```text
+curl localhost:8080/api/users/internal/usernames?ids=1
+```
+
+(Output: `(eval):1: no matches found: localhost:8080/api/users/internal/usernames?ids=1`)
+
+**Key response:** Explained that zsh treats `?` as a filename wildcard and stops before curl runs. Quoting the URL avoids it, and the expected answer is `{"detail":"Not Found"}`.
 
 ---

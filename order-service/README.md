@@ -3,7 +3,7 @@ AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-10-17
 Scope: Documented the database-free AI autofill endpoint, local settings, and Groq free-plan limits.
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
-Scope: Documented the database, the order-worker process and the local development commands.
+Scope: Documented the database, the order-worker process, the local development commands and delivery locations.
 Author review: <to be completed by author>
 -->
 
@@ -11,7 +11,7 @@ Author review: <to be completed by author>
 
 The Order Service will run the errand lifecycle and send the matching credit commands to the Credit Service over
 RabbitMQ (see [docs/order-service-plan.md](../docs/order-service-plan.md)). It's being built step by step: so far it
-has its database, migrations, the `order-worker` process and AI autofill for the create-request form.
+has its database, migrations, the `order-worker` process, delivery locations and AI autofill for the create-request form.
 
 It has two processes built from one image:
 
@@ -41,6 +41,14 @@ Groq key, but autofill returns 503 until it is configured.
 | `mise run serve` | `uv run fastapi dev src/order_service/main.py --port 8004` | API at http://localhost:8004, docs at http://localhost:8004/docs |
 | `mise run worker` | `uv run order-worker` | Runs the background worker |
 | `mise run test` | `uv run pytest --cov=order_service` | Tests, in a throwaway Postgres container (Docker must be running; RabbitMQ not needed) |
+
+## Delivery locations
+
+`/delivery-locations` (list, get, create, edit) holds where errands are delivered. These used to be in supplier-service.
+- **Predefined** locations are the shared campus list, loaded from `seed/delivery-locations.csv` by `order-migrate`
+  (`python -m order_service.seed`, safe to rerun). Everyone sees them; only admins add or edit them.
+- **Personal** locations are added by a student. Only that student sees and edits them.
+- A location can't be edited while an errand using it has a courier on the way (409).
 
 ## Autofill
 

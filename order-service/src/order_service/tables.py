@@ -1,24 +1,29 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: AI-generated errands and outbox tables with the constraints that keep each errand's state, courier and
-#        credit status consistent; the outbox table copied from user-service/tables.py.
+#        credit status consistent; the outbox table copied from user-service/tables.py; the delivery_locations table
+#        copied from supplier-service/tables.py, then extended with floor, predefined and integer user ids.
 # Author review: <to be completed by author>
 
 """Database schema (SQLAlchemy Core).
 
-errands      one row per errand: who asked, who's delivering, its state and where its credits are
-outbox       credit commands waiting to be published to RabbitMQ by order-worker
+delivery_locations  where errands are delivered: predefined campus spots, and the ones requesters add themselves
+errands             one row per errand: who asked, who's delivering, its state and where its credits are
+outbox              credit commands waiting to be published to RabbitMQ by order-worker
 
 User and supplier ids belong to other services, so they are plain integers here: there are no foreign keys across
-services because each owns its own database. delivery_location_id gets its foreign key when the delivery_locations
-table moves into this service (docs/order-service-plan.md, Task 3).
+services because each owns its own database. delivery_locations moved here from supplier-service, so errands refer to
+it with a real foreign key.
 """
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     Column,
     DateTime,
+    Double,
+    ForeignKey,
     Identity,
     Index,
     Integer,
@@ -26,8 +31,10 @@ from sqlalchemy import (
     String,
     Table,
     Text,
+    false,
     func,
     text,
+    true,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
@@ -44,6 +51,9 @@ metadata = MetaData(
 )
 
 # Limits shared with input validation (and the create-request form)
+LOCATION_NAME_MAX_LENGTH = 100
+FLOOR_MAX_LENGTH = 10
+LOCATION_DESCRIPTION_MAX_LENGTH = 300
 TITLE_MAX_LENGTH = 100
 REWARD_MIN = 1
 REWARD_MAX = 100
@@ -60,6 +70,40 @@ def _timestamps() -> list[Column]:
         Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()),
     ]
 
+
+delivery_locations = Table(
+    "delivery_locations",
+    metadata,
+    Column("id", Integer, Identity(), primary_key=True),
+    # The building or spot, e.g. "COM3"
+    Column("name", String(LOCATION_NAME_MAX_LENGTH), nullable=False),
+    Column("floor", String(FLOOR_MAX_LENGTH), nullable=True),
+    Column("description", String(LOCATION_DESCRIPTION_MAX_LENGTH), nullable=True),
+    Column("latitude", Double, nullable=False),
+    Column("longitude", Double, nullable=False),
+    Column("active", Boolean, nullable=False, server_default=true()),
+    # Predefined locations are the shared campus list, managed by admins. The others belong to the student who
+    # added them (created_by) and are only visible to and editable by them.
+    Column("predefined", Boolean, nullable=False, server_default=false()),
+    # User ids from the access token; null for rows loaded by the seed command
+    Column("created_by", Integer, nullable=True),
+    Column("updated_by", Integer, nullable=True),
+    *_timestamps(),
+    CheckConstraint("latitude BETWEEN -90 AND 90 AND longitude BETWEEN -180 AND 180", name="coordinates"),
+    # A personal location always has its owner
+    CheckConstraint("predefined OR created_by IS NOT NULL", name="personal_has_owner"),
+)
+
+# Predefined names are unique regardless of case. Students' own locations may share names ("Home", or "COM3" with a
+# different floor), so they're left out.
+Index(
+    "uq_delivery_locations_predefined_name_lower",
+    func.lower(delivery_locations.c.name),
+    unique=True,
+    postgresql_where=delivery_locations.c.predefined,
+)
+# A student's own locations
+Index("ix_delivery_locations_created_by", delivery_locations.c.created_by)
 
 errands = Table(
     "errands",
@@ -78,7 +122,7 @@ errands = Table(
     # Raised with every reward change and sent with AdjustReservation, so a late reply to an older change is ignored
     Column("reward_revision", Integer, nullable=False, server_default=text("0")),
     Column("supplier_id", Integer, nullable=False),
-    Column("delivery_location_id", Integer, nullable=False),
+    Column("delivery_location_id", Integer, ForeignKey("delivery_locations.id"), nullable=False),
     # The soft deadline the requester sets; the errand expires once the grace period after it has passed too
     Column("deliver_by", DateTime(timezone=True), nullable=False),
     Column("cancel_reason", String(32), nullable=True),
@@ -110,6 +154,8 @@ errands = Table(
     CheckConstraint(f"cancel_reason IN ({_sql_in(CancelReason)})", name="cancel_reason"),
 )
 
+# Whether a delivery location is in use by an errand in progress (it can't be edited then)
+Index("ix_errands_delivery_location_id", errands.c.delivery_location_id)
 # Explore: OPEN errands with held credits, before their deadline
 Index("ix_errands_state_credit_status_deliver_by", errands.c.state, errands.c.credit_status, errands.c.deliver_by)
 # My Requests and My Tasks

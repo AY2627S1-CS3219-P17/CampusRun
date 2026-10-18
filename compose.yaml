@@ -2,7 +2,8 @@
 # Tool: OpenAI Codex (GPT-6), date: 2026-10-17
 # Scope: Added database-free order-service Compose startup and backend-only Groq settings.
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
-# Scope: AI-added order-db, order-migrate and order-worker, the order-service DATABASE_URL, and the credit-demo note.
+# Scope: AI-added order-db, order-migrate and order-worker, the order-service DATABASE_URL, and the credit-demo note;
+#        AI-added the delivery-location seed to order-migrate (2026-10-19).
 # Author review: <to be completed by author>
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
@@ -148,10 +149,10 @@ services:
       timeout: 5s
       retries: 10
 
-  # One-off: applies Alembic migrations, then exits
+  # One-off: applies Alembic migrations and loads the predefined delivery locations (if not already there), then exits
   order-migrate:
     build: ./order-service
-    command: ["alembic", "upgrade", "head"]
+    command: ["sh", "-c", "alembic upgrade head && python -m order_service.seed"]
     environment:
       DATABASE_URL: postgresql+asyncpg://${ORDER_DB_USER:-order_service}:${ORDER_DB_PASSWORD:?set ORDER_DB_PASSWORD in .env}@order-db:5432/${ORDER_DB_NAME:-order_service}
     depends_on:

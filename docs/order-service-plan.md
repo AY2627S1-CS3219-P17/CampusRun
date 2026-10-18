@@ -44,7 +44,7 @@ RabbitMQ 4.3, uv, pytest. These are the same versions as credit-service.
 | D7 | `delivery_locations` moves from supplier-service to order-service | Copy first (Task 3). Remove it from supplier-service only after the switch is confirmed (Task 10). Errands then reference it with a real foreign key. |
 | D8 | Usernames are returned inside errand responses | The frontend never looks up users. Order-service calls an internal user-service endpoint (Task 5). |
 | D9 | Build step by step with a review after each task | See the note at the top. |
-| D10 | The requester can edit an errand only while it's OPEN | It can't be edited once a courier accepts. The same applies to a delivery location: its creator can't edit it while any errand using it is past OPEN. |
+| D10 | The requester can edit an errand only while it's OPEN | It can't be edited once a courier accepts. The same applies to a delivery location: nobody can edit it while an errand using it is ACCEPTED, PICKED_UP or DELIVERED (a courier is on the way). Finished errands don't block edits, or a predefined location could never change again. |
 | D11 | Suppliers only need to be active when an errand is created | Whether the supplier is open isn't checked. |
 | D12 | Searching by supplier name happens on the server | Search, sort, tab and page changes each send a request, debounced as on the Suppliers page. Order-service asks supplier-service for the ids of matching suppliers, then filters errands by `supplier_id` (section 7). |
 
@@ -125,10 +125,12 @@ delivery_locations                       (copied from supplier-service, then ext
   latitude         double not null             inside the served area
   longitude        double not null
   active           boolean not null default true
-  created_by       integer null                NULL = predefined (seeded or admin); else the user who made it
+  predefined       boolean not null default false   the shared campus list (seeded or admin-added)
+  created_by       integer null                the user who added it; NULL only for seeded rows
   updated_by       integer null
   created_at, updated_at
-  unique lower(name) only WHERE created_by IS NULL  (users' own locations may share names)
+  unique lower(name) only WHERE predefined  (users' own locations may share names)
+  CHECK predefined OR created_by IS NOT NULL
 
 errands
   id                    integer identity PK       = errandId in every credit command
@@ -283,7 +285,7 @@ They never include an email address.
 | `GET /me/requests?tab=`, `GET /me/tasks?tab=` | signed in | `active` = OPEN/ACCEPTED/PICKED_UP/DELIVERED, `completed` = COMPLETED, `inactive` = CANCELLED/EXPIRED |
 | `GET /admin/errands?requesterId=&courierId=&state=` | admin | read-only |
 | `GET /admin/stuck` | admin | errands whose credits are off target |
-| `GET/POST/PATCH /delivery-locations[/{id}]` | list: signed in (predefined + own). Create: signed in. Edit: creator, or admin for predefined | copied from supplier-service, with these permission changes |
+| `GET/POST/PATCH /delivery-locations[/{id}]` | list: signed in (predefined + own; `?predefined=true/false` narrows it). Create: signed in; `"predefined": true` in the body is admin-only. Edit: creator for their own, admin for predefined | copied from supplier-service, with these permission changes |
 | `POST /autofill` | signed in | unchanged |
 
 **Searching by supplier name (`q` on `GET /`, `/me/requests` and `/me/tasks`).** Errands store only `supplier_id`
@@ -413,7 +415,8 @@ Stop for review after each task. Every task ends with passing tests (testcontain
     `deliver_by + grace` (sweeper not run) → 409;
   - edit while ACCEPTED → 409; edit while credit PENDING → 409;
   - reward edits enqueue AdjustReservation with revisions 1 then 2;
-  - accept refused while an adjust is pending.
+  - accept refused while an adjust is pending;
+  - accept takes a share lock on its delivery location (`SELECT … FOR SHARE`), so it can't interleave with a location edit's in-use check (Task 3 takes `FOR UPDATE`).
 
 ### Task 8: Reply handling
 - **Files:** `credit.py`, tests.

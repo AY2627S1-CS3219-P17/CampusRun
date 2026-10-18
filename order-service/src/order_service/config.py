@@ -3,13 +3,18 @@
 # Scope: Loaded shared JWT, Groq, supplier, and FastAPI gateway settings.
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: AI-added DATABASE_URL, RABBITMQ_URL, the JWT algorithm and log level, following credit-service/config.py;
-#        made JWT_SECRET optional so the worker can run without it (main.py still requires it).
+#        made JWT_SECRET optional so the worker can run without it (main.py still requires it);
+#        AI-added the served-area bounds and seed directory for delivery locations (copied from supplier-service).
 # Author review: <to be completed by author>
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# order-service/, so the seed files are found wherever the service is started from
+SERVICE_ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
@@ -29,6 +34,15 @@ class Settings(BaseSettings):
     groq_api_key: SecretStr = SecretStr("")
     groq_model: str = "openai/gpt-oss-120b"
     supplier_service_url: str = "http://supplier-service:8000"
+
+    # The "served area" from the glossary: a box around the NUS Kent Ridge campus (same as supplier-service)
+    served_area_min_lat: float = 1.2870
+    served_area_max_lat: float = 1.3100
+    served_area_min_lng: float = 103.7640
+    served_area_max_lng: float = 103.7880
+
+    # The predefined delivery locations loaded by `python -m order_service.seed`
+    seed_dir: Path = SERVICE_ROOT / "seed"
 
     log_level: str = "INFO"
 

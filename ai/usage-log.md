@@ -960,7 +960,7 @@ Update these two files so that there are a total of 100 suppliers and 100 delive
 
 ---
 
-## Session 12 — 2026-10-18 — order-service plan and set-up (Task 1)
+## Session 12 — 2026-10-18 to 2026-10-19 — order-service plan and Tasks 1 to 3
 
 - **Tool:** Claude Code (model: Claude Opus 5.5)
 - **Author:** nathantew14
@@ -1059,5 +1059,76 @@ this works. lets start with Task 1. i've moved us to a new branch, and also star
 ```
 
 **Key response:** Explained that `script.py.mako` is the template Alembic fills in when generating a migration file. Compared the three `auth.py` files and recommended aligning user-service's error messages and role check while keeping `OAuth2PasswordBearer`, since user-service issues the tokens. The team chose to fold this into Task 5, including renaming to the shared names, which Nathan will do with VS Code's symbol rename.
+
+### 6. Task 2: errand tables, states and outbox (generate)
+
+```text
+fold into task 5. i'd say go ahead with the renaming. should be simple with VSCode's object/symbol renaming? i can handle that directly via vscode when we get to task 5.
+
+otherwise, commit task 1, update AI logs, and lets move to task 2
+```
+
+**Key response:** Committed Task 1 and recorded the user-service `auth.py` alignment in the plan's Task 5. Added:
+- `states.py`: errand states, credit statuses, cancel reasons, and the rule for where an errand's credits should end up;
+- the `errands` and `outbox` tables, with CHECK constraints that reject inconsistent errands (own courier, reward outside 1–100, courier missing or present in the wrong state, cancel reason);
+- `outbox.py`, generalised from user-service. The routing key is looked up from the command name, and it publishes on the worker's connection.
+
+The migration was generated against a throwaway Postgres container; 47 tests passed.
+
+### 7. Credit status naming and the errand row before the credit check (explain)
+
+```text
+1. change HELD to RESERVED
+2. in the selected lines, should we even make the order row until the credit availability has been checked? also, what does NO_WALLET mean?
+```
+
+(Selected: the `INSUFFICIENT_CREDITS` and `NO_WALLET` cancel reasons in `states.py`.)
+
+**Key response:** Renamed the status. Explained that the errand row must exist first:
+- Reserving first risks credits held for an errand that then fails to be created.
+- A synchronous check breaks the rule that balance changes go over RabbitMQ.
+- The row starts OPEN with credits PENDING and isn't shown to couriers until the reply arrives.
+- An advisory wallet pre-check (Task 6) stops most refused errands from being created.
+
+NO_WALLET means the requester's wallet hasn't been opened yet. The credit service records a refusal permanently per errand id, so the errand must be cancelled rather than retried.
+
+```text
+1. ah if aaron used held, we'd just keep it is held for consistency
+2. this is more of discussion: is open wallet really necessary to be asynchronous? it shouldn't conflict with other credit transactions, and should be fast, so i don't see why not just trigger it synchronously
+```
+
+**Key response:** Reverted to `HELD`. Explained that OpenWallet is asynchronous because registration writes to two databases that can't share a transaction, not because of conflicts or speed. A synchronous call still needs retries, a repair job and idempotency. It would also make registration depend on the credit service and add the first HTTP endpoint that changes a balance. Recommended keeping it asynchronous, since it answers D3 Part 2.2; the team agreed.
+
+### 8. Task 3: delivery locations copied into order-service (generate)
+
+```text
+commit and start task 3
+```
+
+**Key response:** Committed Task 2. Copied `delivery_locations` from supplier-service (table, seed CSV, seed command and endpoints) and extended it:
+- a `floor` column, an optional description, and integer user ids;
+- an explicit `predefined` flag, chosen by the AI instead of "`created_by` empty means predefined", so admin-added locations keep their author;
+- predefined names unique only among predefined locations;
+- personal locations visible and editable only by their creator; predefined ones editable only by admins;
+- no edits while an errand using the location has a courier on the way.
+
+The AI narrowed the plan's "past OPEN" rule so finished errands don't block edits. `errands.delivery_location_id` got its foreign key, and `order-migrate` now seeds the 100 locations. Supplier-service was not changed. 72 tests passed.
+
+### 9. Recording the constraints in the D3 document (generate)
+
+```text
+1. add these constraints back into the @CS3219-Milestone-D3.docx with yellow highlight so i can update it on my side
+2. same as above
+3. sounds good
+
+update @ai/usage-log.md, commit and move on to task 4
+```
+
+**Key response:** Edited the `delivery_locations` table in the D3 document, highlighted in yellow:
+- added the `floor`, `active`, `predefined` and `updated_by` rows;
+- noted that `created_by` is optional and `name` is varchar(100);
+- added bullets on the unique-name rule, the owner and coordinate checks, who can see and edit which locations, the in-use rule and the errands foreign key.
+
+The document passed XML validation. The AI couldn't render it, because LibreOffice isn't installed.
 
 ---

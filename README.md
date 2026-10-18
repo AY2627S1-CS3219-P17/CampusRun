@@ -2,7 +2,9 @@
 AI Assistance Disclosure:
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
 Tool: OpenAI Codex (GPT-6), date: 2026-10-16; 2026-10-17
-Scope: AI-written "Gateway, root paths and API docs" section and AI Use Summary bullets, including the frontend AI entry view disclosure; the rest was written by the team.
+Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
+Scope: AI-written "Gateway, root paths and API docs" section and AI Use Summary bullets, including the frontend AI entry view disclosure,
+       the credit-service routing note and the Credit Service AI Use Summary; the rest was written by the team.
 Author review: <to be completed by author>
 -->
 
@@ -31,7 +33,7 @@ For cloud deployments, separate configuration will be required.
 ### Gateway, root paths and API docs
 
 - **One entry point.** Browsers reach every service through a single nginx gateway ([`gateway/nginx.conf`](gateway/nginx.conf)) at http://localhost:8080. It's the only container published on the host. The services are reachable only on the Compose private network, by service name (e.g. `http://user-service:8000`). The databases are also published, but bound to `127.0.0.1` for host tooling. The reasoning is in [`docs/auth-plan.md`](docs/auth-plan.md).
-- **Routing.** `/api/users/...` goes to user-service, `/api/suppliers/...` to supplier-service, and `/api/orders/...` to order-service; every other path goes to the `frontend` container, which serves the built web app. So the app runs at http://localhost:8080 and calls the API on the same origin, with relative `/api/...` URLs. For the API routes, nginx strips the prefix, so each service defines its routes relative to its own root and doesn't repeat its name: `GET /api/suppliers/{id}` is `GET /{id}` in supplier-service.
+- **Routing.** `/api/users/...` goes to user-service, `/api/suppliers/...` to supplier-service, `/api/orders/...` to order-service, and `/api/credits/...` to credit-service; every other path goes to the `frontend` container, which serves the built web app. So the app runs at http://localhost:8080 and calls the API on the same origin, with relative `/api/...` URLs. For the API routes, nginx strips the prefix, so each service defines its routes relative to its own root and doesn't repeat its name: `GET /api/suppliers/{id}` is `GET /{id}` in supplier-service.
 - **Root paths.** The services never see the prefix, so each one reads a `ROOT_PATH` setting (e.g. `/api/users`, set in `compose.yaml`) and passes it to FastAPI's `root_path`. That keeps the docs pages, the OpenAPI schema and any URLs a service builds itself (such as `Location` headers) pointing at the gateway path. Leave it empty when running a service directly on your machine.
 - **Opt-in API docs.** `/docs`, `/redoc` and `/openapi.json` are off unless `ENABLE_DOCS=true`. `compose.yaml` and each service's `.env.example` turn them on for local development; deployed environments leave the setting unset, so they don't publish the API schema. Through the gateway, the docs are at `http://localhost:8080/api/<service>/docs`.
 - **Adding a service:**
@@ -45,7 +47,7 @@ For cloud deployments, separate configuration will be required.
 | Name | Role |
 | ----- | ----- |
 | Nathan Tew | User Service, Integration |
-| Aaron Rodrigues | Supplier Service |
+| Aaron Rodrigues | Supplier Service, Credit Service |
 | Yang Qifeng | Frontend |
 
 ---
@@ -117,6 +119,21 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 - **Clarifying** and documenting design decisions recorded in supplier-service/DESIGN.md.
 
 **Verification:** The service was tested against PostgreSQL, including 58 automated tests with 94% coverage, and the API was exercised end-to-end over HTTP after migrating and seeding a fresh database. Docker image builds were not performed because Docker was unavailable. <!-- TODO(author): describe your own review and testing -->
+
+### Credit Service and RabbitMQ
+
+**Tool and mode:** Claude (claude.ai, model: Claude Opus 5.5), suggest, explain and debug (2026-10-17).
+
+**Decisions made by the team before AI assistance:** FastAPI with SQLAlchemy and PostgreSQL, the credit service's own database in `credit-service/`, RabbitMQ as the broker, every balance change sent as an asynchronous message rather than an event, and a "pending" state on the wallet until credits are applied. Requirements F12–F14 and N5 from the backlog.
+
+**Used for:**
+- **Suggesting** the credit service setup: the `wallets`, `reservations` and `ledger_entries` tables and migration, the idempotent reserve/adjust/transfer/release/open-wallet operations, the message contract, the RabbitMQ worker, the read-only API, the audit, the `credit-demo` stand-in for the Order Service, the Dockerfile, and 59 tests.
+- **Suggesting** the RabbitMQ setup (`rabbitmq/definitions.json`, `rabbitmq/provision.sh`): one login per service, topic permissions, quorum queues and dead-lettering. We tested the broker's behaviour before relying on it, and found that RabbitMQ 4 doesn't count `nack(requeue=True)` towards the delivery limit, so the worker never requeues.
+- **Generating** the User Service's transactional outbox for `OpenWallet` (`outbox` table and migration, relay, `resync-wallets`) and its tests, and the Compose, gateway and `.env.example` entries.
+- **Generating** the credit banner's connection to `GET /api/credits/wallets/me`, with the pending state.
+- **Explaining** the design and answering the Part 2 and Part 4 review questions in [`docs/credit-service-plan.md`](docs/credit-service-plan.md), including the integration steps for the Order Service.
+
+**Verification:** credit-service tests (59, 85% line coverage excluding the demo tool) and user-service tests (102, including the existing 95) pass against Postgres. The full stack was built and run with `docker compose up --build`, and the AI ran failure drills: credit worker stopped while an errand completes, RabbitMQ stopped during registration, the credit database stopped mid-command, a broker restart, invalid and unauthorised messages, three competing workers, and all containers recreated with a command still queued. The banner was checked in a browser at 1280px and 390px. <!-- TODO(author): describe your own review and testing -->
 
 ### Frontend Client (Yang Qifeng)
 

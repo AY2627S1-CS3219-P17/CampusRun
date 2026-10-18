@@ -2,6 +2,8 @@
 AI Assistance Disclosure:
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 Scope: AI-assisted Markdown formatting, environment variable setup instructions, the full-stack build step, the interactive API docs section (including the ENABLE_DOCS note), the initial admin setup section, the running tests section, and the protecting an endpoint section (2026-09-27); AI-updated the admin and endpoint sections for the admin role, and the Compose seeding step (2026-09-28); AI-updated them so admins keep student capabilities (2026-09-28).
+Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
+Scope: AI-written "Opening the user's wallet" section.
 Author review: Originally written and then verified by Nathan
 -->
 
@@ -97,6 +99,14 @@ The `create-initial-admin` command creates the first admin (a user with the `adm
   ```sh
   docker compose run --rm user-seed-admin
   ```
+
+## Opening the user's wallet
+
+Every new user needs a credit wallet with the initial credits. Registration (and `create-initial-admin`) inserts an `OpenWallet` message into the `outbox` table **in the same transaction** as the user, so either both are saved or neither is. A background task in the server (`OutboxRelay` in `outbox.py`) then publishes it to RabbitMQ every `OUTBOX_POLL_SECONDS` (1s) and marks it published once RabbitMQ confirms it. The credit service opens the wallet; until then the web app shows the wallet as pending.
+
+- **RabbitMQ is down:** registration still succeeds. The message waits in the outbox, and the relay retries with backoff (up to 30s apart) until it gets through. `SELECT message_type, attempts, last_error FROM outbox WHERE published_at IS NULL` shows what's waiting.
+- **Sent twice** (e.g. a crash after publishing but before marking it): harmless, because the credit service ignores `OpenWallet` for a user who already has a wallet.
+- **Repairs:** `uv run resync-wallets` (or `docker compose run --rm user-service resync-wallets`) queues `OpenWallet` for every user. Use it if the credit database was restored from an older backup. The migration that added the outbox did this once for users who registered before it.
 
 ## Protecting an endpoint
 

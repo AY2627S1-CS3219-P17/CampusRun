@@ -1,0 +1,48 @@
+# AI Assistance Disclosure:
+# Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
+# Scope: AI-generated project definition, dependency list and command-line entry points for the credit service,
+#        following supplier-service/pyproject.toml.
+# Author review: <to be completed by author>
+
+[project]
+name = "credit-service"
+version = "0.1.0"
+description = "CampusRun Credit Service: wallets, reservations and the closed credit economy"
+readme = "README.md"
+requires-python = ">=3.14.7"
+dependencies = [
+    "aio-pika>=10.1.1",
+    "alembic>=1.20.0",
+    "asyncpg>=0.31.0",
+    "fastapi[standard-no-fastapi-cloud-cli]>=0.141.1",
+    "pydantic-settings>=2.15.0",
+    "pyjwt>=2.15.0",
+    "sqlalchemy[asyncio]>=2.1.0",
+]
+
+[project.scripts]
+# The RabbitMQ consumer that applies every balance change (runs in its own container)
+credit-worker = "credit_service.worker:main"
+# Checks that the ledger, balances and reservations still agree
+credit-audit = "credit_service.audit:main"
+# Stand-in for the Order Service until it exists: sends commands and prints balances
+credit-demo = "credit_service.demo:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.7,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+# credit-demo stands in for the Order Service during demos; it isn't part of the service and is exercised
+# end to end against the running stack instead (docs/credit-service-plan.md, section 8)
+omit = ["*/credit_service/demo.py"]

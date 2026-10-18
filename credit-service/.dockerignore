@@ -1,0 +1,14 @@
+# AI Assistance Disclosure:
+# Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
+# Scope: Docker build exclusions.
+# Author review: reviewed by Aaron
+
+.venv
+__pycache__
+*.pyc
+.env
+.env.*
+.DS_Store
+.pytest_cache
+.coverage
+htmlcov

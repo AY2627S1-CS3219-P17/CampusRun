@@ -1,6 +1,6 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
-# Scope: Docker build exclusions, copied from user-service/.dockerignore plus test output.
+# Scope: Docker build exclusions.
 # Author review: <to be completed by author>
 
 .venv

@@ -26,6 +26,13 @@ All application services and supporting components should be containerized using
 - API docs (`/docs`, `/redoc`, `/openapi.json`) are opt-in with `ENABLE_DOCS=true`, which is set only in `compose.yaml` and `.env.example` files. Deployed services leave it unset.
 - A new service needs a `location /api/<service>/` block in `gateway/nginx.conf`, `ROOT_PATH` and `ENABLE_DOCS` in `compose.yaml`, and an entry in the gateway's `depends_on`. If it has a route at its root, it also needs an exact-match `location = /api/<service>` block, or requests without the trailing slash get a 404.
 
+# Messaging Conventions
+<!-- AI-added section (Claude, claude.ai, model: Claude Opus 5.5, 2026-10-17); see docs/credit-service-plan.md -->
+- Every change to a credit balance is a command message on RabbitMQ to the credit service, never an HTTP call. The broker topology and each service's permissions are in `rabbitmq/definitions.json`; each service connects with its own login (`RABBITMQ_<SERVICE>_PASSWORD` in `.env`).
+- A service that sends messages writes them to its own `outbox` table in the same transaction as the change that causes them, and a relay publishes them (see `user-service/src/user_service/outbox.py`). Never publish directly from a request handler.
+- Set the AMQP `user_id` property to your RabbitMQ login: the broker rejects a mismatch, and receivers use it to check the sender. Set `type` to the command name and `message_id` to a UUID.
+- Message handlers must be idempotent (a message can arrive twice) and acknowledge only after their transaction commits. Don't use `nack(requeue=True)`; RabbitMQ 4 doesn't count it towards the delivery limit.
+
 # Required AI Attribution
 Every submission using AI must include:
 - Source & mode: which tool(s), how it was used (generate/refactor/debug/explain).

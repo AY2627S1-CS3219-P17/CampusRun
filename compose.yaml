@@ -14,6 +14,12 @@
 # Scope: AI-generated local development Compose setup for the supplier service, its Postgres database and its one-off migration and seed step.
 # Author review: <to be completed by author>
 
+# AI Assistance Disclosure:
+# Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
+# Scope: AI-added the RabbitMQ broker, the credit-service containers (database, migrations, API, worker and the
+#        on-demand demo), the gateway dependency, and RABBITMQ_URL for user-service's outbox relay.
+# Author review: <to be completed by author>
+
 # Local development / demo only; cloud deployments are configured separately.
 # Values in ${...} are read from the root .env file.
 
@@ -73,6 +79,9 @@ services:
       ROOT_PATH: "/api/users"
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
       JWT_ACCESS_TOKEN_TTL: ${JWT_ACCESS_TOKEN_TTL:-60}
+      # For the outbox relay that sends OpenWallet to the credit service. user-service deliberately doesn't wait
+      # for RabbitMQ: registration works without it and the messages wait in the outbox.
+      RABBITMQ_URL: amqp://user-service:${RABBITMQ_USER_SERVICE_PASSWORD:?set RABBITMQ_USER_SERVICE_PASSWORD in .env}@rabbitmq:5672/
     depends_on:
       # Start only after migrations have finished successfully
       user-migrate:
@@ -131,6 +140,116 @@ services:
     depends_on:
       - supplier-service
 
+  # Message broker for the commands that change credit balances (official image, unchanged; see
+  # docs/credit-service-plan.md). provision.sh creates one login per service and loads definitions.json:
+  # the queues, exchanges, dead-lettering and what each login may send.
+  rabbitmq:
+    image: rabbitmq:4.3.6-management
+    # Fixes the node name (rabbit@rabbitmq). RabbitMQ keeps its data under the node name, so a recreated
+    # container with a random hostname would start empty and lose the queued messages in the volume.
+    hostname: rabbitmq
+    entrypoint: ["bash", "/usr/local/bin/campusrun-provision.sh"]
+    environment:
+      # Created on first boot instead of the default guest/guest account
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_ADMIN_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_ADMIN_PASSWORD:?set RABBITMQ_ADMIN_PASSWORD in .env}
+      RABBITMQ_ADMIN_USER: ${RABBITMQ_ADMIN_USER:-admin}
+      RABBITMQ_ADMIN_PASSWORD: ${RABBITMQ_ADMIN_PASSWORD:?set RABBITMQ_ADMIN_PASSWORD in .env}
+      RABBITMQ_CREDIT_SERVICE_PASSWORD: ${RABBITMQ_CREDIT_SERVICE_PASSWORD:?set RABBITMQ_CREDIT_SERVICE_PASSWORD in .env}
+      RABBITMQ_USER_SERVICE_PASSWORD: ${RABBITMQ_USER_SERVICE_PASSWORD:?set RABBITMQ_USER_SERVICE_PASSWORD in .env}
+      RABBITMQ_ORDER_SERVICE_PASSWORD: ${RABBITMQ_ORDER_SERVICE_PASSWORD:?set RABBITMQ_ORDER_SERVICE_PASSWORD in .env}
+    volumes:
+      - ./rabbitmq/provision.sh:/usr/local/bin/campusrun-provision.sh:ro
+      - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+      # Queued messages survive the container being stopped, restarted or recreated
+      - rabbitmq-data:/var/lib/rabbitmq
+    ports:
+      # Bound to localhost only: AMQP for services run on the host, and the management UI at http://localhost:15672
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    healthcheck:
+      # Healthy only once provision.sh has created the logins and queues
+      test: ["CMD-SHELL", "test -f /tmp/campusrun-ready && rabbitmq-diagnostics -q check_port_connectivity"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 20s
+
+  credit-db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: ${CREDIT_DB_USER:-credit_service}
+      POSTGRES_PASSWORD: ${CREDIT_DB_PASSWORD:?set CREDIT_DB_PASSWORD in .env}
+      POSTGRES_DB: ${CREDIT_DB_NAME:-credit_service}
+    volumes:
+      # Postgres 18+ images keep data under /var/lib/postgresql (not .../data)
+      - credit-db-data:/var/lib/postgresql
+    ports:
+      # Bound to localhost only; 5435 because user-db and supplier-db use 5433 and 5434
+      - "127.0.0.1:5435:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-off: applies Alembic migrations, then exits
+  credit-migrate:
+    build: ./credit-service
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${CREDIT_DB_USER:-credit_service}:${CREDIT_DB_PASSWORD:?set CREDIT_DB_PASSWORD in .env}@credit-db:5432/${CREDIT_DB_NAME:-credit_service}
+    depends_on:
+      credit-db:
+        condition: service_healthy
+
+  # Read-only HTTP API: wallets, history, reservations, audit
+  credit-service:
+    build: ./credit-service
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${CREDIT_DB_USER:-credit_service}:${CREDIT_DB_PASSWORD:?set CREDIT_DB_PASSWORD in .env}@credit-db:5432/${CREDIT_DB_NAME:-credit_service}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      # Local only: deployed environments leave this unset, so the docs are off
+      ENABLE_DOCS: "true"
+      ROOT_PATH: "/api/credits"
+    depends_on:
+      credit-migrate:
+        condition: service_completed_successfully
+
+  # Applies every balance change, from the commands on RabbitMQ. Same image as the API, different process,
+  # so the two scale and restart independently. Run more copies with `docker compose up --scale credit-worker=3`.
+  credit-worker:
+    build: ./credit-service
+    command: ["credit-worker"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${CREDIT_DB_USER:-credit_service}:${CREDIT_DB_PASSWORD:?set CREDIT_DB_PASSWORD in .env}@credit-db:5432/${CREDIT_DB_NAME:-credit_service}
+      RABBITMQ_URL: amqp://credit-service:${RABBITMQ_CREDIT_SERVICE_PASSWORD:?set RABBITMQ_CREDIT_SERVICE_PASSWORD in .env}@rabbitmq:5672/
+      INITIAL_CREDITS: ${INITIAL_CREDITS:-100}
+    # A crash leaves its message unacknowledged, so RabbitMQ hands it to the restarted worker
+    restart: unless-stopped
+    depends_on:
+      credit-migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+
+  # Demo only, not started by `docker compose up`: stands in for the Order Service's errand flow until it's built.
+  # docker compose run --rm credit-demo scenario <requester id> <courier id> --pause
+  credit-demo:
+    build: ./credit-service
+    entrypoint: ["credit-demo"]
+    profiles: ["demo"]
+    environment:
+      DEMO_RABBITMQ_URL: amqp://order-service:${RABBITMQ_ORDER_SERVICE_PASSWORD:?set RABBITMQ_ORDER_SERVICE_PASSWORD in .env}@rabbitmq:5672/
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      CREDIT_API_URL: http://credit-service:8000
+      USER_API_URL: http://user-service:8000
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      credit-service:
+        condition: service_started
+
   # The built web app, served by nginx; reached only through the gateway
   frontend:
     build: ./frontend
@@ -146,8 +265,11 @@ services:
       - user-service
       - supplier-service
       - order-service
+      - credit-service
       - frontend
 
 volumes:
   user-db-data:
   supplier-db-data:
+  credit-db-data:
+  rabbitmq-data:

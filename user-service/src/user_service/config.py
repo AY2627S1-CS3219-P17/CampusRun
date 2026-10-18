@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
 # Scope: AI-generated pydantic-settings Settings class reading DATABASE_URL and ENABLE_DOCS; AI-added Pyright ignore on Settings();
-#        AI-added INITIAL_ADMIN_EMAIL (Claude Code, 2026-09-28).
+#        AI-added INITIAL_ADMIN_EMAIL (Claude Code, 2026-09-28); AI-added RABBITMQ_URL and OUTBOX_POLL_SECONDS (Claude, claude.ai, 2026-10-17).
 # Author review: reviewed by Nathan
 
 from functools import lru_cache
@@ -32,6 +32,12 @@ class Settings(BaseSettings):
 
     # Path prefix the gateway serves this service under, e.g. "/api/users"; empty when accessed directly
     root_path: str = ""
+
+    # This service's RabbitMQ login (user user-service), for the outbox relay. Unset: the relay doesn't run and
+    # messages wait in the outbox table, so registration still works without RabbitMQ.
+    rabbitmq_url: SecretStr | None = None
+    # How often the relay checks the outbox for messages to publish
+    outbox_poll_seconds: float = 1.0
 
 
 @lru_cache

@@ -2,9 +2,13 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
 # Scope: AI-generated FastAPI app with engine lifespan and GET /health endpoint; AI-updated lifespan return type to AsyncGenerator and made API docs depend on ENABLE_DOCS;
 #        AI-completed the POST /auth/register endpoint from the author's draft; AI-renamed the user token type to "student" (Claude Code, 2026-09-27);
-#        AI-generated the PATCH /users/me endpoint (2026-09-27); AI-merged the admin login into /auth/login and removed /admins/me (2026-09-28).
+#        AI-generated the PATCH /users/me endpoint (2026-09-27); AI-merged the admin login into /auth/login and removed /admins/me (2026-09-28);
+#        AI-added the OpenWallet outbox message on registration and the outbox relay in the lifespan (Claude, claude.ai, 2026-10-17).
 # Author review: reviewed by Nathan
 
+import asyncio
+import contextlib
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Annotated
@@ -21,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from user_service.auth import CurrentUser, credentials_error
 from user_service.config import Settings, get_settings
 from user_service.db import Connection, create_engine, get_engine
+from user_service.outbox import OutboxRelay, RabbitPublisher, enqueue_open_wallet
 from user_service.schemas import (
     PASSWORD_MAX_LENGTH,
     RegisterRequest,
@@ -32,10 +37,25 @@ from user_service.security import DUMMY_HASH, create_access_token, password_hash
 from user_service.tables import users
 
 
+log = logging.getLogger(__name__)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-    app.state.engine = create_engine(get_settings())
-    yield
+    settings = get_settings()
+    app.state.engine = create_engine(settings)
+    if settings.rabbitmq_url is None:
+        log.warning("RABBITMQ_URL is not set: messages will wait in the outbox table until it is")
+        yield
+    else:
+        # Publishes queued messages (e.g. OpenWallet) in the background; registration never waits for RabbitMQ
+        publisher = RabbitPublisher(settings.rabbitmq_url)
+        relay = asyncio.create_task(OutboxRelay(app.state.engine, publisher, settings.outbox_poll_seconds).run())
+        yield
+        relay.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await relay
+        await publisher.close()
     await app.state.engine.dispose()
 
 
@@ -110,6 +130,8 @@ async def register(body: RegisterRequest, conn: Connection) -> UserResponse:
             status_code=status.HTTP_409_CONFLICT,
             detail="Username or email is already in use",
         )
+    # Same transaction as the insert: the credit service is asked for a wallet if and only if the user exists
+    await enqueue_open_wallet(conn, created.id)
     return UserResponse.model_validate(created, from_attributes=True)
 
 

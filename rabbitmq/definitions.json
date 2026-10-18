@@ -1,0 +1,104 @@
+{
+  "vhosts": [{ "name": "/" }],
+  "exchanges": [
+    {
+      "name": "credit.commands",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "credit.replies",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "credit.dead-letter",
+      "vhost": "/",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "credit-service.commands",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-delivery-limit": 5,
+        "x-dead-letter-exchange": "credit.dead-letter",
+        "x-dead-letter-strategy": "at-least-once",
+        "x-overflow": "reject-publish"
+      }
+    },
+    {
+      "name": "credit-service.commands.dead",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "quorum" }
+    },
+    {
+      "name": "order-service.credit-replies",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "quorum" }
+    }
+  ],
+  "bindings": [
+    {
+      "source": "credit.commands",
+      "vhost": "/",
+      "destination": "credit-service.commands",
+      "destination_type": "queue",
+      "routing_key": "wallet.open",
+      "arguments": {}
+    },
+    {
+      "source": "credit.commands",
+      "vhost": "/",
+      "destination": "credit-service.commands",
+      "destination_type": "queue",
+      "routing_key": "reservation.*",
+      "arguments": {}
+    },
+    {
+      "source": "credit.dead-letter",
+      "vhost": "/",
+      "destination": "credit-service.commands.dead",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "credit.replies",
+      "vhost": "/",
+      "destination": "order-service.credit-replies",
+      "destination_type": "queue",
+      "routing_key": "order-service",
+      "arguments": {}
+    }
+  ],
+  "permissions": [
+    { "user": "credit-service", "vhost": "/", "configure": "^$", "write": "^credit\\.replies$", "read": "^credit-service\\.commands$" },
+    { "user": "user-service", "vhost": "/", "configure": "^$", "write": "^credit\\.commands$", "read": "^$" },
+    { "user": "order-service", "vhost": "/", "configure": "^order-service\\..*", "write": "^(credit\\.commands|order-service\\..*)$", "read": "^order-service\\..*" }
+  ],
+  "topic_permissions": [
+    { "user": "user-service", "vhost": "/", "exchange": "credit.commands", "write": "^wallet\\.open$", "read": "^$" },
+    { "user": "order-service", "vhost": "/", "exchange": "credit.commands", "write": "^reservation\\.(reserve|adjust|transfer|release)$", "read": "^$" }
+  ]
+}

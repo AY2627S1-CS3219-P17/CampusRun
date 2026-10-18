@@ -827,3 +827,135 @@ now put the frontend behind the gateway, and wire up compose to run the frontend
 **Prompt:** “1) Building, floor, description is set by user, remove the dependence to supplier 2) Rename "your pickup location" as just Location 3) Remove the extra info, make Deliver By and Credits into two separate lines”
 
 **Key response:** Updated the create-request dialog with user-entered delivery details, searchable supplier, map location, a 30-minute default deadline, credits, and client validation. Submission remains UI-only pending Order Service integration. Frontend build and lint passed.
+
+---
+
+## Session 10 — 2026-10-18 — credit-service setup
+
+- **Tool:** Claude (claude.ai chat, model: Claude Opus 5.5)
+- **Author:** Aaron
+- **Modes:** explain, review, generate, debug
+- **Timestamps:** only the dates were recorded for this session; individual prompt times were not captured.
+- **Decisions made before the session (by the team, not AI):** FastAPI with SQLAlchemy Core and PostgreSQL; one folder and one database per service; the supplier FRs (F12 to F14, N5) in the D1 backlog.
+
+### 1. Set up the initial Credit Service files (explain, generate)
+
+```text
+help me build the initial credit-service files from an empty folder, following the repository's existing conventions for configuration, database connections, and Alembic setup.
+```
+
+**Key response:** Worked through the initial Credit Service setup using the existing repository as a reference. Added the project configuration, PostgreSQL connection, SQLAlchemy Core setup, and Alembic migration scaffolding. Used the established project conventions to keep the new service consistent with the rest of the codebase.
+
+### 2. Review the implementation of the wallet database and migration (review, debug)
+
+```text
+review the suggested implementation of the specified wallets, reservations, and ledger_entries tables in SQLAlchemy Core and create the Alembic migration, then check the migration for errors.
+```
+
+**Key response:** Looked through the implementation of the three PostgreSQL tables and their migration:
+- wallets: Stores available and reserved balances, with PostgreSQL computing the total balance and preventing negative balances.
+- reservations: Stores one reservation per errand, with statuses HELD, TRANSFERRED, RELEASED, or REJECTED.
+- ledger_entries: Maintains an append-only record of balance changes for transaction history and auditing.
+Checked the model definitions and migration together, working through implementation issues to get the database setup ready for use by the service.
+
+### 3. Review and test wallet operations (review, debug)
+
+```text
+let's work through the wallet operations one at a time, including opening, reserving, adjusting, transferring, and releasing credits; help me check the transaction handling and debug the tests.
+```
+
+**Key response:** Looked through the implementation and testing of the wallet operations. The initial wallet balance is configured through INITIAL_CREDITS, which defaults to 100 credits. Each operation runs within a database transaction and is safe to repeat. Balance checks are incorporated into database updates to prevent concurrent requests from spending the same credits twice. Also checked that balance changes were recorded in the ledger and worked through test failures involving wallet operations and reservation states.
+
+### 4. Set up RabbitMQ and troubleshoot message delivery (generate, review, debug)
+
+```text
+help me configure the RabbitMQ files for the credit commands, then run a small test to check how failed messages and delivery limits behave.
+```
+
+**Key response:** Worked through the RabbitMQ 4.3.6 configuration using the official image. Set up the files under rabbitmq/, including separate logins for each service, permissions restricting which commands each service can send, and a dead-letter queue. Tested the broker's delivery behaviour and found that RabbitMQ 4 does not count nack(requeue=True) towards the delivery limit as expected. Used this finding when implementing and checking the worker's handling of failed messages, avoiding repeated requeuing.
+
+### 5. Implement and debug credit command processing (generate, review, debug)
+
+```text
+help me trace a credit command from RabbitMQ through the worker, check sender and message-body validation, and debug the processing and acknowledgement flow.
+```
+
+**Key response:** Worked through the credit-worker implementation, including message validation, applying credit operations, replying to the sender, and acknowledging processed messages. Checked the database transaction handling and repeated-message behaviour. Debugged the processing flow using invalid messages and failure scenarios to verify that credit changes were not lost or applied more than once.
+
+### 6. Review the implementation of the Credit API and check its responses (review, debug)
+
+```text
+review the suggested implementation of the specified read-only credit endpoints, connect them to the wallet data, and work through any failing API or authentication tests.
+```
+
+**Key response:** Looked through the implementation of the read-only Credit API endpoints:
+- Retrieving the authenticated user's wallet, including a PENDING state before the wallet opens.
+- Retrieving credit transaction history.
+- Looking up a reservation associated with an errand.
+- Providing an administrative audit view.
+Checked the API responses against the expected behaviour and worked through relevant test failures. The API does not expose endpoints for directly changing wallet balances; balance changes are processed through the internal command flow. The Credit Service test suite reached 59 passing tests with 85% coverage.
+
+### 7. Connect wallet creation to the User Service (generate, review, debug)
+
+```text
+help me connect account registration to the OpenWallet command using the specified transactional outbox approach, and troubleshoot wallet creation when RabbitMQ is unavailable.
+```
+
+**Key response:** Worked through the User Service integration so that registration and initial-admin creation record an OpenWallet command in the transactional outbox. Checked the delivery flow when RabbitMQ was unavailable and worked through the implementation of the resync-wallets command. Added and checked seven new User Service tests covering the relevant functionality. The complete User Service test suite subsequently passed all 102 tests.
+
+### 8. Connect the frontend credit banner to real data (review, debug)
+
+```text
+help me connect the frontend credit banner to the Credit API, check the response fields against the UI, and fix any issues with displaying real balances and pending wallets.
+```
+
+**Key response:** Worked through the frontend integration with the Credit API, checking the response fields and displayed values. Updated the credit banner to show actual wallet balances and a Pending state when a wallet had not yet opened. Checked the banner's behaviour as wallet data became available and verified the layout at laptop and phone widths.
+
+### 9. Integrate the services and troubleshoot Docker Compose (generate, review, debug)
+
+```text
+help me add the Credit Service components to the root Compose configuration, connect the gateway route and environment variables, and troubleshoot any startup or connectivity errors.
+```
+
+**Key response:** Worked through the root compose.yaml configuration to run the Credit Service and its supporting components:
+- rabbitmq for message delivery.
+- credit-db for PostgreSQL persistence.
+- credit-migrate for applying database migrations.
+- credit-service for the API.
+- credit-worker for processing credit commands.
+- credit-demo as an on-demand stand-in for the Order Service during testing and demonstrations.
+Also added the /api/credits/ gateway route and the required .env.example values. Tested the components together in Docker Compose and worked through configuration and connectivity issues encountered during startup.
+
+### 10. Run end-to-end tests and document the implementation (review, debug, explain)
+
+```text
+help me check the completed Credit Service using its test suite and Compose environment and investigate failures during the failure drills
+```
+
+**Key response:** Worked through end-to-end verification of the Credit Service. The full stack ran in Docker Compose. Failure drills included stopping the worker, RabbitMQ, or database during processing; submitting invalid messages; running three competing workers; and recreating all containers. The reported drills completed without lost credits or duplicate balance changes. Final verification recorded 59 passing Credit Service tests with 85% coverage and 102 passing User Service tests. The frontend credit banner was also checked at laptop and phone widths.
+
+---
+
+## Session 11 — 2026-10-18 — supplier seed data expansion
+
+- **Tool:** Claude (claude.ai chat, model: Claude Opus 5.5)
+- **Author:** Aaron
+- **Modes:** generate
+- **Timestamps:** only the date was recorded for this session; individual prompt times were not captured.
+- **Decisions made before the session (by the team, not AI):** FastAPI with SQLAlchemy Core and PostgreSQL; one folder and one database per service; the Supplier Service requirements (F4 to F6, N3) in the D1 backlog; the existing rows in `supplier-service/seed/`.
+
+### 1. Expanding the seed data to 100 suppliers and 100 delivery locations (generate)
+
+The current `suppliers.csv` and `delivery-locations.csv` were attached.
+
+```text
+Update these two files so that there are a total of 100 suppliers and 100 delivery-locations. They must all be within NUS
+```
+
+**Key response:** Added 59 suppliers and 67 delivery locations to `supplier-service/seed/suppliers.csv` and `supplier-service/seed/delivery-locations.csv`, leaving the existing rows unchanged. All new entries are real places at Kent Ridge, University Town or Kent Vale.
+- **Suppliers:** most came from the NUS UCI retail and dining directory, the NUS Libraries list of print locations, and two 2025 food guides. 19 generic food-court stalls came from OpenStreetMap or a 2021 article and were flagged for checking on campus.
+- **Coordinates:** taken from NUSMods venue and bus-stop data and from OpenStreetMap (via Mapcarta).
+- **Verification:** every row passed the service's seed validation, including the NUS served-area bounds. A fresh database seeded 100 suppliers and 100 delivery locations, and all 58 supplier-service tests passed.
+- **Existing rows:** the AI flagged 14 supplier rows and the YIH delivery location as 240–1,080 m from their buildings. These were not changed.
+
+---

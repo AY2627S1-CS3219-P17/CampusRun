@@ -1,0 +1,4 @@
+# AI Assistance Disclosure: Claude (claude.ai, model: Claude Opus 5.5), 2026-10-17. Keeps LF line endings so the
+# script runs in the Linux container even from a Windows checkout (bash fails on CRLF).
+*.sh text eol=lf
+*.json text eol=lf

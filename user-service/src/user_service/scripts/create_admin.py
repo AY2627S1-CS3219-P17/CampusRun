@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated create-initial-admin script that seeds the first admin from INITIAL_ADMIN_* settings;
 #        AI-changed it to create a user with the admin role, validated like a registration, and added --skip-if-unset
-#        for the Compose seeding service (2026-09-28).
+#        for the Compose seeding service (2026-09-28); AI-added the OpenWallet outbox message (Claude, claude.ai, 2026-10-17).
 # Author review: reviewed by Nathan
 
 import argparse
@@ -15,6 +15,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 from user_service.config import Settings, get_settings
 from user_service.db import create_engine
+from user_service.outbox import enqueue_open_wallet
 from user_service.schemas import RegisterRequest
 from user_service.security import password_hash
 from user_service.tables import users
@@ -65,6 +66,8 @@ async def create_initial_admin(settings: Settings, skip_if_unset: bool = False) 
                 .returning(users.c.id)
             )
             if created is not None:
+                # Admins keep every student capability, so they need a wallet too (docs/admin-role-plan.md)
+                await enqueue_open_wallet(conn, created)
                 return f"Created initial admin '{admin.username}'"
 
             # Nothing inserted: either a concurrent run won, or a student already has this email or username

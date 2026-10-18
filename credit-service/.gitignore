@@ -1,0 +1,8 @@
+# AI Assistance Disclosure:
+# Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
+# Scope: Git exclusions for test output.
+# Author review: reviewed by Aaron
+
+.pytest_cache/
+.coverage
+htmlcov/

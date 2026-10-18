@@ -4,7 +4,8 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: AI-added DATABASE_URL, RABBITMQ_URL, the JWT algorithm and log level, following credit-service/config.py;
 #        made JWT_SECRET optional so the worker can run without it (main.py still requires it);
-#        AI-added the served-area bounds and seed directory for delivery locations (copied from supplier-service).
+#        AI-added the served-area bounds and seed directory for delivery locations (copied from supplier-service),
+#        and the user and credit service URLs (2026-10-19).
 # Author review: <to be completed by author>
 
 from functools import lru_cache
@@ -33,7 +34,12 @@ class Settings(BaseSettings):
 
     groq_api_key: SecretStr = SecretStr("")
     groq_model: str = "openai/gpt-oss-120b"
+    # Other services, reached on the Compose private network. Calls are made as the signed-in user (their token).
     supplier_service_url: str = "http://supplier-service:8000"
+    user_service_url: str = "http://user-service:8000"
+    credit_api_url: str = "http://credit-service:8000"
+    # Seconds to wait for another service before treating it as unavailable
+    service_timeout_seconds: float = 5.0
 
     # The "served area" from the glossary: a box around the NUS Kent Ridge campus (same as supplier-service)
     served_area_min_lat: float = 1.2870

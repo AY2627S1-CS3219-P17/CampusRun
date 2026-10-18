@@ -2,7 +2,8 @@
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-assisted review and debugging for supplier endpoints, including list/search/filter/sort/paginate, get, create,
 #        edit (including activate/deactivate);
-#        AI-removed the /suppliers prefix and made Location include ROOT_PATH (Claude Code, 2026-09-27).
+#        AI-removed the /suppliers prefix and made Location include ROOT_PATH (Claude Code, 2026-09-27);
+#        AI-added GET /lookup for several suppliers by id (Claude Code, 2026-10-19).
 # Author review: <to be completed by author>
 
 from datetime import datetime, time
@@ -11,6 +12,7 @@ from typing import Annotated
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException, Path, Query, Response, status
+from pydantic import Field
 from sqlalchemy import and_, func, insert, or_, select, update
 from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.exc import IntegrityError
@@ -230,6 +232,30 @@ async def list_buildings(conn: Connection, user: AnyUser):
         )
     )
     return result.all()
+
+
+@router.get(
+    "/lookup",
+    response_model=list[SupplierOut],
+    summary="Several suppliers by id, active or not (for the Order Service's errand lists)",
+)
+async def lookup_suppliers(
+    conn: Connection,
+    user: AnyUser,
+    ids: Annotated[
+        list[Annotated[int, Field(ge=1)]],
+        Query(min_length=1, max_length=100, description="Repeat for each id: ?ids=1&ids=2. At most 100."),
+    ],
+):
+    # Like GET /{supplier_id}, deactivated suppliers are included so old errands can still show them.
+    # Unknown ids are left out rather than failing the whole lookup.
+    rows = (
+        await conn.execute(
+            select(suppliers).where(suppliers.c.id.in_(set(ids))).order_by(suppliers.c.id)
+        )
+    ).mappings()
+    now = campus_time_now()
+    return [to_out(row, now) for row in rows]
 
 
 @router.get(

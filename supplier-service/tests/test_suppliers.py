@@ -2,6 +2,8 @@
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-assisted review for tests for supplier CRUD, validation, search, filters, sorting, paging and distance;
 #        AI-updated paths after the /suppliers prefix was removed (Claude Code, 2026-09-27).
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
+# Scope: AI-added tests for GET /lookup.
 # Author review: <to be completed by author>
 
 from datetime import time
@@ -89,6 +91,30 @@ async def test_get_by_id_and_404(client):
     created = await create(client)
     assert (await client.get(f"/{created['id']}", headers=STUDENT)).json()["id"] == created["id"]
     assert (await client.get("/999999", headers=STUDENT)).status_code == 404
+
+
+async def test_lookup_returns_several_suppliers_active_or_not(client):
+    first = await create(client, name="First")
+    second = await create(client, name="Second")
+    await client.patch(f"/{second['id']}", headers=ADMIN, json={"active": False})
+
+    response = await client.get(f"/lookup?ids={second['id']}&ids={first['id']}&ids=999999&ids={first['id']}", headers=STUDENT)
+
+    assert response.status_code == 200
+    # Ordered by id, each once; unknown ids are left out; deactivated suppliers are included
+    assert [(s["name"], s["active"]) for s in response.json()] == [("First", True), ("Second", False)]
+
+
+@pytest.mark.parametrize(
+    "query", ["", "?ids=0", "?ids=abc", "?" + "&".join(f"ids={i}" for i in range(1, 102))],
+    ids=["none", "zero", "not-a-number", "over-100"],
+)
+async def test_lookup_rejects_bad_ids(client, query):
+    assert (await client.get(f"/lookup{query}", headers=STUDENT)).status_code == 422
+
+
+async def test_lookup_requires_sign_in(client):
+    assert (await client.get("/lookup?ids=1")).status_code == 401
 
 
 @pytest.mark.parametrize("bad_id", ["abc", "0"])

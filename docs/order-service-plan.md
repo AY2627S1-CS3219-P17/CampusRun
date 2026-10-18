@@ -267,8 +267,8 @@ reserved. Try again in a moment."
 
 Paths are relative to the service; the gateway adds `/api/orders`. JSON is camelCase. Lists use the supplier `Page`
 shape. Errand responses embed:
-- `supplier {id, name, building, floor, latitude, longitude} | null`, fetched from supplier-service by id for the
-  unique ids on the page;
+- `supplier {id, name, building, floor, latitude, longitude} | null`, fetched for the page's distinct supplier ids
+  in one batched `GET /lookup` call to supplier-service;
 - `deliveryLocation {...}`;
 - `requesterName` and `courierName` (null if user-service can't be reached);
 - `creditStatus`.
@@ -357,20 +357,25 @@ Stop for review after each task. Every task ends with passing tests (testcontain
   predefined name → 409, duplicate personal names allowed.
 
 ### Task 4: Service clients
-- **Files:** `clients.py`, tests with `httpx.MockTransport`.
-- **Produces:**
-  - `get_suppliers(ids: set[int], token) -> dict[int, SupplierRef]` (concurrent `GET /{id}`; a missing supplier is
-    left out);
-  - `get_usernames(ids: set[int], token) -> dict[int, str]`;
-  - `available_credits(token) -> int | None`;
-  - `search_supplier_ids(q: str, token) -> set[int] | None` (`None` = supplier-service unreachable).
-- Each returns empty or None when the service is down, except where the caller needs a definite answer:
-  `require_active_supplier(id, token)` raises 422 if the supplier is unknown or inactive, and 503 if the service is
-  down.
+- **Files:** `clients.py`, `schemas.SupplierSummary`, the lifespan in `main.py`, `tests/test_clients.py` (fake HTTP
+  transport, no services needed).
+- **Produces:** `ServiceClients`, one pooled `httpx.AsyncClient` created with the app, injected with the `Clients`
+  dependency. Every call forwards the signed-in user's token.
+  - `get_suppliers(ids, token) -> dict[int, SupplierSummary] | None`: supplier-service's new `GET /lookup?ids=1&ids=2`
+    (up to 100 ids per request, added in this task). Unknown ids are left out, deactivated ones are kept; `None` if
+    supplier-service is down.
+  - `require_active_supplier(id, token) -> SupplierSummary`: raises `FieldError("supplierId", …)` (422) if the
+    supplier is unknown or inactive, and 503 if supplier-service is down.
+  - `search_supplier_ids(q, token) -> set[int] | None`: active and deactivated listings, every page; `None` if down.
+  - `get_usernames(ids, token) -> dict[int, str] | None`: `GET /internal/usernames?ids=1&ids=2` in batches of 100;
+    `None` if down.
+  - `get_wallet(token) -> WalletBalance(status, available) | None`. This replaces the planned
+    `available_credits`, so Task 6 can tell a PENDING wallet apart from a low balance.
+- `USER_SERVICE_URL` and `CREDIT_API_URL` are set in Compose and `order-service/.env.example`.
 
 ### Task 5: Internal username lookup in user-service
 - **Files:** user-service `main.py` (or a new `routes/internal.py`), schemas, tests; `gateway/nginx.conf`.
-- `GET /internal/usernames?ids=1,2,3` (at most 100 ids, a valid token required) → `[{id, username}]`. It returns
+- `GET /internal/usernames?ids=1&ids=2` (at most 100 ids, a valid token required) → `[{id, username}]`. It returns
   usernames only, never emails.
 - Gateway: `location /api/users/internal/ { return 404; }`, so only services on the private network can call it.
 - **Tests:** returns the requested users only; more than 100 ids → 422; no token → 401; email never in the body.

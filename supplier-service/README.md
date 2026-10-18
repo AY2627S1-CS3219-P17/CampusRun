@@ -1,7 +1,8 @@
 <!--
 AI Assistance Disclosure:
 Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
-Scope: AI-generated service README; AI-updated paths, Docker access and settings for the gateway (Claude Code, 2026-09-27).
+Scope: AI-generated service README; AI-updated paths, Docker access and settings for the gateway (Claude Code, 2026-09-27);
+       AI-added GET /lookup (Claude Code, 2026-10-19).
 Author review: <to be completed by author>
 -->
 
@@ -72,6 +73,7 @@ Paths are relative to the service. Behind the gateway they're under `/api/suppli
 | `GET /meta` | signed in | Supplier types and the served-area bounds |
 | `GET /` | signed in | Query options: `q`, `type` (repeatable), `building`, `openNow`, `active` (`false` lists deactivated records), `nearLat` + `nearLng` (+ `radius`, in metres), `sort` (`name`, `-name`, `type`, `-createdAt`, `-updatedAt`, `distance`), `page`, `pageSize` |
 | `GET /buildings` | signed in | Building names, for the location filter |
+| `GET /lookup?ids=1&ids=2` | signed in | Up to 100 suppliers by id in one call, deactivated ones included; unknown ids are left out. Used by the Order Service to show errands' suppliers |
 | `GET /{id}` | signed in | One supplier |
 | `POST /` | admin | Create |
 | `PATCH /{id}` | admin | Change any fields; `{"active": false}` deactivates and `{"active": true}` reactivates |

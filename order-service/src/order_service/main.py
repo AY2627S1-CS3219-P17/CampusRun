@@ -1,7 +1,8 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: AI-generated FastAPI app, engine lifespan and health check, following credit-service/main.py; the autofill
-#        endpoint (OpenAI Codex, 2026-10-17) now lives in routes/autofill.py; AI-added the delivery location routes.
+#        endpoint (OpenAI Codex, 2026-10-17) now lives in routes/autofill.py; AI-added the delivery location routes
+#        and the shared service clients (2026-10-19).
 # Author review: <to be completed by author>
 
 """The order service's HTTP API.
@@ -20,6 +21,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from order_service.clients import ServiceClients
 from order_service.config import get_settings
 from order_service.db import create_engine, get_engine
 from order_service.errors import install_error_handlers
@@ -29,7 +31,10 @@ from order_service.routes import autofill, delivery_locations
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     app.state.engine = create_engine(get_settings())
+    # One pooled HTTP client for the Supplier, User and Credit Services
+    app.state.clients = ServiceClients(get_settings())
     yield
+    await app.state.clients.close()
     await app.state.engine.dispose()
 
 

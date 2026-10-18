@@ -960,7 +960,7 @@ Update these two files so that there are a total of 100 suppliers and 100 delive
 
 ---
 
-## Session 12 — 2026-10-18 to 2026-10-19 — order-service plan and Tasks 1 to 3
+## Session 12 — 2026-10-18 to 2026-10-19 — order-service plan and Tasks 1 to 4
 
 - **Tool:** Claude Code (model: Claude Opus 5.5)
 - **Author:** nathantew14
@@ -1130,5 +1130,49 @@ update @ai/usage-log.md, commit and move on to task 4
 - added bullets on the unique-name rule, the owner and coordinate checks, who can see and edit which locations, the in-use rule and the errands foreign key.
 
 The document passed XML validation. The AI couldn't render it, because LibreOffice isn't installed.
+
+### 10. Task 4: service clients (generate)
+
+```text
+1. add these constraints back into the @CS3219-Milestone-D3.docx with yellow highlight so i can update it on my side
+2. same as above
+3. sounds good
+
+update @ai/usage-log.md, commit and move on to task 4
+```
+
+**Key response:** Committed Task 3. Added `clients.py`: one pooled HTTP client for the Supplier, User and Credit Services, which forwards the signed-in user's token and only reads. What each call returns when its service is down:
+- supplier details, usernames, supplier search and the wallet check return `None`, so pages still load;
+- checking the chosen supplier before creating an errand fails with 503;
+- an unknown or deactivated supplier gets a 422 on `supplierId`.
+
+`get_wallet` replaced the planned `available_credits`, so a PENDING wallet can be told apart from a low balance. 94 tests passed.
+
+### 11. Batched supplier lookups and calls between services (generate, explain)
+
+```text
+1. requests for supplier details: can we batch them instead of a separate request for each supplier?
+2. do calls to other services go through the api gateway? does it still work if the services or not contained in one docker private network?
+```
+
+**Key response:** Added `GET /lookup?ids=1&ids=2` to supplier-service: up to 100 suppliers by id in one call, deactivated ones included and unknown ids left out, with 6 tests (64 supplier-service tests passed). The order-service client now uses it in batches of 100. The planned username lookup was switched to the same repeated-parameter form. 95 order-service tests passed.
+
+Explained that services call each other directly on the Compose private network by service name, not through the gateway, which keeps internal-only endpoints internal. Other services' addresses are settings, so outside one Docker network they're set to the services' own addresses. The gateway block on internal endpoints would then need replacing with internal-only ingress or service-to-service authentication.
+
+### 12. Communication isolation in the D3 document (generate)
+
+```text
+looks good. add the point on communication isolation to the @CS3219-Milestone-D3.docx doc, same thing highlightin the addition. then, update ai logs, commit, and let me do the rename before starting task 5
+```
+
+**Key response:** Added six highlighted points under Part 4.3's "communication isolation" question:
+- the gateway as the only public entry point;
+- direct service-to-service calls on the private network;
+- internal-only endpoints blocked at the gateway;
+- the forwarded user token;
+- per-service RabbitMQ logins for credit changes;
+- service addresses as configuration, and what changes outside one Docker network.
+
+The document passed XML validation.
 
 ---

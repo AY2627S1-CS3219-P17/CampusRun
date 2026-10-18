@@ -3,7 +3,7 @@
 # Scope: Added database-free order-service Compose startup and backend-only Groq settings.
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: AI-added order-db, order-migrate and order-worker, the order-service DATABASE_URL, and the credit-demo note;
-#        AI-added the delivery-location seed to order-migrate (2026-10-19).
+#        AI-added the delivery-location seed to order-migrate and the user and credit URLs for order-service (2026-10-19).
 # Author review: <to be completed by author>
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
@@ -169,6 +169,8 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
       SUPPLIER_SERVICE_URL: http://supplier-service:8000
+      USER_SERVICE_URL: http://user-service:8000
+      CREDIT_API_URL: http://credit-service:8000
       # Local only: deployed environments leave this unset, so the docs are off
       ENABLE_DOCS: "true"
       ROOT_PATH: "/api/orders"

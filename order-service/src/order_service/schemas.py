@@ -3,7 +3,7 @@
 # Scope: Defined partial autofill contracts and a strict model schema with delivery-only location details and nullable string credits.
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: AI-added the camelCase base models, the paged list shape and the delivery location models, copied from
-#        supplier-service/schemas.py, with optional floor and description.
+#        supplier-service/schemas.py, with optional floor and description; the supplier summary (2026-10-19).
 # Author review: <to be completed by author>
 
 """Request and response models. Every value from a client is checked here.
@@ -129,6 +129,21 @@ class DeliveryLocationOut(CamelModel):
     updated_at: datetime
     created_by: int | None
     updated_by: int | None
+
+
+# ----------------------------------------------------------- other services
+
+
+class SupplierSummary(CamelModel):
+    """The parts of a Supplier Service supplier that errands show. Fetched live, never stored (D6)."""
+
+    id: int
+    name: str
+    building: str
+    floor: str | None
+    latitude: float
+    longitude: float
+    active: bool
 
 
 # ------------------------------------------------------------------ autofill

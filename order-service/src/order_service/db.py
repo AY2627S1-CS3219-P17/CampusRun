@@ -1,6 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
-# Scope: Engine factory and per-request transaction copied from credit-service/db.py.
+# Scope: Engine factory and per-request transaction copied from credit-service/db.py; AI-added the Engine
+#        dependency for endpoints that call other services (2026-10-19).
 # Author review: <to be completed by author>
 
 from collections.abc import AsyncIterator
@@ -34,3 +35,6 @@ async def get_connection(
 
 # scope="function" closes the transaction before the response is sent (see supplier-service/db.py)
 Connection = Annotated[AsyncConnection, Depends(get_connection, scope="function")]
+# For endpoints that also call other services: they open their own short transaction after (or between) those calls,
+# so a slow service never holds a database connection
+Engine = Annotated[AsyncEngine, Depends(get_engine)]

@@ -1,7 +1,8 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: AI-generated pytest fixtures following user-service/tests/conftest.py: a disposable Postgres container
-#        migrated with Alembic, per-test empty tables, an HTTP client wired to the test database, and token helpers.
+#        migrated with Alembic, per-test empty tables, an HTTP client wired to the test database, and token helpers;
+#        the fake Supplier, User and Credit Services behind the client (2026-10-19).
 # Author review: <to be completed by author>
 
 import os
@@ -25,9 +26,11 @@ from sqlalchemy import Connection, text  # noqa: E402
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine  # noqa: E402
 from testcontainers.community.postgres import PostgresContainer  # noqa: E402
 
+from order_service.clients import get_clients  # noqa: E402
 from order_service.db import get_engine  # noqa: E402
 from order_service.main import app  # noqa: E402
 from order_service.tables import metadata  # noqa: E402
+from tests.fakes import FakeServices  # noqa: E402
 
 ALEMBIC_INI = Path(__file__).parent.parent / "alembic.ini"
 
@@ -82,9 +85,18 @@ async def engine(database_url: str) -> AsyncIterator[AsyncEngine]:
 
 
 @pytest.fixture
-async def client(engine: AsyncEngine) -> AsyncIterator[AsyncClient]:
-    # ASGITransport skips the lifespan, so point the app at the test engine directly
+def services() -> FakeServices:
+    # The Supplier, User and Credit Services, in memory; tests change it to set up a scenario
+    return FakeServices()
+
+
+@pytest.fixture
+async def client(engine: AsyncEngine, services: FakeServices) -> AsyncIterator[AsyncClient]:
+    # ASGITransport skips the lifespan, so point the app at the test engine and the fake services directly
+    clients = services.clients()
     app.dependency_overrides[get_engine] = lambda: engine
+    app.dependency_overrides[get_clients] = lambda: clients
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
     app.dependency_overrides.clear()
+    await clients.close()

@@ -18,6 +18,8 @@ worker. The design and the build order are in `docs/order-service-plan.md`.
   `order-worker` publishes them. Never publish from a request handler.
 - Every state change is one conditional `UPDATE ... WHERE <expected state and party> RETURNING`. Zero rows means the
   change is refused (404, 403 or 409), never a read-then-write.
+- Never call another service while holding a database connection. Endpoints that call other services take `Engine`
+  (not `Connection`), make those calls first, then open one short transaction (`engine.begin()`).
 - Reply handling must be idempotent and acknowledge only after the transaction commits. Never `nack(requeue=True)`.
 - Routers with fixed paths are included before the ones with `/{errand_id}` at the root (see `main.py`).
 - JSON (HTTP and messages) is camelCase; Python is snake_case. Errors use `{"detail": ...}`, and 422 responses add

@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: AI-generated FastAPI app, engine lifespan and health check, following credit-service/main.py; the autofill
 #        endpoint (OpenAI Codex, 2026-10-17) now lives in routes/autofill.py; AI-added the delivery location routes
-#        and the shared service clients (2026-10-19).
+#        the shared service clients and the errand, My Requests/My Tasks and admin routes (2026-10-19).
 # Author review: <to be completed by author>
 
 """The order service's HTTP API.
@@ -25,7 +25,7 @@ from order_service.clients import ServiceClients
 from order_service.config import get_settings
 from order_service.db import create_engine, get_engine
 from order_service.errors import install_error_handlers
-from order_service.routes import autofill, delivery_locations
+from order_service.routes import admin, autofill, delivery_locations, errands, mine
 
 
 @asynccontextmanager
@@ -71,3 +71,7 @@ async def health(engine: Annotated[AsyncEngine, Depends(get_engine)]) -> JSONRes
 # catch /autofill, /me, /admin and /delivery-locations.
 app.include_router(autofill.router)
 app.include_router(delivery_locations.router)
+app.include_router(mine.router)
+app.include_router(admin.router)
+# Last: its /{errand_id} sits at the root
+app.include_router(errands.router)

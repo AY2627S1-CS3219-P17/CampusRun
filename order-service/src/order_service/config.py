@@ -5,7 +5,7 @@
 # Scope: AI-added DATABASE_URL, RABBITMQ_URL, the JWT algorithm and log level, following credit-service/config.py;
 #        made JWT_SECRET optional so the worker can run without it (main.py still requires it);
 #        AI-added the served-area bounds and seed directory for delivery locations (copied from supplier-service),
-#        and the user and credit service URLs (2026-10-19).
+#        and the user and credit service URLs, the expiry grace period and campus time zone (2026-10-19).
 # Author review: <to be completed by author>
 
 from functools import lru_cache
@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     served_area_max_lat: float = 1.3100
     served_area_min_lng: float = 103.7640
     served_area_max_lng: float = 103.7880
+
+    # Errands: deliver_by is a soft deadline; an unfinished errand expires this long after it (D2)
+    expiry_grace_minutes: int = Field(default=5, ge=0)
+    # Local campus time, used for deliverBy values sent without a time zone
+    timezone: str = "Asia/Singapore"
 
     # The predefined delivery locations loaded by `python -m order_service.seed`
     seed_dir: Path = SERVICE_ROOT / "seed"

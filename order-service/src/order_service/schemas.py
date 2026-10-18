@@ -3,7 +3,8 @@
 # Scope: Defined partial autofill contracts and a strict model schema with delivery-only location details and nullable string credits.
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: AI-added the camelCase base models, the paged list shape and the delivery location models, copied from
-#        supplier-service/schemas.py, with optional floor and description; the supplier summary (2026-10-19).
+#        supplier-service/schemas.py, with optional floor and description; the supplier summary and the errand
+#        request, response and list models (2026-10-19).
 # Author review: <to be completed by author>
 
 """Request and response models. Every value from a client is checked here.
@@ -11,13 +12,16 @@
 JSON uses camelCase to match the web client's types; Python code uses the snake_case field names.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
+from enum import StrEnum
 from typing import Annotated
+from zoneinfo import ZoneInfo
 
 from pydantic import (
     AfterValidator,
     BaseModel,
     ConfigDict,
+    Field,
     StringConstraints,
     field_validator,
     model_validator,
@@ -25,7 +29,16 @@ from pydantic import (
 from pydantic.alias_generators import to_camel
 
 from order_service.config import get_settings
-from order_service.tables import FLOOR_MAX_LENGTH, LOCATION_DESCRIPTION_MAX_LENGTH, LOCATION_NAME_MAX_LENGTH
+from order_service.errors import FieldError
+from order_service.states import CancelReason, CreditStatus, State
+from order_service.tables import (
+    FLOOR_MAX_LENGTH,
+    LOCATION_DESCRIPTION_MAX_LENGTH,
+    LOCATION_NAME_MAX_LENGTH,
+    REWARD_MAX,
+    REWARD_MIN,
+    TITLE_MAX_LENGTH,
+)
 
 
 class CamelModel(BaseModel):
@@ -144,6 +157,120 @@ class SupplierSummary(CamelModel):
     latitude: float
     longitude: float
     active: bool
+
+
+# ------------------------------------------------------------------ errands
+
+# The create-request form's rules for deliverBy (frontend/src/components/shared/update-request.tsx)
+MIN_LEAD = timedelta(minutes=15)
+MAX_LEAD = timedelta(hours=24)
+
+Title = _text(TITLE_MAX_LENGTH)
+Credits = Annotated[int, Field(ge=REWARD_MIN, le=REWARD_MAX)]
+
+
+def check_deliver_by(value: datetime, now: datetime | None = None) -> datetime:
+    """Campus time if no time zone is given; between 15 minutes and 24 hours from now."""
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=ZoneInfo(get_settings().timezone))
+    now = now or datetime.now(value.tzinfo)
+    if value < now + MIN_LEAD:
+        raise ValueError("Choose a time at least 15 minutes from now.")
+    if value > now + MAX_LEAD:
+        raise ValueError("Choose a time within the next 24 hours.")
+    return value
+
+
+DeliverBy = Annotated[datetime, AfterValidator(check_deliver_by)]
+
+
+class ErrandCreate(RequestModel):
+    """POST / body. The delivery point is either an existing location (deliveryLocationId: a predefined one or one
+    of your own) or a new one of your own (building, floor, description, latitude, longitude), as the form sends."""
+
+    title: Title
+    supplier_id: Annotated[int, Field(ge=1)]
+    delivery_location_id: Annotated[int, Field(ge=1)] | None = None
+    building: LocationName | None = None
+    floor: Floor | None = None
+    description: LocationDescription | None = None
+    latitude: Latitude | None = None
+    longitude: Longitude | None = None
+    deliver_by: DeliverBy
+    credits: Credits
+
+    @model_validator(mode="after")
+    def one_delivery_point(self):
+        custom = {"building", "floor", "description", "latitude", "longitude"} & self.model_fields_set
+        if self.delivery_location_id is not None:
+            if custom:
+                raise ValueError("Choose a saved delivery location or enter a new one, not both.")
+            return self
+        missing = [f for f in ("building", "latitude", "longitude") if getattr(self, f) is None]
+        if missing:
+            raise FieldError(missing[0], "This field is required.")
+        return self
+
+
+class ErrandSort(StrEnum):
+    # The frontend's ERRAND_SORTS values (frontend/src/utils/toolbar.ts)
+    MOST_RECENT = "most-recent"
+    LEAST_RECENT = "least-recent"
+    MOST_CREDITS = "most-credits"
+    LEAST_CREDITS = "least-credits"
+
+
+class ErrandTab(StrEnum):
+    # My Requests and My Tasks (there is no pending tab: D4)
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    INACTIVE = "inactive"
+
+
+class ErrandLocation(CamelModel):
+    id: int
+    name: str
+    floor: str | None
+    description: str | None
+    latitude: float
+    longitude: float
+    predefined: bool
+
+
+class ErrandOut(CamelModel):
+    id: int
+    title: str
+    state: State
+    # PENDING while a credit command is on its way; the web client shows "credits processing" (D4)
+    credit_status: CreditStatus
+    credit_rejection: str | None
+    credits: int
+    requester_id: int
+    # Null if the User Service can't be reached
+    requester_name: str | None
+    courier_id: int | None
+    courier_name: str | None
+    supplier_id: int
+    # Live from the Supplier Service (D6); null if it can't be reached
+    supplier: SupplierSummary | None
+    delivery_location: ErrandLocation
+    # The soft deadline, and when the errand expires if it isn't completed (deliverBy plus the grace period)
+    deliver_by: datetime
+    expires_at: datetime
+    cancel_reason: CancelReason | None
+    created_at: datetime
+    updated_at: datetime
+    accepted_at: datetime | None
+    picked_up_at: datetime | None
+    delivered_at: datetime | None
+    completed_at: datetime | None
+    cancelled_at: datetime | None
+    expired_at: datetime | None
+
+
+class ErrandPage(Page[ErrandOut]):
+    # False when a search couldn't include supplier names because the Supplier Service was down
+    supplier_search: bool = True
 
 
 # ------------------------------------------------------------------ autofill

@@ -960,7 +960,7 @@ Update these two files so that there are a total of 100 suppliers and 100 delive
 
 ---
 
-## Session 12 — 2026-10-18 to 2026-10-19 — order-service plan and Tasks 1 to 5
+## Session 12 — 2026-10-18 to 2026-10-19 — order-service plan and Tasks 1 to 6
 
 - **Tool:** Claude Code (model: Claude Opus 5.5)
 - **Author:** nathantew14
@@ -1197,5 +1197,57 @@ curl localhost:8080/api/users/internal/usernames?ids=1
 (Output: `(eval):1: no matches found: localhost:8080/api/users/internal/usernames?ids=1`)
 
 **Key response:** Explained that zsh treats `?` as a filename wildcard and stops before curl runs. Quoting the URL avoids it, and the expected answer is `{"detail":"Not Found"}`.
+
+### 15. Task 6: creating, reading and listing errands (generate)
+
+```text
+update ai logs, commit and start task 6
+```
+
+**Key response:** Committed Task 5. Added:
+- `POST /`: creating an errand;
+- `GET /`: Explore;
+- `GET /{id}`: one errand;
+- `GET /me/requests` and `GET /me/tasks`, by tab;
+- `GET /admin/errands`: a read-only admin view.
+
+Creating an errand checks the supplier (422, or 503 if it can't be checked) and the wallet (advisory). It then writes the errand, OPEN with credits PENDING, and its `ReserveCredits` command in one transaction. A new delivery point from the form becomes the requester's own location.
+
+Lists search title, location and supplier names, sort, and page. Each page makes one batched supplier call and one username call. Fields fall back to `null` when a service is down. The AI named the reward `credits` to match the frontend, and treated a time with no zone as campus time. 134 tests passed.
+
+### 16. Service calls outside database transactions (review, generate)
+
+```text
+"Database transaction held open during service calls.": any reason why this was chosen? why not just have the checks before the transaction opens?
+```
+
+**Key response:** Acknowledged that this wasn't a deliberate choice: the shared `Connection` dependency opened the transaction before the handler ran. A slow service could therefore hold database connections and exhaust the pool at peak load. Changed the code:
+- create calls supplier-service and credit-service first, then writes in one short transaction;
+- lists search suppliers before the query, and add supplier details and names after the connection is closed.
+
+Added an `Engine` dependency, a test that no connection is checked out during any service call, and the rule in `order-service/AGENTS.md`. 135 tests passed.
+
+### 17. Errands whose supplier is deactivated (explain)
+
+```text
+is there any existing or planned way to deal with possible de-sync where a supplier is deactivated a moment after the check? or actually, can we just deal with it more generally: what do we do with existing errands if a supplier is deactivated? does the background sweeper help to cancel those errands?
+```
+
+**Key response:** Nothing handled it, and the sweeper only expires errands and resends credit commands. Compared three options:
+- refuse accepts for a deactivated supplier, and show it in the UI;
+- have the sweeper cancel OPEN errands, which needs service-to-service credentials;
+- a `SupplierDeactivated` event from supplier-service.
+
+```text
+how about option 3 but through a synchronous endpoint on order-service?
+```
+
+**Key response:** Explained that a synchronous callback would work as a best-effort cleanup, but a failed call is never retried, and it makes supplier-service depend on order-service. Neither the event nor the callback closes the race at creation, so an accept-time check is needed regardless.
+
+```text
+nevermind, lets just go with just option 1. it's good enough for the scope of this project. add option 2 and 3 as alternatives that were rejected to @CS3219-Milestone-D3.docx
+```
+
+**Key response:** Recorded decision D13 in the plan: accept refuses a deactivated supplier (409) and goes ahead if supplier-service is down, which the AI chose. The UI shows "Supplier unavailable". Added the chosen approach and the rejected alternatives, highlighted, under Part 1's question on referenced data changing in the D3 document. Pointed out that the document's earlier "set the id to 0" line now contradicts this.
 
 ---

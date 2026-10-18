@@ -47,6 +47,7 @@ RabbitMQ 4.3, uv, pytest. These are the same versions as credit-service.
 | D10 | The requester can edit an errand only while it's OPEN | It can't be edited once a courier accepts. The same applies to a delivery location: nobody can edit it while an errand using it is ACCEPTED, PICKED_UP or DELIVERED (a courier is on the way). Finished errands don't block edits, or a predefined location could never change again. |
 | D11 | Suppliers only need to be active when an errand is created | Whether the supplier is open isn't checked. |
 | D12 | Searching by supplier name happens on the server | Search, sort, tab and page changes each send a request, debounced as on the Suppliers page. Order-service asks supplier-service for the ids of matching suppliers, then filters errands by `supplier_id` (section 7). |
+| D13 | A deactivated supplier's errands can't be accepted | Accept checks the supplier is still active (409 otherwise); the web client shows "Supplier unavailable" and lets the requester cancel while OPEN. Errands with a courier carry on or expire. Rejected: the sweeper cancelling them (needs service credentials), and a SupplierDeactivated event or a synchronous callback from supplier-service (more work; neither closes the creation race alone). |
 
 **No separate "reserving" state for OPEN-and-pending.** `credit_status` already covers it, and it also covers the
 other pending cases (COMPLETED with the transfer in flight, CANCELLED/EXPIRED with the release in flight). One
@@ -387,8 +388,18 @@ Stop for review after each task. Every task ends with passing tests (testcontain
   - keep user-service's names (`Account`, `CurrentUser`, `CurrentAdmin`). The team decided against renaming them.
 
 ### Task 6: Create, read and list errands
-- **Files:** `schemas.py`, `routes/errands.py`, `routes/mine.py`, `routes/admin.py` (`/admin/errands`), tests.
+- **Files:** `schemas.py`, `errand_views.py` (shared queries and responses), `routes/errands.py`, `routes/mine.py`,
+  `routes/admin.py` (`/admin/errands`), `tests/fakes.py` (in-memory supplier, user and credit services), tests.
 - Insert the errand (and a new location if needed) and `enqueue("ReserveCredits", …)` in one transaction.
+- **As built:**
+  - The API calls the reward `credits`, as the frontend does. The custom delivery fields are flat (`building`,
+    `floor`, `description`, `latitude`, `longitude`), so 422 keys match the form's fields.
+  - A `deliverBy` without a time zone is campus time (`TIMEZONE`, Asia/Singapore).
+  - Responses add `expiresAt` (`deliverBy` + `EXPIRY_GRACE_MINUTES`).
+  - Each page makes one `/lookup` call for suppliers and one `/internal/usernames` call for names.
+  - No database connection is held while other services are called. Create checks the supplier and wallet first,
+    then writes in one short transaction. Lists search suppliers before the query and add names and suppliers
+    after it. A test checks the pool is empty during every service call.
 - **Tests:**
   - 201 + Location with ROOT_PATH, and an outbox row with the right body;
   - custom delivery fields create a location owned by the requester; someone else's `deliveryLocationId` → 422;
@@ -406,6 +417,10 @@ Stop for review after each task. Every task ends with passing tests (testcontain
 - **Files:** `transitions.py`, `routes/actions.py`, `PATCH` in `routes/errands.py`, tests.
 - **Produces:** `accept`, `pick_up`, `deliver`, `complete`, `cancel`, `edit(conn, errand_id, user, changes)`. Each
   returns the row, or raises 404/403/409 after a 0-row update.
+- **Supplier check on accept (D13):** before its transaction, accept calls supplier-service for the errand's
+  supplier. A deactivated or missing supplier gets 409 "This supplier is no longer available." If supplier-service
+  can't be reached, the accept goes ahead and the failure is logged: deactivation is rare, and refusing every accept
+  during an outage costs more.
 - **Tests:**
   - every edge in section 5, and every other edge → 409;
   - courier or admin cancel → 403;
@@ -419,6 +434,7 @@ Stop for review after each task. Every task ends with passing tests (testcontain
   - edit while ACCEPTED → 409; edit while credit PENDING → 409;
   - reward edits enqueue AdjustReservation with revisions 1 then 2;
   - accept refused while an adjust is pending;
+  - accept refused (409) when the supplier is deactivated; allowed when supplier-service is down;
   - accept takes a share lock on its delivery location (`SELECT … FOR SHARE`), so it can't interleave with a location edit's in-use check (Task 3 takes `FOR UPDATE`).
 
 ### Task 8: Reply handling
@@ -475,6 +491,8 @@ Stop for review after each task. Every task ends with passing tests (testcontain
 - Use one mapper, `toTaskCard(errand, viewer)`. Map 422 field names onto the form's fields (`supplierId→supplier`,
   `latitude→location`, `deliverBy→deliveryBy`). Refresh the credit banner after create, cancel and complete.
 - Cancel and Edit show only on OPEN errands, for the requester.
+- When `supplier.active` is false, show "Supplier unavailable": hide Accept in Explore, and prompt the requester to
+  cancel in My Requests (D13).
 - Search waits 300 ms after typing stops and cancels the previous request, as on the Suppliers page. If
   `supplierSearch` is false, show a short note.
 - **Check:** `npm run build`, `npm run lint`, then the demo script through the UI.

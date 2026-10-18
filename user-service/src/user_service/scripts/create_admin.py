@@ -2,6 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated create-initial-admin script that seeds the first admin from INITIAL_ADMIN_* settings;
 #        AI-changed it to create a user with the admin role, validated like a registration, and added --skip-if-unset
+#        for the Compose seeding service (2026-09-28); AI-unwrapped the now-SecretStr password before hashing (2026-09-29).
 #        for the Compose seeding service (2026-09-28); AI-added the OpenWallet outbox message (Claude, claude.ai, 2026-10-17).
 # Author review: reviewed by Nathan
 
@@ -59,7 +60,7 @@ async def create_initial_admin(settings: Settings, skip_if_unset: bool = False) 
                 .values(
                     email=admin.email,
                     username=admin.username,
-                    password_hash=password_hash.hash(admin.password),
+                    password_hash=password_hash.hash(admin.password.get_secret_value()),
                     role="admin",
                 )
                 .on_conflict_do_nothing()

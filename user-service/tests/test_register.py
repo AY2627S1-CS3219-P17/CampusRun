@@ -1,7 +1,8 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated tests for the POST /auth/register endpoint; AI-added cases for the web client's username and
-#        password rules (2026-09-27); AI-added the student-email-only and role cases (2026-09-28).
+#        password rules (2026-09-27); AI-added the student-email-only and role cases (2026-09-28);
+#        AI-added the cases for keeping passwords out of 422 responses and model reprs (2026-09-29).
 # Author review: reviewed by Nathan
 
 import asyncio
@@ -11,7 +12,7 @@ from httpx import AsyncClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from user_service.schemas import PASSWORD_MAX_LENGTH
+from user_service.schemas import PASSWORD_MAX_LENGTH, RegisterRequest
 from user_service.security import password_hash
 from user_service.tables import USERNAME_MAX_LENGTH, users
 
@@ -125,6 +126,32 @@ async def test_rejects_invalid_input(
 
     assert response.status_code == 422
     assert await count_users(engine) == 0
+
+
+@pytest.mark.parametrize("password", ["Sh0rt-", "NoSpecial123", "Aa1-" + "a" * (PASSWORD_MAX_LENGTH - 3)])
+async def test_validation_errors_leave_out_the_password(client: AsyncClient, password: str) -> None:
+    response = await client.post("/auth/register", json={**VALID, "password": password})
+
+    assert response.status_code == 422
+    assert password not in response.text
+    assert all("input" not in error for error in response.json()["detail"])
+
+
+@pytest.mark.parametrize(
+    ("password", "message"),
+    [
+        ("Sh0rt-", "String should have at least 8 characters"),
+        ("Aa1-" + "a" * (PASSWORD_MAX_LENGTH - 3), f"String should have at most {PASSWORD_MAX_LENGTH} characters"),
+    ],
+)
+async def test_password_length_errors_say_characters(client: AsyncClient, password: str, message: str) -> None:
+    response = await client.post("/auth/register", json={**VALID, "password": password})
+
+    assert [error["msg"] for error in response.json()["detail"]] == [message]
+
+
+def test_request_repr_masks_the_password() -> None:
+    assert VALID["password"] not in repr(RegisterRequest(**VALID))
 
 
 @pytest.mark.parametrize("missing", ["email", "username", "password"])

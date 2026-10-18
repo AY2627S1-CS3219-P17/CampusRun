@@ -3,6 +3,7 @@
 # Scope: AI-generated FastAPI app with engine lifespan and GET /health endpoint; AI-updated lifespan return type to AsyncGenerator and made API docs depend on ENABLE_DOCS;
 #        AI-completed the POST /auth/register endpoint from the author's draft; AI-renamed the user token type to "student" (Claude Code, 2026-09-27);
 #        AI-generated the PATCH /users/me endpoint (2026-09-27); AI-merged the admin login into /auth/login and removed /admins/me (2026-09-28);
+#        AI-added the validation error handler that leaves request input out of 422 responses (2026-09-29).
 #        AI-added the OpenWallet outbox message on registration and the outbox relay in the lifespan (Claude, claude.ai, 2026-10-17).
 # Author review: reviewed by Nathan
 
@@ -13,8 +14,10 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.concurrency import run_in_threadpool
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import func, or_, select, text, update
@@ -74,6 +77,16 @@ app = FastAPI(
 )
 
 
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+    # FastAPI's default 422 body echoes each error's input, which can be a password or the whole request body
+    errors = [{key: value for key, value in error.items() if key != "input"} for error in exc.errors()]
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        content=jsonable_encoder({"detail": errors}),
+    )
+
+
 def login_failed() -> HTTPException:
     # One message for unknown account and wrong password, so it doesn't reveal which accounts exist
     return HTTPException(
@@ -107,7 +120,7 @@ async def health(engine: Annotated[AsyncEngine, Depends(get_engine)]) -> JSONRes
 @app.post("/auth/register", status_code=status.HTTP_201_CREATED)
 async def register(body: RegisterRequest, conn: Connection) -> UserResponse:
     # Argon2 is deliberately slow; hashing in a thread keeps other requests responsive
-    hashed = await run_in_threadpool(password_hash.hash, body.password)
+    hashed = await run_in_threadpool(password_hash.hash, body.password.get_secret_value())
 
     # Relies on the case-insensitive unique indexes, so concurrent sign-ups can't both succeed
     created = (
@@ -186,10 +199,11 @@ async def update_current_user(body: UpdateUserRequest, account: CurrentUser, con
         )
         if stored_hash is None:
             raise credentials_error()
-        if not await check_password(body.current_password or "", stored_hash):
+        current_password = body.current_password.get_secret_value() if body.current_password else ""
+        if not await check_password(current_password, stored_hash):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
         # Tokens issued before the change stay valid until they expire; see "Revoking sessions" in docs/auth-plan.md
-        changes["password_hash"] = await run_in_threadpool(password_hash.hash, body.new_password)
+        changes["password_hash"] = await run_in_threadpool(password_hash.hash, body.new_password.get_secret_value())
 
     columns = (users.c.id, users.c.email, users.c.username, users.c.email_verified_at, users.c.role, users.c.created_at)
     if changes:

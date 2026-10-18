@@ -3,14 +3,26 @@
 # Scope: AI-generated registration request and user response models with NUS email, username and password validation;
 #        AI-added the profile update request model, and aligned the username and password rules with the web client (2026-09-27);
 #        AI-limited emails to @u.nus.edu, added role to UserResponse and removed AdminResponse (2026-09-28);
-#        AI-made the profile update request reject unknown fields (2026-09-28).
+#        AI-made the profile update request reject unknown fields (2026-09-28);
+#        AI-changed the password fields to SecretStr so they're masked if a request model is logged (2026-09-29).
 # Author review: reviewed by Nathan
 
 import re
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, StringConstraints, field_validator, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    SecretStr,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
+from pydantic_core import PydanticCustomError
 
 from user_service.security import Role
 from user_service.tables import USERNAME_MAX_LENGTH
@@ -43,17 +55,32 @@ PASSWORD_CHARACTER_CLASSES = (
 )
 
 
-def check_password_characters(password: str) -> str:
-    if not all(character_class.search(password) for character_class in PASSWORD_CHARACTER_CLASSES):
+def check_password_rules(password: SecretStr) -> SecretStr:
+    value = password.get_secret_value()
+    # Checked here rather than with Field(min_length=...), which on a SecretStr reports "items" instead of "characters".
+    # Same error types and messages as a str field's.
+    if len(value) < PASSWORD_MIN_LENGTH:
+        raise PydanticCustomError(
+            "string_too_short",
+            "String should have at least {min_length} characters",
+            {"min_length": PASSWORD_MIN_LENGTH},
+        )
+    if len(value) > PASSWORD_MAX_LENGTH:
+        raise PydanticCustomError(
+            "string_too_long",
+            "String should have at most {max_length} characters",
+            {"max_length": PASSWORD_MAX_LENGTH},
+        )
+    if not all(character_class.search(value) for character_class in PASSWORD_CHARACTER_CLASSES):
         raise ValueError("must contain an uppercase letter, a lowercase letter, a number and a special character")
     return password
 
 
-# Not stripped: spaces are valid password characters
+# SecretStr masks the value in repr and logs; call get_secret_value() to hash it. Not stripped: spaces are valid.
 Password = Annotated[
-    str,
-    StringConstraints(min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH),
-    AfterValidator(check_password_characters),
+    SecretStr,
+    AfterValidator(check_password_rules),
+    Field(json_schema_extra={"minLength": PASSWORD_MIN_LENGTH, "maxLength": PASSWORD_MAX_LENGTH}),
 ]
 
 
@@ -81,7 +108,7 @@ class UpdateUserRequest(BaseModel):
     # Omitted fields are left unchanged
     username: Username | None = None
     # Not length-checked here: check_password caps it, so a wrong password gets 400 rather than 422
-    current_password: str | None = None
+    current_password: SecretStr | None = None
     new_password: Password | None = None
 
     @field_validator("username", mode="before")

@@ -237,7 +237,7 @@ reserved. Try again in a moment."
   - A reserve `REJECTED` on an OPEN errand cancels it (`cancel_reason = reply.reason`, credit REJECTED). This is the
     only reply that changes state.
   - Anything else is logged and acked unchanged. Examples:
-    - a HELD reply on an already-cancelled errand;
+    - a reply with status `HELD` on an already-cancelled errand;
     - `NO_COURIER_WALLET`;
     - `status: null`;
     - an unknown `errandId`;
@@ -330,10 +330,15 @@ Stop for review after each task. Every task ends with passing tests (testcontain
 ### Task 2: Errand tables, states and outbox
 - **Files:** `tables.py` (errands, outbox), migration, `states.py`, `outbox.py`, tests.
 - **Produces:**
-  - `State`, `CreditStatus`, `target_credit_status(state) -> set[CreditStatus]`;
-  - `enqueue(conn, command: str, routing_key: str, payload: dict) -> None`;
+  - `State`, `CreditStatus`, `CancelReason`, `UNFINISHED`/`FINISHED`/`IN_PROGRESS`,
+    `target_credit_status(state) -> frozenset[CreditStatus]`;
+  - `enqueue(conn, command: str, payload: dict) -> None`. The routing key comes from `outbox.ROUTING_KEYS`, so a
+    command can't be sent with the wrong key; an unknown command raises `ValueError`;
+  - `RabbitPublisher(connection)`, which publishes on the worker's existing RabbitMQ connection;
   - `publish_pending(engine, publisher, batch_size=100) -> tuple[int, bool]`;
   - `OutboxRelay`.
+- `errands.delivery_location_id` is `NOT NULL` with no foreign key yet. Task 3 adds the key along with the
+  `delivery_locations` table.
 - **Tests:** `test_migrations_match_tables`; the CHECK constraints (own courier, reward range); port user-service's
   `test_outbox.py` (order kept on failure, two relays never send the same row, a Return counts as failure).
 - Credit-demo reservations used made-up errand ids (e.g. 41). Before the first integrated run, remove the
@@ -415,9 +420,9 @@ Stop for review after each task. Every task ends with passing tests (testcontain
 - **Tests:**
   - each target reached by its reply;
   - a duplicate reply → no change;
-  - TRANSFERRED then a late HELD → stays TRANSFERRED;
+  - TRANSFERRED then a late `HELD` reply → stays TRANSFERRED;
   - reserve REJECTED on OPEN → CANCELLED with its reason and gone from Explore;
-  - cancel before the HELD reply → HELD ignored, then RELEASED applied;
+  - cancel before the `HELD` reply → it is ignored, then RELEASED applied;
   - REJECTED after cancel → credit REJECTED, state unchanged;
   - adjust INSUFFICIENT_CREDITS → reward reverted;
   - `status: null` and unknown errandId → acked, no change.

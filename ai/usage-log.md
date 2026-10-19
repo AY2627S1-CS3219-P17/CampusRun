@@ -960,7 +960,7 @@ Update these two files so that there are a total of 100 suppliers and 100 delive
 
 ---
 
-## Session 12 — 2026-10-18 to 2026-10-19 — order-service plan and Tasks 1 to 9
+## Session 12 — 2026-10-18 to 2026-10-19 — order-service plan and Tasks 1 to 10
 
 - **Tool:** Claude Code (model: Claude Opus 5.5)
 - **Author:** nathantew14
@@ -1425,5 +1425,42 @@ update ai logs, commit task 8 and start task 9
 ```
 
 **Key response:** Committed Task 8 and started Task 9.
+
+### 28. Task 9: the order-worker (generate)
+
+(Continued from the previous entry's prompt, `update ai logs, commit task 8 and start task 9`.)
+
+**Key response:** Built `order-worker`'s three loops, run side by side so the process exits (and Compose restarts it) if one fails:
+- **Outbox relay:** publishes the credit commands written by the API.
+- **Reply consumer:**
+  - checks the message type and that it was sent by the `credit-service` login;
+  - applies each reply with retries while the database is unavailable;
+  - acknowledges only after the commit;
+  - drops invalid or repeatedly failing replies.
+- **Sweeper:**
+  - expires OPEN, ACCEPTED and PICKED_UP errands at their deadline, and DELIVERED ones when the grace period ends, with `ReleaseCredits`;
+  - resends the right command for errands whose credits have been PENDING longer than `RECONCILE_AFTER_MINUTES`.
+
+Both sweeper jobs work in batches, and the rows they pick are locked and skipped by other sweepers. Also:
+- added `GET /admin/stuck`;
+- fixed `expiresAt`, which now includes the grace period only for delivered errands;
+- added logs for creations, transitions, replies, expiries and resends;
+- added the `SWEEP_SECONDS`, `RECONCILE_AFTER_MINUTES` and `WORKER_PREFETCH` settings.
+
+256 tests passed, including two sweepers and two reconcilers at once. Decided by the AI, for the author to review:
+- replies that are dropped are recovered by the reconciler, so no dead-letter queue was added for the reply queue;
+- a resend bumps the errand's `updated_at`.
+
+The worker had not been run end to end against RabbitMQ.
+
+### 29. Merging a parallel session (explain)
+
+```text
+i accidentally continued the tasks in another chat instance. here are the updates. after this, update the AI usage logs, and start on task 10
+```
+
+(Followed by a handoff summary of Tasks 7 to 9 from the other session: commits `dd3c9f4`, `77b2099`, `2ab934c` and `4156a78`, the design of `credit.py`, `worker.py` and `sweeper.py`, and the D3 document additions.)
+
+**Key response:** Checked that the branch matched the handoff. Added the missing Task 9 entry to this log, then started Task 10.
 
 ---

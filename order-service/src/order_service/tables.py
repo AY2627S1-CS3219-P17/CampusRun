@@ -123,7 +123,7 @@ errands = Table(
     Column("reward_revision", Integer, nullable=False, server_default=text("0")),
     Column("supplier_id", Integer, nullable=False),
     Column("delivery_location_id", Integer, ForeignKey("delivery_locations.id"), nullable=False),
-    # The soft deadline the requester sets; the errand expires once the grace period after it has passed too
+    # The deadline the requester sets. Delivered errands can be confirmed up to grace_period after deadline
     Column("deliver_by", DateTime(timezone=True), nullable=False),
     Column("cancel_reason", String(32), nullable=True),
     *_timestamps(),

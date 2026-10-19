@@ -24,7 +24,7 @@ class State(StrEnum):
     DELIVERED = "DELIVERED"  # the courier has reported delivery
     COMPLETED = "COMPLETED"  # the requester has confirmed
     CANCELLED = "CANCELLED"  # by the requester while OPEN, or because the credits couldn't be reserved
-    EXPIRED = "EXPIRED"  # not completed by the deadline plus the grace period
+    EXPIRED = "EXPIRED"  # not delivered by the deadline, or not confirmed by the end of the grace period after it
 
 
 class CreditStatus(StrEnum):
@@ -44,7 +44,7 @@ class CancelReason(StrEnum):
 
 # Errands a courier can be working on; their credits stay HELD until the errand ends
 IN_PROGRESS = frozenset({State.ACCEPTED, State.PICKED_UP, State.DELIVERED})
-# The sweeper expires these once the deadline plus the grace period has passed
+# The sweeper expires these: at the deadline, or for DELIVERED ones, once the grace period after it has passed
 UNFINISHED = frozenset({State.OPEN} | IN_PROGRESS)
 FINISHED = frozenset({State.COMPLETED, State.CANCELLED, State.EXPIRED})
 assert UNFINISHED | FINISHED == set(State) and not UNFINISHED & FINISHED

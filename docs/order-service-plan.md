@@ -459,6 +459,19 @@ Stop for review after each task. Every task ends with passing tests (testcontain
   - REJECTED after cancel → credit REJECTED, state unchanged;
   - adjust INSUFFICIENT_CREDITS → reward reverted;
   - `status: null` and unknown errandId → acked, no change.
+- **As built:**
+  - A reply is applied only while the errand's `credit_status` is PENDING. Every command sets PENDING when it's sent,
+    so a duplicate, or a reply after the credits have settled, changes nothing. This also stops a release's reply
+    (which has no `rejection`) from clearing the `credit_rejection` a refused reserve set.
+  - For an errand that isn't finished, the reply's `revision` must equal `reward_revision`, including the reserve's
+    reply (both start at 0).
+  - A refused reserve cancels only an OPEN errand, and only for INSUFFICIENT_CREDITS or NO_WALLET. `reward` is set
+    from the reply only for an unfinished errand, so the amount-0 placeholder of a release that overtook its reserve
+    never touches it.
+  - A transfer whose `courierId` differs from the errand's is ignored. NO_COURIER_WALLET (status HELD) leaves the
+    errand PENDING for the reconciler.
+  - `apply_reply` returns `applied`, `cancelled` or `ignored` and never raises for a well-formed reply. Checking the
+    sender and acknowledging are the worker's job (Task 9).
 
 ### Task 9: Worker and sweeper
 - **Files:** `broker.py`, `sweeper.py`, `worker.py`, `routes/admin.py` (`/admin/stuck`), tests.

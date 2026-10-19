@@ -960,7 +960,7 @@ Update these two files so that there are a total of 100 suppliers and 100 delive
 
 ---
 
-## Session 12 — 2026-10-18 to 2026-10-19 — order-service plan and Tasks 1 to 7
+## Session 12 — 2026-10-18 to 2026-10-19 — order-service plan and Tasks 1 to 9
 
 - **Tool:** Claude Code (model: Claude Opus 5.5)
 - **Author:** nathantew14
@@ -1367,5 +1367,63 @@ remove the unused new_delivery_point property, keep the cap, commit task 7 and u
 ```
 
 **Key response:** Removed the property, kept the 24-hour cap on edits, and committed Task 7. 210 tests passed.
+
+### 24. The "never a read-then-write" rule (explain, generate)
+
+```text
+what does the never a read-and-write mean, and what was it meant for?
+update the readme disclosure at the end.
+```
+
+**Key response:** Explained the race the rule prevents: two couriers both read OPEN, then both write ACCEPTED, and the second overwrites the first. A conditional `UPDATE` re-checks its `WHERE` under the row lock, so the loser matches 0 rows. Pointed out that `edit` and `accept` read before writing, but with `FOR UPDATE`, so the rule's wording was stricter than the code. Added Tasks 2–7, two of the author's decisions and the verification to the README's Order Service disclosure.
+
+```text
+change agents.md to improve the wording, then commit and move on to Task 8
+```
+
+**Key response:** Reworded the rule in `order-service/AGENTS.md` to "never decide a change from an unlocked read" and committed. For Task 8, read the credit service's reply format and ledger. With the advisor, settled on these rules for applying a reply:
+- only while the errand's credits are PENDING;
+- only if the reply reaches the target for the errand's state;
+- for an unfinished errand, only if the revision matches.
+
+Added `credit.py` (`ReservationResult`, `apply_reply`) and 19 tests. Fixed three stale grace-period comments. 229 tests passed.
+
+### 25. Explaining an unclear sentence (explain)
+
+```text
+"For example, a HELD reply for an errand cancelled in the meantime is ignored, and the release's reply settles it." what are you even saying
+```
+
+**Key response:** Apologised for the compressed sentence. Walked through it step by step: the requester cancels before the reserve's reply arrives, so the HELD reply is ignored and the RELEASED reply is applied. The credits stay PENDING in between, so the reconciler can resend the release if its reply is lost.
+
+### 26. Adding reply handling to the D3 document (generate)
+
+```text
+add the three unexpected cases and the guarding against clearning of credit rejection "a release reply that would otherwise clear the credit_rejection set by a refused reserve. The PENDING check is what stops it." into @../CS3219-Milestone-D3.docx
+```
+
+**Key response:** Added highlighted bullets under Part 3 §3 ("Does message ordering matter?"):
+- the PENDING and target rules, as context;
+- the guard that keeps a refused reserve's `credit_rejection`;
+- three cases: a refused reward increase, a transfer the courier has no wallet for, and a transfer naming another courier.
+
+The document passed validation, and the previous version was backed up.
+
+### 27. Who calls `apply_reply` (explain)
+
+```text
+who calls apply_reply
+```
+
+**Key response:** Only the tests, for now. Task 9's reply consumer in `order-worker` will:
+- check the sender and the message type;
+- parse the reply;
+- call `apply_reply` in a transaction, and acknowledge only after it commits.
+
+```text
+update ai logs, commit task 8 and start task 9
+```
+
+**Key response:** Committed Task 8 and started Task 9.
 
 ---

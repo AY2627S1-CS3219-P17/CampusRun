@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 # Scope: AI-generated shared errand queries and responses: who can see an errand, the Explore and tab filters,
 #        search across title, delivery location and supplier name, sorting and paging, and adding the live
-#        supplier details and usernames to each errand.
+#        supplier details and usernames to each errand; expiresAt adds the grace period only once delivered.
 # Author review: <to be completed by author>
 
 """Reading errands, shared by the errand, My Requests/My Tasks and admin routes."""
@@ -180,7 +180,8 @@ async def to_out(
                 predefined=r.location_predefined,
             ),
             deliver_by=r.deliver_by,
-            expires_at=r.deliver_by + grace,
+            # Once delivered, the requester has the grace period to confirm (D2); this stays true after it ends
+            expires_at=r.deliver_by + grace if r.delivered_at is not None else r.deliver_by,
             cancel_reason=r.cancel_reason,
             created_at=r.created_at,
             updated_at=r.updated_at,

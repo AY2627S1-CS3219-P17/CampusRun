@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 # Scope: AI-generated errand endpoints: create (supplier and wallet checks, a new personal delivery location if
 #        needed, and the ReserveCredits command in the same transaction), Explore, and one errand by id. Calls to
-#        other services happen outside the database transaction; AI-added editing an OPEN errand.
+#        other services happen outside the database transaction; AI-added editing an OPEN errand and a log line on create.
 # Author review: <to be completed by author>
 
 """Errands at the service root: POST / creates one, GET / is Explore, GET /{id} is one errand.
@@ -12,6 +12,7 @@ ReserveCredits command goes into the outbox in the same transaction, so the comm
 does (docs/order-service-plan.md, section 6). Couriers only see it once the Credit Service has reserved the credits.
 """
 
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Path, Query, Response, status
@@ -33,6 +34,8 @@ from order_service.states import CreditStatus, State
 from order_service.tables import delivery_locations, errands
 
 router = APIRouter(tags=["errands"])
+
+log = logging.getLogger(__name__)
 
 NOT_FOUND = "This errand does not exist."
 ErrandId = Annotated[int, Path(ge=1)]
@@ -122,6 +125,7 @@ async def create_errand(body: ErrandCreate, engine: Engine, user: AnyUser, clien
         # Same transaction as the errand: sent if and only if the errand is saved
         await enqueue(conn, "ReserveCredits", {"errandId": errand_id, "requesterId": user.id, "amount": body.credits})
 
+    log.info("Errand %s created by user %s; reserving %s credits", errand_id, user.id, body.credits)
     response.headers["Location"] = f"{get_settings().root_path}/{errand_id}"
     return await respond(engine, errand_id, clients, user, known_suppliers={supplier.id: supplier})
 

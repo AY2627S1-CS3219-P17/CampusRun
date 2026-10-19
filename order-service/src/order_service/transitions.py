@@ -1,7 +1,8 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 # Scope: AI-generated errand state transitions (accept, pick up, deliver, complete, cancel, edit): each one
-#        conditional UPDATE with its credit command in the same transaction, and a clear 404/403/409 when refused.
+#        conditional UPDATE with its credit command in the same transaction, and a clear 404/403/409 when refused;
+#        AI-added a log line for every transition (Task 9).
 # Author review: <to be completed by author>
 
 """Every change to an errand's state (docs/order-service-plan.md, section 5).
@@ -20,6 +21,7 @@ Time guards (D2), checked in the database with its own clock:
                                              just before the deadline
 """
 
+import logging
 from datetime import timedelta
 from typing import Any, Literal
 
@@ -33,6 +35,8 @@ from order_service.errand_views import visible_to
 from order_service.outbox import enqueue
 from order_service.states import CancelReason, CreditStatus, State
 from order_service.tables import delivery_locations, errands
+
+log = logging.getLogger(__name__)
 
 Action = Literal["accept", "pick up", "deliver", "complete", "cancel", "edit"]
 
@@ -148,6 +152,7 @@ async def explain(conn: AsyncConnection, errand_id: int, user: CurrentUser, acti
 async def _or_explain(conn: AsyncConnection, row: Row | None, errand_id: int, user: CurrentUser, action: Action) -> Row:
     if row is None:
         raise await explain(conn, errand_id, user, action)
+    log.info("Errand %s: %s by user %s", errand_id, action, user.id)
     return row
 
 

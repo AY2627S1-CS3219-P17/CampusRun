@@ -5,7 +5,8 @@
 # Scope: AI-added DATABASE_URL, RABBITMQ_URL, the JWT algorithm and log level, following credit-service/config.py;
 #        made JWT_SECRET optional so the worker can run without it (main.py still requires it);
 #        AI-added the served-area bounds and seed directory for delivery locations (copied from supplier-service),
-#        and the user and credit service URLs, the expiry grace period and campus time zone (2026-10-19).
+#        and the user and credit service URLs, the expiry grace period and campus time zone (2026-10-19);
+#        AI-added the sweeper and reply consumer settings (2026-10-19).
 # Author review: <to be completed by author>
 
 from functools import lru_cache
@@ -47,8 +48,14 @@ class Settings(BaseSettings):
     served_area_min_lng: float = 103.7640
     served_area_max_lng: float = 103.7880
 
-    # Errands: deliver_by is a soft deadline; an unfinished errand expires this long after it (D2)
+    # Errands: an errand not yet delivered expires at deliver_by; a DELIVERED one, awaiting the requester's
+    # confirmation, this long after it (D2)
     expiry_grace_minutes: int = Field(default=5, ge=0)
+    # order-worker: how often the sweeper runs, and how long credits may stay PENDING before the command is resent
+    sweep_seconds: float = Field(default=30, gt=0)
+    reconcile_after_minutes: int = Field(default=5, ge=1)
+    # Credit Service replies taken from RabbitMQ at a time
+    worker_prefetch: int = Field(default=10, ge=1)
     # Local campus time, used for deliverBy values sent without a time zone
     timezone: str = "Asia/Singapore"
 

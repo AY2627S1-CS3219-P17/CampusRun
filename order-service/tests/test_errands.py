@@ -74,7 +74,8 @@ async def test_create_saves_the_errand_and_its_reserve_command_together(
     assert errand["supplier"]["name"] == "Robot Cafe"
     assert errand["courierId"] is None and errand["courierName"] is None
     deliver_by = datetime.fromisoformat(errand["deliverBy"])
-    assert datetime.fromisoformat(errand["expiresAt"]) - deliver_by == timedelta(minutes=5)
+    # Not delivered yet, so it expires at the deadline itself (D2)
+    assert datetime.fromisoformat(errand["expiresAt"]) == deliver_by
 
     async with engine.connect() as conn:
         [command] = (await conn.execute(select(outbox))).all()

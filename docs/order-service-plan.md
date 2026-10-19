@@ -484,6 +484,25 @@ Stop for review after each task. Every task ends with passing tests (testcontain
   - reconcile resends after the threshold and not before;
   - a fake reply from the wrong user_id is rejected; a valid one is applied then acked; a DB error leaves it unacked.
 - **Check:** the demo script in Task 11 runs end to end through the API (curl or Postman).
+- **As built:**
+  - `sweeper.py`: `expire_due()` and `reconcile()`. Each batch is one `UPDATE` whose rows a CTE picks with `FOR UPDATE
+    SKIP LOCKED`, re-checking the condition in the `UPDATE`. An errand expires once its next action is no longer
+    allowed: not yet delivered, once `due()` is false (past `deliver_by`); DELIVERED, once `live()` is false (past the
+    grace period). It reuses the transitions' own checks, so expiry follows any change to the deadline rule.
+  - `reconcile()` resends the command for the errand's state: ReserveCredits (revision 0) or AdjustReservation for
+    an unfinished errand, TransferCredits, or ReleaseCredits with CANCELLED or EXPIRED. It skips errands whose command
+    is still unpublished in the outbox, and sets `updated_at` so the wait restarts. The sweep expires first, so a
+    just-expired errand isn't sent a stale ReserveCredits.
+  - `GET /admin/stuck` lists errands PENDING for longer than `RECONCILE_AFTER_MINUTES`, including those still waiting
+    in the outbox (the broker is down), which the reconciler leaves alone.
+  - The reply queue has no dead-letter queue (`definitions.json` is unchanged), so a reply that fails the sender,
+    type or body check, or fails 3 times unexpectedly, is rejected and dropped. The reconciler resends the command
+    later, and the Credit Service replies again. A database outage holds the reply unacknowledged and retries.
+  - Logs: every transition (errand, action, user); each reply with its `message_id` and `correlation_id` (the
+    command's `message_id`), status and outcome; each expiry and resend. The relay already logs each publish.
+  - `expiresAt` in responses is `deliverBy`, plus the grace period once the errand has been delivered (`delivered_at`
+    set), so it stays consistent with `completedAt` and `expiredAt` after the errand ends.
+  - Settings: `SWEEP_SECONDS` (30), `RECONCILE_AFTER_MINUTES` (5), `WORKER_PREFETCH` (10).
 
 ### Task 10: Remove delivery_locations from supplier-service (only after Task 9 is confirmed working)
 - **Files:** supplier-service `tables.py` + a new migration that drops the table, `routes/delivery_locations.py`

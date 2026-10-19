@@ -295,8 +295,9 @@ class ErrandOut(CamelModel):
     # Live from the Supplier Service (D6); null if it can't be reached
     supplier: SupplierSummary | None
     delivery_location: ErrandLocation
-    # The soft deadline, and when the errand expires if it isn't completed (deliverBy plus the grace period)
+    # deliver_by: the actual deadline
     deliver_by: datetime
+    # expires_at: if the errand has been delivered, this is the deadline for the requester to confirm
     expires_at: datetime
     cancel_reason: CancelReason | None
     created_at: datetime

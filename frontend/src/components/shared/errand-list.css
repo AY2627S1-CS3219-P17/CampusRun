@@ -1,0 +1,49 @@
+/* AI Assistance Disclosure:
+ * Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
+ * Scope: AI-generated errand list status line, empty, error and load-more styles, copied from the Suppliers page.
+ * Author review: <to be completed by author>
+ */
+
+.errand-list-status {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 16px;
+  min-height: 20px;
+  margin-top: 14px;
+  color: #607a80;
+  font-size: 14px;
+}
+
+.errand-list-note {
+  color: #8a5300;
+}
+
+.errand-list-empty,
+.errand-list-more {
+  margin: 42px 0;
+  text-align: center;
+  color: #648087;
+}
+
+.errand-list-more {
+  margin-block: 20px;
+  min-height: 1px;
+}
+
+.errand-list-empty p,
+.errand-list-more p {
+  margin: 0 0 10px;
+}
+
+.errand-list-empty button,
+.errand-list-more button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #176849;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}

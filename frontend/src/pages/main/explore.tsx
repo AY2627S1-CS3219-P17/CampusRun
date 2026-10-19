@@ -9,47 +9,32 @@
 // Scope: Changed the mock supplier to a name from the seeded supplier list.
 // Tool: Codex (OpenAI), date: 2026-10-17
 // Scope: Showed Accept in Open Explore task details.
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
+// Scope: AI-replaced the sample tasks with Explore from the Order Service, loaded as the list scrolls.
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
+// Scope: AI-moved the card actions into the shared errand mapper.
 // Author review: <to be completed by author>
 
 import { useState } from 'react'
 import CreditBanner from '../../components/shared/credit-banner'
-import TaskCard, { type TaskCardProps } from '../../components/shared/task-card'
-import Pagination from '../../components/shared/pagination'
+import ErrandList from '../../components/shared/errand-list'
 import Toolbar from '../../components/shared/toolbar'
 import Header from '../../components/shared/header'
-import { ERRAND_SORTS } from '../../utils/toolbar'
-import { SAMPLE_TASK_LOCATIONS } from '../../utils/sample-task-cards'
+import { ERRAND_SORTS, toErrandSort } from '../../utils/toolbar'
+import { useErrandList } from '../../utils/use-errand-list'
+import type { ErrandSort } from '../../types/order'
 import './explore.css'
-
-const PAGE_SIZE = 2
-const AVAILABLE_TASKS: TaskCardProps[] = [
-  {
-    type: 'open',
-    title: 'Pick up printed notes',
-    pickupPoint: 'COM3 Print Shop',
-    supplierName: 'Printer @ Com 2',
-    dropoffPoint: 'Central Library',
-    dueBy: '21 Apr, 5:00 PM',
-    credits: 10,
-    userName: 'Alex Tan',
-    pins: {
-      pickup: SAMPLE_TASK_LOCATIONS['COM3 Print Shop'],
-      dropoff: SAMPLE_TASK_LOCATIONS['Central Library'],
-    },
-  },
-]
 
 export default function ExplorePage() {
   const [query, setQuery] = useState('')
-  const [sort, setSort] = useState(ERRAND_SORTS[0].value)
-  const [page, setPage] = useState(1)
-  const totalPages = Math.max(1, Math.ceil(AVAILABLE_TASKS.length / PAGE_SIZE))
+  const [sort, setSort] = useState<ErrandSort>(ERRAND_SORTS[0].value)
+  const list = useErrandList('explore', 'active', query, sort)
 
   return (
     <div className="explore-page">
       <Header initialSection="Explore" />
       <main className="explore-content">
-        <CreditBanner />
+        <CreditBanner pending={list.pending} />
         <Toolbar
           subheader="Available Tasks"
           search={{
@@ -57,29 +42,21 @@ export default function ExplorePage() {
             onChange: setQuery,
             placeholder: 'Search errands',
             label: 'Search errands',
+            maxLength: 100,
           }}
           sort={{
             options: ERRAND_SORTS,
             value: sort,
-            onChange: setSort,
+            onChange: (value) => setSort(toErrandSort(value) ?? sort),
             label: 'Sort available tasks',
           }}
         />
-        <section className="task-card-list" aria-label="Available tasks">
-          {AVAILABLE_TASKS.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map(
-            (card) => (
-              <TaskCard
-                key={card.title}
-                {...card}
-                actionLabel={card.type === 'open' ? 'Accept' : undefined}
-              />
-            ),
-          )}
-        </section>
-        <Pagination
-          page={page}
-          totalPages={totalPages}
-          onPageChange={setPage}
+        <ErrandList
+          list={list}
+          viewer="explore"
+          label="Available tasks"
+          emptyText="No errands are waiting for a courier."
+          onClearSearch={() => setQuery('')}
         />
       </main>
     </div>

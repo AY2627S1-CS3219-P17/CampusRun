@@ -10,10 +10,12 @@
 // Scope: Wired the create-request header action to the shared request editor dialog.
 // Tool: Codex (OpenAI), date: 2026-10-17
 // Scope: Removed duplicated navigation state and derived the active section from the page prop.
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
+// Scope: AI-added opening My Requests after a request is created.
 // Author review: <to be completed by author>
 
 import { useRef, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { DropdownMenu } from 'radix-ui'
 import { LogOut, Plus, Store, UserRound } from 'lucide-react'
 import EditInfoDialog from './edit-user-info'
@@ -37,6 +39,7 @@ type HeaderProps = {
 export default function Header({ initialSection }: HeaderProps) {
   const [editingInfo, setEditingInfo] = useState(false)
   const [creatingRequest, setCreatingRequest] = useState(false)
+  const navigate = useNavigate()
   const createRef = useRef<HTMLButtonElement>(null)
   const profileRef = useRef<HTMLButtonElement>(null)
 
@@ -136,6 +139,9 @@ export default function Header({ initialSection }: HeaderProps) {
       {creatingRequest && (
         <UpdateRequestDialog
           onClose={() => setCreatingRequest(false)}
+          onCreated={() => {
+            void navigate('/my-requests')
+          }}
           onRestoreFocus={() => createRef.current?.focus()}
         />
       )}

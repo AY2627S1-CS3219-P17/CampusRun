@@ -5,43 +5,43 @@
 // Scope: Showed Picked up and Delivered header actions for active courier tasks.
 // Tool: Codex (OpenAI), date: 2026-10-17
 // Scope: Simplified action label typing and per-tab pagination initialization.
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
+// Scope: AI-replaced the sample tasks with My Tasks from the Order Service, loaded as the list scrolls.
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
+// Scope: AI-moved the card actions into the shared errand mapper.
 // Author review: <to be completed by author>
 
 import { useState } from 'react'
 import CreditBanner from '../../components/shared/credit-banner'
-import TaskCard, { type TaskCardType } from '../../components/shared/task-card'
-import Pagination from '../../components/shared/pagination'
+import ErrandList from '../../components/shared/errand-list'
 import Toolbar from '../../components/shared/toolbar'
 import Header from '../../components/shared/header'
-import { ERRAND_SORTS, ERRAND_TABS } from '../../utils/toolbar'
-import { SAMPLE_TASK_CARDS } from '../../utils/sample-task-cards'
+import {
+  ERRAND_SORTS,
+  ERRAND_TABS,
+  toErrandSort,
+  toErrandTab,
+} from '../../utils/toolbar'
+import { useErrandList } from '../../utils/use-errand-list'
+import type { ErrandSort, ErrandTab } from '../../types/order'
 import './explore.css'
 
-const PAGE_SIZE = 2
-const ACTIVE_ACTIONS: Partial<Record<TaskCardType, string>> = {
-  accepted: 'Picked up',
-  'picked-up': 'Delivered',
-}
-
 export default function MyTasksPage() {
-  const [tab, setTab] = useState(ERRAND_TABS[0].value)
+  const [tab, setTab] = useState<ErrandTab>(ERRAND_TABS[0].value)
   const [query, setQuery] = useState('')
-  const [sort, setSort] = useState(ERRAND_SORTS[0].value)
-  const [pages, setPages] = useState<Record<string, number>>({})
-  const page = pages[tab] ?? 1
-  const cards = SAMPLE_TASK_CARDS[tab] ?? []
-  const totalPages = Math.max(1, Math.ceil(cards.length / PAGE_SIZE))
+  const [sort, setSort] = useState<ErrandSort>(ERRAND_SORTS[0].value)
+  const list = useErrandList('tasks', tab, query, sort)
 
   return (
     <div className="explore-page">
       <Header initialSection="My Tasks" />
       <main className="explore-content">
-        <CreditBanner />
+        <CreditBanner pending={list.pending} />
         <Toolbar
           tabs={{
             options: ERRAND_TABS,
             value: tab,
-            onChange: setTab,
+            onChange: (value) => setTab(toErrandTab(value) ?? tab),
             label: 'Errand status',
           }}
           search={{
@@ -49,31 +49,21 @@ export default function MyTasksPage() {
             onChange: setQuery,
             placeholder: 'Search errands',
             label: 'Search errands',
+            maxLength: 100,
           }}
           sort={{
             options: ERRAND_SORTS,
             value: sort,
-            onChange: setSort,
+            onChange: (value) => setSort(toErrandSort(value) ?? sort),
             label: 'Sort errands',
           }}
         />
-        <section className="task-card-list" aria-label={`${tab} tasks`}>
-          {cards.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((card) => (
-            <TaskCard
-              key={card.type}
-              {...card}
-              actionLabel={
-                tab === 'active' ? ACTIVE_ACTIONS[card.type] : undefined
-              }
-            />
-          ))}
-        </section>
-        <Pagination
-          page={page}
-          totalPages={totalPages}
-          onPageChange={(nextPage) =>
-            setPages((current) => ({ ...current, [tab]: nextPage }))
-          }
+        <ErrandList
+          list={list}
+          viewer="courier"
+          label={`${tab} tasks`}
+          emptyText={`You have no ${tab} tasks.`}
+          onClearSearch={() => setQuery('')}
         />
       </main>
     </div>

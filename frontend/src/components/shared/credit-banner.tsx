@@ -4,11 +4,14 @@
 // Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 // Scope: Replaced the placeholder amounts with the Credit Service wallet, polled while a change is pending,
 //        and added the pending state.
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
+// Scope: AI-added reloading the wallet straight away when an errand changes.
 // Author review: <to be completed by author>
 
 import { useEffect, useState } from 'react'
 import { CircleDollarSign } from 'lucide-react'
 import { getWallet } from '../../api/credit'
+import { onErrandsChanged } from '../../utils/errand-events'
 import { ApiError } from '../../api/client'
 import type { Wallet } from '../../types/credit'
 import sharedBanner from '../../assets/shared_banner.png'
@@ -49,6 +52,8 @@ export default function CreditBanner({ pending = false }: CreditBannerProps) {
         })
         .finally(() => {
           if (controller.signal.aborted) return
+          // An errand change can start a second load while one is in flight; keep a single timer
+          window.clearTimeout(timer)
           timer = window.setTimeout(
             load,
             waiting ? PENDING_POLL_MS : IDLE_POLL_MS,
@@ -56,8 +61,14 @@ export default function CreditBanner({ pending = false }: CreditBannerProps) {
         })
     }
     load()
+    // e.g. a new errand's reward is about to be reserved
+    const stopListening = onErrandsChanged(() => {
+      window.clearTimeout(timer)
+      load()
+    })
 
     return () => {
+      stopListening()
       controller.abort()
       window.clearTimeout(timer)
     }

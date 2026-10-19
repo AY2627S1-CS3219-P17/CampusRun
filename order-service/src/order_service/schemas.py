@@ -4,7 +4,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: AI-added the camelCase base models, the paged list shape and the delivery location models, copied from
 #        supplier-service/schemas.py, with optional floor and description; the supplier summary and the errand
-#        request, response and list models (2026-10-19).
+#        request, response and list models, and the errand edit model (2026-10-19).
 # Author review: <to be completed by author>
 
 """Request and response models. Every value from a client is checked here.
@@ -209,6 +209,47 @@ class ErrandCreate(RequestModel):
         missing = [f for f in ("building", "latitude", "longitude") if getattr(self, f) is None]
         if missing:
             raise FieldError(missing[0], "This field is required.")
+        return self
+
+
+class ErrandUpdate(RequestModel):
+    """PATCH /{id} body, while the errand is OPEN. Only the fields sent change.
+
+    A new delivery point works as on create: deliveryLocationId, or building, floor, description, latitude and
+    longitude for a new location of your own. Changing that location's own details is PATCH /delivery-locations/{id}.
+    """
+
+    title: Title | None = None
+    supplier_id: Annotated[int, Field(ge=1)] | None = None
+    delivery_location_id: Annotated[int, Field(ge=1)] | None = None
+    building: LocationName | None = None
+    floor: Floor | None = None
+    description: LocationDescription | None = None
+    latitude: Latitude | None = None
+    longitude: Longitude | None = None
+    deliver_by: DeliverBy | None = None
+    credits: Credits | None = None
+
+    @field_validator("title", "supplier_id", "delivery_location_id", "deliver_by", "credits", mode="before")
+    @classmethod
+    def fields_cannot_be_cleared(cls, value):
+        if value is None:
+            raise ValueError("This field is required and cannot be empty.")
+        return value
+
+    @model_validator(mode="after")
+    def check_changes(self):
+        if not self.model_fields_set:
+            raise ValueError("Send at least one field to change.")
+        # Intersection operation on Sets
+        custom = {"building", "floor", "description", "latitude", "longitude"} & self.model_fields_set
+        if custom:
+            if self.delivery_location_id is not None:
+                raise ValueError("Choose a saved delivery location or enter a new one, not both.")
+            # Prevent creating a new incomplete delivery location
+            missing = [f for f in ("building", "latitude", "longitude") if getattr(self, f) is None]
+            if missing:
+                raise FieldError(missing[0], "This field is required.")
         return self
 
 

@@ -11,17 +11,17 @@ from zoneinfo import ZoneInfo
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import func, insert, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from order_service.config import get_settings
 from order_service.tables import delivery_locations, errands, outbox
 from tests.conftest import auth
+from tests.factories import ALICE, BOB, CAROL, add_errand, add_location, count
 from tests.fakes import FakeServices
 
 pytestmark = pytest.mark.anyio
 
-ALICE, BOB, CAROL = 1, 2, 3
 ADMIN = auth(user_id=100, role="admin")
 
 
@@ -48,35 +48,6 @@ async def create(client: AsyncClient, user_id: int = ALICE, **overrides) -> dict
     response = await client.post("/", headers=auth(user_id), json=body(**overrides))
     assert response.status_code == 201, response.text
     return response.json()
-
-
-async def count(engine: AsyncEngine, table) -> int:
-    async with engine.connect() as conn:
-        return await conn.scalar(select(func.count()).select_from(table))
-
-
-async def add_location(engine: AsyncEngine, **values) -> int:
-    defaults = {"name": "COM3", "latitude": 1.29494, "longitude": 103.77438, "predefined": True}
-    async with engine.begin() as conn:
-        return await conn.scalar(
-            insert(delivery_locations).values(**defaults | values).returning(delivery_locations.c.id)
-        )
-
-
-async def add_errand(engine: AsyncEngine, location_id: int, **values) -> int:
-    """An errand in any state, written directly (the transitions that get it there come in Task 7)."""
-    defaults = {
-        "requester_id": ALICE,
-        "state": "OPEN",
-        "credit_status": "HELD",
-        "title": "Collect printed notes",
-        "reward": 10,
-        "supplier_id": 1,
-        "delivery_location_id": location_id,
-        "deliver_by": datetime.now(UTC) + timedelta(hours=1),
-    }
-    async with engine.begin() as conn:
-        return await conn.scalar(insert(errands).values(**defaults | values).returning(errands.c.id))
 
 
 async def titles(client: AsyncClient, url: str, user_id: int = BOB) -> list[str]:

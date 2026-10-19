@@ -182,7 +182,7 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 
 **Decisions made by the team before or during AI assistance:**
 - The Order Service integrates with the Credit Service through the asynchronous credit-transaction workflow.
-- Only the requester cancels, and only while OPEN. Unfinished errands expire after a soft deadline plus a 5-minute grace period, and the reserved credits are returned.
+- Only the requester cancels, and only while OPEN. Unfinished errands expire at their deadline; only the requester's confirmation gets a 5-minute grace period after it. The reserved credits are returned.
 - Supplier details are not copied onto errands.
 - Delivery locations move from supplier-service to order-service.
 - Supplier-name search runs on the server.

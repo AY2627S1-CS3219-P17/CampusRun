@@ -960,7 +960,7 @@ Update these two files so that there are a total of 100 suppliers and 100 delive
 
 ---
 
-## Session 12 — 2026-10-18 to 2026-10-19 — order-service plan and Tasks 1 to 6
+## Session 12 — 2026-10-18 to 2026-10-19 — order-service plan and Tasks 1 to 7
 
 - **Tool:** Claude Code (model: Claude Opus 5.5)
 - **Author:** nathantew14
@@ -1249,5 +1249,123 @@ nevermind, lets just go with just option 1. it's good enough for the scope of th
 ```
 
 **Key response:** Recorded decision D13 in the plan: accept refuses a deactivated supplier (409) and goes ahead if supplier-service is down, which the AI chose. The UI shows "Supplier unavailable". Added the chosen approach and the rejected alternatives, highlighted, under Part 1's question on referenced data changing in the D3 document. Pointed out that the document's earlier "set the id to 0" line now contradicts this.
+
+### 18. Task 7: errand actions and editing (generate)
+
+```text
+yup update the usage log, commit Task 6 and start Task 7
+```
+
+**Key response:** Committed Task 6. Added `transitions.py`, where each state change is one conditional `UPDATE` with its credit command written to the outbox in the same transaction, and these endpoints:
+- `POST /{id}/accept`, `/pickup`, `/deliver`, `/complete` and `/cancel`;
+- `PATCH /{id}`: editing an OPEN errand whose credits are HELD, sending `AdjustReservation` only if the reward changes.
+
+When an update matches no rows, `explain()` gives a 404, 403 or 409 with a specific message. Tests cover the D3 corner cases: 10 simultaneous accepts (one wins), accept racing cancel, complete sent twice (one `TransferCredits`), the deadline guards, the delivery-location share lock and a deactivated supplier. Raised five decisions for review.
+
+### 19. Reviewing the Task 7 decisions (review, explain, generate)
+
+```text
+decisions to review:
+2. i want only confirmation to work for 5 mins after deadline, everything else should be cutoff at the deadline
+3. why can't we allow errands to be extended indefinitely? also, what are credit audit flags? is that by aaron?
+5. what do you mean by "The supplier check only runs when an accept could succeed"? does the supplier check not run when the errand is created, or when it is edited? are you saying the supplier check waits for the credit transaction to finish first?
+```
+
+**Key response:**
+- **Point 2:** accept, pick up, deliver, cancel and edit now stop at the deadline, and only `complete` works during the 5-minute grace period. Updated the tests and the plan (D2, D3, the state machine and Task 9's sweeper rule).
+- **Point 3:** explained that the 24-hours-from-posting cap on edits was the AI's own addition. The credit audit (by Aaron, `credit-service/src/credit_service/audit.py`) warns about holds older than 48 hours, so errands extended indefinitely would show up there. Recommended keeping the cap.
+- **Point 5:** the supplier is always checked on create, on edit only when `supplierId` changes, and on accept only when the errand is OPEN with credits HELD. Nothing waits for a credit transaction.
+
+```text
+keep the cap, update the logs, commit and start task 8
+```
+
+(The session moved on to the questions below before this was done; the commit happened in entry 23.)
+
+### 20. The share lock in accept (explain, generate)
+
+```text
+what's this select for?
+```
+
+**Key response:** Explained that the `SELECT … FOR SHARE` on the delivery location exists only for its lock. A location edit locks the row `FOR UPDATE` and then checks that no courier is on the way, so without the share lock an accept could slip in between and the drop-off could move under a courier. A share lock lets accepts at the same location run together.
+
+```text
+add the share-lock explanation above that select block
+```
+
+**Key response:** Added the explanation as comments in `transitions.py`. Only comments changed.
+
+### 21. `Engine` versus `Connection` (explain, generate)
+
+```text
+why do some endpoints use engine.connect, while others get a Connection object straight away
+```
+
+```text
+what determines whether the endpoint receives a connection or engine? is it just the method signature of the endpoint function?
+```
+
+**Key response:** Endpoints that call other services take `Engine` and open short transactions themselves, so no connection is held during an HTTP call; the others take `Connection`, one transaction for the whole request. FastAPI chooses by the parameter's type (`Annotated[..., Depends(...)]` in `db.py`), not its name.
+
+```text
+add a brief explaination for share-lock vs update lock and the engine vs connection in the @../CS3219-Milestone-D3.docx
+```
+
+**Key response:** Added both explanations, highlighted in yellow, under Part 1.4 (corner cases) and Part 1.5 (integration) of the D3 document.
+
+### 22. The locked read in edit (explain)
+
+```text
+why is this lock block not just put below with the setting of the update fields?
+```
+
+```text
+is the block just checking if the reward update actually changes anything?
+```
+
+**Key response:** Yes: the edit needs the old reward to decide whether to send `AdjustReservation`, and `RETURNING` only gives values after the update. The row lock keeps that comparison valid until the update runs. Skipping an unchanged reward matters because the edit form is likely to send every field back. Offered a single-statement version using Postgres 18's `RETURNING old.reward`, but recommended keeping the locked read for readability.
+
+### 23. The errand edit model's validators (explain, generate)
+
+```text
+what are these functions for
+```
+
+```text
+so is this ErrandUpdate used before the request gets to the PATCH handler, or after?
+```
+
+```text
+does the @src/order_service/schemas.py file also contain classes that act on the response from the endpoint?
+```
+
+```text
+what's this doing
+```
+
+```text
+does this mean that the errand update must change the building AND lat/long?
+```
+
+```text
+so it's just making sure the builidng, lat and long is not cleared by the update?
+```
+
+```text
+so it's preventing updates to the errand that would create incomplete delivery location records?
+```
+
+**Key response:**
+- **When it runs:** FastAPI validates the body into `ErrandUpdate` before calling the handler, and a failure becomes a 422 without the handler running. Response models such as `ErrandOut` run after the handler, filtering and serialising what it returns.
+- **`fields_cannot_be_cleared`:** rejects an explicit `null` for fields an errand must always have.
+- **`check_changes`:** rejects an empty body, rejects both a saved location and a new one, and requires `building`, `latitude` and `longitude` whenever any custom-location field is sent. Custom fields always create a new delivery location; they never edit the current one. The check gives a clear 422 instead of a database `NOT NULL` error on insert.
+- **Unused code:** pointed out that the `new_delivery_point` property was unused, after wrongly describing it as used by the handler.
+
+```text
+remove the unused new_delivery_point property, keep the cap, commit task 7 and update ai logs
+```
+
+**Key response:** Removed the property, kept the 24-hour cap on edits, and committed Task 7. 210 tests passed.
 
 ---

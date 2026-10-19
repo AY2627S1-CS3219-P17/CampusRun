@@ -36,8 +36,8 @@ RabbitMQ 4.3, uv, pytest. These are the same versions as credit-service.
 | # | Decision | Effect on the design |
 |---|---|---|
 | D1 | Only the requester can cancel, and only while OPEN | One cancel rule: `state='OPEN' AND requester_id=:me`. No courier or admin cancel. |
-| D2 | `deliver_by` is a soft deadline with a grace period of `EXPIRY_GRACE_MINUTES` (5). At `deliver_by + grace`, any errand that hasn't finished becomes EXPIRED | OPEN, ACCEPTED, PICKED_UP and DELIVERED all expire. The courier isn't paid; the requester gets the reserved credits back (`ReleaseCredits{reason:'EXPIRED'}`). |
-| D3 | A delivered but unconfirmed errand waits for confirmation or for expiry | No auto-complete. `complete` works until `deliver_by + grace`. |
+| D2 | `deliver_by` is the deadline for everything except the requester's confirmation, which has a grace period of `EXPIRY_GRACE_MINUTES` (5). Errands not yet delivered expire at `deliver_by`; DELIVERED ones at `deliver_by + grace` | OPEN, ACCEPTED, PICKED_UP and DELIVERED all expire. The courier isn't paid; the requester gets the reserved credits back (`ReleaseCredits{reason:'EXPIRED'}`). |
+| D3 | A delivered but unconfirmed errand waits for confirmation or for expiry | No auto-complete. `complete` works until `deliver_by + grace`; nothing else does. |
 | D4 | No `pending` tab | Pending = an errand whose `credit_status` is PENDING. It appears in the normal tabs with a "credits processing" badge. |
 | D5 | No accept cutoff before the deadline | Accept only requires `deliver_by > now()`. |
 | D6 | Don't copy supplier details onto errands | Store `supplier_id` only. Responses fetch the supplier live, so supplier edits change existing errands (accepted trade-off). |
@@ -54,9 +54,10 @@ other pending cases (COMPLETED with the transfer in flight, CANCELLED/EXPIRED wi
 column handles all three. A new state would only cover the first, and would change the glossary's lifecycle. Explore
 lists only errands whose credits are HELD, so to couriers an OPEN-and-pending errand doesn't exist yet.
 
-**Consequence of D2 and D3 to be ready to explain at D3:** if the deadline is 5:00, the courier can still deliver
-and the requester can still confirm until 5:05. After that the errand expires and the courier isn't paid. The grace
-period moves the cut-off but doesn't remove it.
+**Consequence of D2 and D3 to be ready to explain at D3:** if the deadline is 5:00, the courier must deliver by
+5:00, and the requester can still confirm until 5:05. An errand not delivered by 5:00 expires then; one delivered but
+not confirmed by 5:05 expires then, and the courier isn't paid. The grace period moves the confirmation cut-off but
+doesn't remove it.
 
 ## 2. D3 readiness check (everything except the Order Service)
 
@@ -178,23 +179,24 @@ racing requests, so the loser matches 0 rows. On 0 rows, read the errand again a
 - **409** if it's in the wrong state or past the deadline, e.g. `{"detail": "This errand was already accepted."}`.
 
 Two time guards, written below as `due` and `live`:
-- `due` = `now() < deliver_by`: required to **accept** or **edit**. A courier can't take an errand that's already
-  late, and Explore hides it.
-- `live` = `now() < deliver_by + grace`: required to **pick up**, **deliver**, **complete** and **cancel**.
+- `due` = `now() < deliver_by`: required to **accept**, **pick up**, **deliver**, **cancel** and **edit**.
+- `live` = `now() < deliver_by + grace`: required to **complete** only, so the requester can confirm an errand that
+  was delivered just before the deadline.
 
-The sweeper expires at `deliver_by + grace`. A sweeper that runs late can't let anything progress after that.
+The sweeper expires errands not yet delivered at `deliver_by`, and DELIVERED ones at `deliver_by + grace`. Every
+action checks its own time guard, so a sweeper that runs late can't let anything progress.
 
 | From → To | By | Guard (in the WHERE) | Credit command | credit_status |
 |---|---|---|---|---|
 | — → OPEN | requester `POST /` | supplier exists and active; location in area; deadline in range | ReserveCredits | PENDING |
 | OPEN → OPEN (edit) | requester `PATCH /{id}` | `state='OPEN' AND requester_id=:me AND credit_status='HELD'` + due | AdjustReservation if `credits` changed (revision+1) | PENDING if adjusted |
 | OPEN → ACCEPTED | courier `/accept` | `state='OPEN' AND credit_status='HELD' AND requester_id<>:me` + due | — | HELD |
-| ACCEPTED → PICKED_UP | courier `/pickup` | `state='ACCEPTED' AND courier_id=:me` + live | — | HELD |
-| PICKED_UP → DELIVERED | courier `/deliver` | `state='PICKED_UP' AND courier_id=:me` + live | — | HELD |
+| ACCEPTED → PICKED_UP | courier `/pickup` | `state='ACCEPTED' AND courier_id=:me` + due | — | HELD |
+| PICKED_UP → DELIVERED | courier `/deliver` | `state='PICKED_UP' AND courier_id=:me` + due | — | HELD |
 | DELIVERED → COMPLETED | requester `/complete` | `state='DELIVERED' AND requester_id=:me` + live | TransferCredits | PENDING |
-| OPEN → CANCELLED | requester `/cancel` | `state='OPEN' AND requester_id=:me` (any credit_status) + live | ReleaseCredits(CANCELLED) | PENDING |
+| OPEN → CANCELLED | requester `/cancel` | `state='OPEN' AND requester_id=:me` (any credit_status) + due | ReleaseCredits(CANCELLED) | PENDING |
 | OPEN → CANCELLED | reply handler | reserve reply REJECTED | — | REJECTED |
-| OPEN/ACCEPTED/PICKED_UP/DELIVERED → EXPIRED | sweeper | `state IN (...) AND deliver_by + grace <= now()` | ReleaseCredits(EXPIRED) | PENDING |
+| OPEN/ACCEPTED/PICKED_UP → EXPIRED; DELIVERED → EXPIRED | sweeper | `deliver_by <= now()`; for DELIVERED, `deliver_by + grace <= now()` | ReleaseCredits(EXPIRED) | PENDING |
 
 An edit while the reserve reply is still outstanding (credit PENDING) gets 409 "Your credits are still being
 reserved. Try again in a moment."
@@ -203,8 +205,8 @@ reserved. Try again in a moment."
 - **Two couriers accept at once:** the second waits for the row lock, then re-checks `state='OPEN'`, matches 0 rows
   and gets 409.
 - **Accept at the same moment as cancel or expiry:** whichever commits first wins. Accept checks the deadline itself.
-- **Delivery near the deadline:** deliver and complete still work during the grace period. The sweeper and these
-  actions race only at `deliver_by + grace`, where the row lock decides.
+- **Delivery near the deadline:** the courier must deliver by the deadline; the requester can still confirm during the
+  grace period. The sweeper and a confirmation race only at `deliver_by + grace`, where the row lock decides.
 - **Complete submitted twice:** the second gets 409 "already completed". Even a duplicate TransferCredits pays only
   once.
 - **Cancel before the reserve reply arrives:** ReleaseCredits follows ReserveCredits in outbox order. The credit
@@ -429,13 +431,22 @@ Stop for review after each task. Every task ends with passing tests (testcontain
   - 10 accepts gathered → exactly one 200;
   - accept vs cancel gathered → one winner, and the outbox matches it;
   - complete twice → 200 then 409, with one TransferCredits;
-  - accept or edit after `deliver_by` → 409; deliver and complete inside the grace period → 200; any action after
-    `deliver_by + grace` (sweeper not run) → 409;
+  - every action except complete after `deliver_by` → 409; complete inside the grace period → 200, after it → 409
+    (sweeper not run);
   - edit while ACCEPTED → 409; edit while credit PENDING → 409;
   - reward edits enqueue AdjustReservation with revisions 1 then 2;
   - accept refused while an adjust is pending;
   - accept refused (409) when the supplier is deactivated; allowed when supplier-service is down;
   - accept takes a share lock on its delivery location (`SELECT … FOR SHARE`), so it can't interleave with a location edit's in-use check (Task 3 takes `FOR UPDATE`).
+- **As built:**
+  - `transitions.py` holds each transition. `explain()` turns a 0-row update into 404, 403 or 409 with a specific
+    message, e.g. "This errand isn't ready to deliver yet."
+  - A courier who loses an accept race gets 409 "This errand has already been accepted.", not 404, even though the
+    errand is no longer visible to them. This reveals only an errand's state, never its details.
+  - Accept checks the supplier only when the accept could succeed.
+  - Edits can't move `deliverBy` past 24 hours after the errand was created, so repeated edits can't keep credits
+    held past the credit audit's 48-hour mark.
+  - Raising the reward runs the advisory wallet check on the difference.
 
 ### Task 8: Reply handling
 - **Files:** `credit.py`, tests.
@@ -454,8 +465,8 @@ Stop for review after each task. Every task ends with passing tests (testcontain
 - `order-worker` runs the relay, the reply consumer (prefetch 10) and the sweeper loop. It handles SIGTERM like
   `credit-worker`, and logs every transition and message with errand id, type and message_id (Part 3.4).
 - **Tests:**
-  - expire_due expires OPEN, ACCEPTED, PICKED_UP and DELIVERED past `deliver_by + grace`, with
-    ReleaseCredits(EXPIRED); an errand inside the grace period is untouched; COMPLETED is untouched;
+  - expire_due expires OPEN, ACCEPTED and PICKED_UP past `deliver_by`, and DELIVERED past `deliver_by + grace`, with
+    ReleaseCredits(EXPIRED); a DELIVERED errand inside the grace period is untouched; COMPLETED is untouched;
   - two sweepers gathered → each errand expired once;
   - reconcile resends after the threshold and not before;
   - a fake reply from the wrong user_id is rejected; a valid one is applied then acked; a DB error leaves it unacked.
@@ -499,8 +510,8 @@ Stop for review after each task. Every task ends with passing tests (testcontain
 
 ## Review focus
 
-1. Accept, cancel, complete and expiry racing at `deliver_by + grace`: exactly one outcome, and the outbox
-   matches it (Tasks 7 and 9).
+1. Actions racing expiry at the deadline (and complete racing it at `deliver_by + grace`): exactly one outcome, and
+   the outbox matches it (Tasks 7 and 9).
 2. Replies duplicated or out of order never move `credit_status` backwards (Task 8).
 3. Supplier-service or user-service down during a list or create: lists still work with nulls; create fails cleanly
    with nothing written (Tasks 4 and 6).

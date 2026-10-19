@@ -178,7 +178,7 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 **Prompts and key exchanges:** see [`ai/usage-log.md`](ai/usage-log.md).
 ### Order Service (Nathan)
 
-**Tool and mode:** Claude Code (model: Claude Opus 5.5), review, explain and generate (2026-10-18).
+**Tool and mode:** Claude Code (model: Claude Opus 5.5), review, explain and generate (2026-10-18 to 2026-10-19).
 
 **Decisions made by the team before or during AI assistance:**
 - The Order Service integrates with the Credit Service through the asynchronous credit-transaction workflow.
@@ -186,6 +186,8 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 - Supplier details are not copied onto errands.
 - Delivery locations move from supplier-service to order-service.
 - Supplier-name search runs on the server.
+- Errands whose supplier has been deactivated can't be accepted; the requester can still cancel them. Cancelling them automatically, by a sweeper or a supplier-service event, was rejected for this project's scope.
+- Edits can't move an errand's deadline more than 24 hours past when it was posted, so reserved credits can't be held indefinitely.
 - The work is built one reviewed task at a time.
 
 **Used for:**
@@ -195,5 +197,14 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
   - Alembic, `db.py`, `auth.py`, `errors.py`, `broker.py`, `/health`, and a placeholder worker;
   - autofill moved into `routes/autofill.py`;
   - Testcontainers-based tests.
+- **Generating** the data layer (Tasks 2 and 3):
+  - the `errands` and `outbox` tables with CHECK constraints, the errand states and credit statuses, and the outbox relay generalised from user-service;
+  - delivery locations copied from supplier-service: personal locations private to their creator, predefined ones editable by admins, no edits while a courier is on the way, and a seed of the 100 predefined locations.
+- **Generating** the calls to other services (Tasks 4 and 5):
+  - one pooled client that forwards the user's token, for supplier details (batched through supplier-service's new `GET /lookup`), usernames and the advisory wallet check, each falling back to `null` when the service is down;
+  - user-service's internal `GET /internal/usernames`, which the gateway blocks, so only services can call it.
+- **Generating** errand creation, reading and listing (Task 6): create writes the errand, its delivery point and the `ReserveCredits` command in one short transaction, after the supplier and wallet checks; Explore, My Requests, My Tasks and an admin list search, sort and page. No database connection is held while another service is called.
+- **Generating** the errand lifecycle (Task 7): accept, pick up, deliver, complete, cancel and edit, each one conditional `UPDATE` with its credit command written to the outbox in the same transaction, and refusals explained as 404, 403 or 409.
+- **Explaining** the code for the author's review: the delivery-location share lock, `Engine` versus `Connection` dependencies, the locked read in edit, and the request and response models. Explanations of the locks and transactions were added to the D3 document.
 
-**Verification:** 9 order-service tests pass; `docker compose config`, `nginx -t` and the image build pass. <!-- TODO(author): describe your own review and testing -->
+**Verification:** 210 order-service tests pass, including concurrent accepts, accept against cancel, complete sent twice and the deadline guards; the race tests passed on six repeated runs. Task 1 also passed `docker compose config`, `nginx -t` and the image build. <!-- TODO(author): describe your own review and testing -->

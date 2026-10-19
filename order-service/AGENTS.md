@@ -17,7 +17,8 @@ worker. The design and the build order are in `docs/order-service-plan.md`.
 - Credit commands are written to the `outbox` table in the same transaction as the change that causes them, and
   `order-worker` publishes them. Never publish from a request handler.
 - Every state change is one conditional `UPDATE ... WHERE <expected state and party> RETURNING`. Zero rows means the
-  change is refused (404, 403 or 409), never a read-then-write.
+  change is refused (404, 403 or 409). Never decide a change from an unlocked read: a value needed before the update
+  (e.g. the old reward in `edit`) is read with `FOR UPDATE`, and the `UPDATE` still carries its full guard.
 - Never call another service while holding a database connection. Endpoints that call other services take `Engine`
   (not `Connection`), make those calls first, then open one short transaction (`engine.begin()`).
 - Reply handling must be idempotent and acknowledge only after the transaction commits. Never `nack(requeue=True)`.

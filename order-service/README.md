@@ -3,21 +3,23 @@ AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-10-17
 Scope: Documented the database-free AI autofill endpoint, local settings, and Groq free-plan limits.
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
-Scope: Documented the database, the order-worker process, the local development commands and delivery locations.
+Scope: Documented the database, the order-worker process, the local development commands and delivery locations;
+       AI-updated the overview and added the demo section (2026-10-19).
 Author review: <to be completed by author>
 -->
 
 # Order service
 
-The Order Service will run the errand lifecycle and send the matching credit commands to the Credit Service over
-RabbitMQ (see [docs/order-service-plan.md](../docs/order-service-plan.md)). It's being built step by step: so far it
-has its database, migrations, the `order-worker` process, delivery locations and AI autofill for the create-request form.
+The Order Service runs the errand lifecycle (OPEN, ACCEPTED, PICKED_UP, DELIVERED, then COMPLETED, CANCELLED or
+EXPIRED) and sends the matching credit commands to the Credit Service over RabbitMQ. It also owns delivery locations
+and serves AI autofill for the create-request form. The design and its decisions are in
+[docs/order-service-plan.md](../docs/order-service-plan.md).
 
 It has two processes built from one image:
 
 - **order-service**: the HTTP API. It never connects to RabbitMQ.
-- **order-worker**: publishes queued credit commands, applies the credit service's replies and expires errands past
-  their deadline. For now it only connects to the database and RabbitMQ and waits.
+- **order-worker**: publishes queued credit commands (the outbox relay), applies the credit service's replies, and
+  runs the sweeper, which expires errands past their deadline and resends credit commands stuck PENDING.
 
 ## Run locally with the full app
 
@@ -41,6 +43,21 @@ Groq key, but autofill returns 503 until it is configured.
 | `mise run serve` | `uv run fastapi dev src/order_service/main.py --port 8004` | API at http://localhost:8004, docs at http://localhost:8004/docs |
 | `mise run worker` | `uv run order-worker` | Runs the background worker |
 | `mise run test` | `uv run pytest --cov=order_service` | Tests, in a throwaway Postgres container (Docker must be running; RabbitMQ not needed) |
+
+## Demo
+
+With the full stack running, from the repository root:
+
+```
+order-service/scripts/demo.sh            # every step, without stopping
+order-service/scripts/demo.sh --pause    # wait for Enter before each step, for presenting
+```
+
+It registers three new students and walks through: wallets opening, an errand's credits being reserved, two couriers
+accepting at once (one gets 409), pick-up, delivery and payment, a repeated confirmation (409, nobody paid twice),
+the credit worker stopped while an errand completes (the transfer waits in RabbitMQ) and restarted, an errand expiring
+and its credits being released, and the credit audit. It stops and restarts `credit-worker` and moves one errand's
+deadline into the past with `psql`. Set `ORDER_SWEEP_SECONDS=5` in the root `.env` for a faster expiry step.
 
 ## Delivery locations
 

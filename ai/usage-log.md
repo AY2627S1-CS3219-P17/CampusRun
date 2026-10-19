@@ -960,7 +960,7 @@ Update these two files so that there are a total of 100 suppliers and 100 delive
 
 ---
 
-## Session 12 — 2026-10-18 to 2026-10-19 — order-service plan and Tasks 1 to 10
+## Session 12 — 2026-10-18 to 2026-10-19 — order-service plan and Tasks 1 to 12
 
 - **Tool:** Claude Code (model: Claude Opus 5.5)
 - **Author:** nathantew14
@@ -1494,5 +1494,70 @@ update ai logs, commit task 10 and start task 11
 ```
 
 **Key response:** Committed Task 10 and started Task 11.
+
+### 32. Task 11: the demo script and the D3 answers (generate, review)
+
+(Continued from the previous entry's prompt, `update ai logs, commit task 10 and start task 11`.)
+
+**Key response:** Wrote `order-service/scripts/demo.sh`, a nine-step demo through the gateway (`--pause` waits between steps):
+- registration and wallets, and an errand's credits reserved;
+- two couriers accepting at once;
+- pick-up, delivery and payment, and a repeated confirmation;
+- `credit-worker` stopped while an errand completes, then restarted;
+- an errand expiring and its credits being released;
+- the credit audit.
+
+It ran end to end against the author's stack, which was also the first full run of Task 9's worker, and the audit reported no problems. Updated the order-service README.
+
+The D3 document was open in Word, so the AI didn't write to it, and listed what it still needed: Part 1.1's database justification still described suppliers, its `orders` table was out of date, and Parts 1.2–1.5, 2.4 and 3.1–3.4 had no answers yet. Also flagged that Part 2's credit tables don't match Aaron's built code.
+
+```text
+why does the deadline get moved into the past at step 8
+```
+
+**Key response:** Deadlines must be at least 15 minutes away, longer than the D3 demo slot, so the script sets one errand's deadline to a minute ago with `psql`. Everything after that is the real sweeper, outbox and credit worker. Offered a configurable minimum instead; the author kept the shortcut.
+
+```text
+keep the psql shortcut, i've closed the doc
+```
+
+**Key response:** Added highlighted answers to the D3 document:
+- **Part 1.1:**
+  - a database justification for errands;
+  - a corrected errands table and the outbox table.
+- **Part 1.2:** the state-transition table.
+- **Part 1.3:**
+  - validation and error responses;
+  - the endpoint table;
+  - identity and relationship checks.
+- **Part 1.4:** answers to the concurrency questions.
+- **Part 1.5:** the demo steps.
+- **Part 2.4:** the Order Service's side of the failure answers.
+- **Parts 3.1–3.4:**
+  - the workflow and technology choice;
+  - a sample command and reply with each field explained;
+  - repeated messages, the outbox, and what can be observed.
+
+The document passed XML validation, and the original was backed up first.
+
+```text
+"■    The PENDING rule also stops a later reply from clearing a refusal. If the requester cancels while the reserve is still being processed and the reserve is refused, the errand records INSUFFICIENT_CREDITS. The release's reply that follows describes the same refused reservation, but without a rejection; the credits are no longer PENDING, so it's ignored and the reason is kept."
+
+this sentence in the doc is really confusing
+```
+
+**Key response:** Rewrote the bullet in the D3 document as one lead sentence and four numbered steps through the order of events.
+
+```text
+i'm getting command not found cat/curl for the demo script
+```
+
+**Key response:** The script had been run with zsh, where the variable `path` is tied to `PATH`, so the helper's `local path=...` emptied `PATH`. Renamed it to `route`, and the `status` helper to `last_status`. Added a guard that re-runs the script under bash. Tested by starting it with zsh.
+
+```text
+update ai logs, commit task 11 and start task 12
+```
+
+**Key response:** Committed Task 11 and started Task 12.
 
 ---

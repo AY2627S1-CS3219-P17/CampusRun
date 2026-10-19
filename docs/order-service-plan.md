@@ -510,6 +510,9 @@ Stop for review after each task. Every task ends with passing tests (testcontain
   README/AGENTS.md updated.
 - **Check:** the supplier-service tests pass; nothing references `/api/suppliers/delivery-locations` (it's unused
   by the frontend today).
+- **As built:** migration `d69018bb0bdf` drops the table and its index. Its downgrade recreates the table empty;
+  the rows aren't restored. Order-service seeded its copy from the CSV, so rows an admin added in supplier-service
+  after that weren't carried over. Done before Task 9 had been run end to end, at the author's request.
 
 ### Task 11: Docs and D3 answers
 - Update the D3 doc: Part 1 schema (sections 4 and 5 here), the state table, the failure answers, and a Part 3

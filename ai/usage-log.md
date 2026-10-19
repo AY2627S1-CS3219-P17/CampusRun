@@ -1463,4 +1463,36 @@ i accidentally continued the tasks in another chat instance. here are the update
 
 **Key response:** Checked that the branch matched the handoff. Added the missing Task 9 entry to this log, then started Task 10.
 
+### 30. Task 10: delivery locations removed from supplier-service (generate)
+
+(Continued from the previous entry's prompt.)
+
+**Key response:** Removed delivery locations from supplier-service, now that order-service has its own copy:
+- the routes, the request and response models, the table, the seed code and CSV, and the tests;
+- added migration `d69018bb0bdf`, which drops the table, and whose downgrade recreates it empty.
+
+Supplier-service's 61 tests passed, and the migration upgraded, downgraded and re-upgraded on a throwaway database. The AI pointed out:
+- the plan said to wait until Task 9 had run end to end;
+- rows an admin had added in supplier-service wouldn't carry over, because order-service seeded from the CSV;
+- the change removes Aaron's code.
+
+### 31. Checking it on the running stack (review)
+
+```text
+run the checks for me this time while i look over the code
+```
+
+**Key response:** Ran the three checks against the author's local stack:
+- `supplier-migrate` applied `d69018bb0bdf` and kept the existing suppliers;
+- after `docker compose up -d --build`, supplier-service's API no longer listed `/delivery-locations`;
+- `/api/orders/delivery-locations` returned the 100 predefined locations with a test token, signed inside the order-service container so the secret wasn't printed, and 401 without one.
+
+Also confirmed that `order-worker` started cleanly against RabbitMQ and was waiting for credit replies; a full command-and-reply run is left for Task 11's demo.
+
+```text
+update ai logs, commit task 10 and start task 11
+```
+
+**Key response:** Committed Task 10 and started Task 11.
+
 ---

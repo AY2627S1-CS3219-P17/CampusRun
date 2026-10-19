@@ -2,6 +2,8 @@
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated test fixtures: a migrated test database, a test client and token helpers;
 #        AI-changed tokens to carry the "type" claim (Claude Code, 2026-09-27), then the "role" claim (2026-09-28).
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
+# Scope: AI-removed the delivery location parts, which moved to the order service.
 # Author review: <to be completed by author>
 
 """Tests run against a real Postgres, migrated with Alembic.
@@ -81,7 +83,7 @@ def anyio_backend():
 async def engine():
     engine = create_engine(get_settings(), poolclass=NullPool)
     async with engine.begin() as conn:
-        await conn.execute(text("TRUNCATE suppliers, delivery_locations RESTART IDENTITY"))
+        await conn.execute(text("TRUNCATE suppliers RESTART IDENTITY"))
     yield engine
     await engine.dispose()
 

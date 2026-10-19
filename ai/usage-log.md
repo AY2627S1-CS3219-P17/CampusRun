@@ -959,3 +959,605 @@ Update these two files so that there are a total of 100 suppliers and 100 delive
 - **Existing rows:** the AI flagged 14 supplier rows and the YIH delivery location as 240–1,080 m from their buildings. These were not changed.
 
 ---
+
+## Session 12 — 2026-10-18 to 2026-10-19 — order-service plan and Tasks 1 to 12
+
+- **Tool:** Claude Code (model: Claude Opus 5.5)
+- **Author:** nathantew14
+- **Modes:** explain, review, generate
+- **Timestamps:** only the date was recorded for this session; individual prompt times were not captured.
+- **Decisions made before the session (by the team, not AI):** the Order Service integrates with the Credit Service through the asynchronous credit-transaction workflow; the D3 milestone document defines the scope.
+
+### 1. D3 gap check and order-service plan (review, explain)
+
+```text
+@frontend/CS3219-Milestone-D3.docx we need to implement everything required in this document. the credit service, and frontend should already be done. the asynchronous worfklow we picked should be the processing of credit transactions, which the order service will have to integrate with.
+check that everything except the order service has been implemented, then draft a plan for building the order service.
+
+for the structure of the service directory/code, evaluate which existing service to follow. my initial thought is to follow user-service but split the endpoints into routes like the other services.
+```
+
+**Key response:** Checked the other services by reading the code. User, supplier and credit services were implemented. Gaps found:
+- The frontend's errand pages still used sample data, and the create form had no backend.
+- `docs/credit-service-plan.md` was cited in several places but never committed.
+- The local `.env` was missing the RabbitMQ and credit variables.
+- user-service had no way to look up another user's username.
+- The gateway was missing an exact-match `/api/orders` route.
+
+Recommended credit-service as the code skeleton (separate worker process, reply consumer, `routes/` package, field-level 422 errors), with the outbox taken from user-service. Wrote `docs/order-service-plan.md`: schema, state machine, credit commands over RabbitMQ, API, tasks and open questions.
+
+### 2. Team decisions on the open questions (explain, generate)
+
+```text
+2. getting the plan, we'll do what we can without assuming steps first
+3. do i need to fill all the env vars for the rabbitmq service?
+4. do we need a usernames GET, or can we just return them with the errands?
+5. add the corresponding nginx block for orders
+6. yes, non of the infra is in place yet. we will need to do it. is it in the plan?
+7. we are decided to move the delivery_lcoations table to the order service. in the plan, make a copy of it first, then remove it from the supplier service after when the switch is confirmed
+8. we don't want to copy supplier details, and will accept the tradeoff of supplier edits changing existing errands
+9. is the background sweeper run on some kind of cronjob?
+
+answers that you needed
+a. only requester can cancel when the order is in OPEN state. keeps it simple.
+b. once deadline is passed, errand switches to expired state. perhaps with the background switcher? the in-progress errand is thus effectively suspended. no credit is transferred to the courier; reserved credit is returned to the requester's wallet balance
+c. ignore the pending tab; it is for pending orders, but we'll just put the pending orders with the rest of the orders with a different visual. pending orders are orders that have pending credit transaction. they can either be open and pending (which actually means the order is not open yet, not sure if we should have a separate state for that), completed and pending (transaction from requester to courier in progress), or cancelled/expired and pending (transaction to return reserved credits back to the requester's wallet in progress).
+d. delivered but unconfirmed errands stay unconfirmed until they are confirmed, or until they expire, where it then transits to expired. same as in point b.
+e. write the frontend connection into the plan, at the end.
+f. no need, lets just keep it simple for now.
+
+build method: I want it to happen step by step, so I can manually review each stop and talk through it, ask questions, discuss and maybe make changes.
+
+update and confirm the plan again, don't start building yet
+```
+
+**Key response:** Added the `location = /api/orders` gateway block. Updated the plan with the team's decisions:
+- requester-only cancel while OPEN;
+- every unfinished errand expires at the deadline, and the reserved credits are released;
+- usernames are returned inside errand responses, via an internal user-service endpoint blocked at the gateway;
+- delivery locations move to order-service, copied first and removed from supplier-service afterwards;
+- no copying of supplier details.
+
+Recommended no separate "reserving" state, since a `credit_status` column covers every pending case. Explained that the sweeper is a polling loop in the worker, not a cronjob. Moved the infrastructure to Task 1.
+
+### 3. Supplier-name search and remaining rules (explain)
+
+```text
+8. i would think searching by supplier names is important. how does the frontend do it currently? when the filter updates, does it filter the loaded errands on the client, or is every change to the filter a backend request?
+
+separate points:
+1. alright, we'll skip the "reserving" state, and just use the combination of the errand state and its credit_status
+2. delivering just before the deadline: how about just a 5 minute grace period after the deadline before its marked as expired? so the deadline that the requester sets is actually the soft "delivery" deadline.
+3. editing: requester can only edit before courier accepts, i.e. when the errand is still in OPEN state
+4. just active. we won't manage whether the supplier is open or not.
+
+we can start after the mechanism for supplier name searching is decided.
+```
+
+**Key response:** Found that the errand pages stored the search text but never used it, while the Suppliers page sends a debounced backend request on every change. Proposed server-side search: order-service asks supplier-service for the ids of matching suppliers, then filters errands by title, delivery location or those ids in one query, so pagination stays correct. The team accepted this. Added the 5-minute grace period, with separate time rules for accept and edit (before the deadline) and for pick-up, deliver, complete and cancel (before the deadline plus grace).
+
+### 4. Task 1: infrastructure and service skeleton (generate, review)
+
+```text
+this works. lets start with Task 1. i've moved us to a new branch, and also started docker so you can do any syntax checks necessary
+```
+
+**Key response:** Added `order-db`, `order-migrate` and `order-worker` to `compose.yaml`, and `ORDER_DB_*` to both `.env.example` files. In order-service:
+- Copied `db.py`, `errors.py`, `auth.py` and `broker.py` from credit-service.
+- Set up Alembic with an empty schema.
+- Moved autofill into `routes/autofill.py` without logic changes.
+- Added `/health` and a placeholder `order-worker`.
+- Added Testcontainers-based tests (9 passing).
+
+`docker compose config`, `nginx -t` and the image build passed. The stack itself was not started. The AI noted one behaviour change: autofill's 422 body now uses the shared field-error format.
+
+### 5. Alembic template and auth consistency (explain)
+
+```text
+1. what is script.py.mako?
+2. it seems that you've matched @order-service/src/order_service/auth.py to @credit-service/src/credit_service/auth.py. should we match @user-service/src/user_service/auth.py to the rest as well?
+```
+
+**Key response:** Explained that `script.py.mako` is the template Alembic fills in when generating a migration file. Compared the three `auth.py` files and recommended aligning user-service's error messages and role check while keeping `OAuth2PasswordBearer`, since user-service issues the tokens. The team chose to fold this into Task 5, including renaming to the shared names, which Nathan will do with VS Code's symbol rename.
+
+### 6. Task 2: errand tables, states and outbox (generate)
+
+```text
+fold into task 5. i'd say go ahead with the renaming. should be simple with VSCode's object/symbol renaming? i can handle that directly via vscode when we get to task 5.
+
+otherwise, commit task 1, update AI logs, and lets move to task 2
+```
+
+**Key response:** Committed Task 1 and recorded the user-service `auth.py` alignment in the plan's Task 5. Added:
+- `states.py`: errand states, credit statuses, cancel reasons, and the rule for where an errand's credits should end up;
+- the `errands` and `outbox` tables, with CHECK constraints that reject inconsistent errands (own courier, reward outside 1–100, courier missing or present in the wrong state, cancel reason);
+- `outbox.py`, generalised from user-service. The routing key is looked up from the command name, and it publishes on the worker's connection.
+
+The migration was generated against a throwaway Postgres container; 47 tests passed.
+
+### 7. Credit status naming and the errand row before the credit check (explain)
+
+```text
+1. change HELD to RESERVED
+2. in the selected lines, should we even make the order row until the credit availability has been checked? also, what does NO_WALLET mean?
+```
+
+(Selected: the `INSUFFICIENT_CREDITS` and `NO_WALLET` cancel reasons in `states.py`.)
+
+**Key response:** Renamed the status. Explained that the errand row must exist first:
+- Reserving first risks credits held for an errand that then fails to be created.
+- A synchronous check breaks the rule that balance changes go over RabbitMQ.
+- The row starts OPEN with credits PENDING and isn't shown to couriers until the reply arrives.
+- An advisory wallet pre-check (Task 6) stops most refused errands from being created.
+
+NO_WALLET means the requester's wallet hasn't been opened yet. The credit service records a refusal permanently per errand id, so the errand must be cancelled rather than retried.
+
+```text
+1. ah if aaron used held, we'd just keep it is held for consistency
+2. this is more of discussion: is open wallet really necessary to be asynchronous? it shouldn't conflict with other credit transactions, and should be fast, so i don't see why not just trigger it synchronously
+```
+
+**Key response:** Reverted to `HELD`. Explained that OpenWallet is asynchronous because registration writes to two databases that can't share a transaction, not because of conflicts or speed. A synchronous call still needs retries, a repair job and idempotency. It would also make registration depend on the credit service and add the first HTTP endpoint that changes a balance. Recommended keeping it asynchronous, since it answers D3 Part 2.2; the team agreed.
+
+### 8. Task 3: delivery locations copied into order-service (generate)
+
+```text
+commit and start task 3
+```
+
+**Key response:** Committed Task 2. Copied `delivery_locations` from supplier-service (table, seed CSV, seed command and endpoints) and extended it:
+- a `floor` column, an optional description, and integer user ids;
+- an explicit `predefined` flag, chosen by the AI instead of "`created_by` empty means predefined", so admin-added locations keep their author;
+- predefined names unique only among predefined locations;
+- personal locations visible and editable only by their creator; predefined ones editable only by admins;
+- no edits while an errand using the location has a courier on the way.
+
+The AI narrowed the plan's "past OPEN" rule so finished errands don't block edits. `errands.delivery_location_id` got its foreign key, and `order-migrate` now seeds the 100 locations. Supplier-service was not changed. 72 tests passed.
+
+### 9. Recording the constraints in the D3 document (generate)
+
+```text
+1. add these constraints back into the @CS3219-Milestone-D3.docx with yellow highlight so i can update it on my side
+2. same as above
+3. sounds good
+
+update @ai/usage-log.md, commit and move on to task 4
+```
+
+**Key response:** Edited the `delivery_locations` table in the D3 document, highlighted in yellow:
+- added the `floor`, `active`, `predefined` and `updated_by` rows;
+- noted that `created_by` is optional and `name` is varchar(100);
+- added bullets on the unique-name rule, the owner and coordinate checks, who can see and edit which locations, the in-use rule and the errands foreign key.
+
+The document passed XML validation. The AI couldn't render it, because LibreOffice isn't installed.
+
+### 10. Task 4: service clients (generate)
+
+```text
+1. add these constraints back into the @CS3219-Milestone-D3.docx with yellow highlight so i can update it on my side
+2. same as above
+3. sounds good
+
+update @ai/usage-log.md, commit and move on to task 4
+```
+
+**Key response:** Committed Task 3. Added `clients.py`: one pooled HTTP client for the Supplier, User and Credit Services, which forwards the signed-in user's token and only reads. What each call returns when its service is down:
+- supplier details, usernames, supplier search and the wallet check return `None`, so pages still load;
+- checking the chosen supplier before creating an errand fails with 503;
+- an unknown or deactivated supplier gets a 422 on `supplierId`.
+
+`get_wallet` replaced the planned `available_credits`, so a PENDING wallet can be told apart from a low balance. 94 tests passed.
+
+### 11. Batched supplier lookups and calls between services (generate, explain)
+
+```text
+1. requests for supplier details: can we batch them instead of a separate request for each supplier?
+2. do calls to other services go through the api gateway? does it still work if the services or not contained in one docker private network?
+```
+
+**Key response:** Added `GET /lookup?ids=1&ids=2` to supplier-service: up to 100 suppliers by id in one call, deactivated ones included and unknown ids left out, with 6 tests (64 supplier-service tests passed). The order-service client now uses it in batches of 100. The planned username lookup was switched to the same repeated-parameter form. 95 order-service tests passed.
+
+Explained that services call each other directly on the Compose private network by service name, not through the gateway, which keeps internal-only endpoints internal. Other services' addresses are settings, so outside one Docker network they're set to the services' own addresses. The gateway block on internal endpoints would then need replacing with internal-only ingress or service-to-service authentication.
+
+### 12. Communication isolation in the D3 document (generate)
+
+```text
+looks good. add the point on communication isolation to the @CS3219-Milestone-D3.docx doc, same thing highlightin the addition. then, update ai logs, commit, and let me do the rename before starting task 5
+```
+
+**Key response:** Added six highlighted points under Part 4.3's "communication isolation" question:
+- the gateway as the only public entry point;
+- direct service-to-service calls on the private network;
+- internal-only endpoints blocked at the gateway;
+- the forwarded user token;
+- per-service RabbitMQ logins for credit changes;
+- service addresses as configuration, and what changes outside one Docker network.
+
+The document passed XML validation.
+
+### 13. Task 5: username lookup and user-service auth messages (generate)
+
+```text
+on second thought, i think my naming still makes more sense. i'll leave it as-is for now. proceed to task 5.
+```
+
+**Key response:** Kept user-service's names, as the author decided. Changed `auth.py`:
+- "expired" and "not valid" session messages, the same as the other services;
+- a token whose role isn't `student` or `admin`, or whose `sub` isn't a number, is rejected;
+- a full-sentence message for a wrong role.
+
+Added `GET /internal/usernames?ids=1&ids=2`: up to 100 ids, returning only ids and usernames, never emails. Added a gateway block that answers `/api/users/internal/` with a 404. A throwaway nginx container confirmed the block also catches `//`, `./`, `../` and URL-encoded variants of the path. 118 user-service tests passed (16 new).
+
+### 14. Checking the gateway block (explain)
+
+```text
+curl localhost:8080/api/users/internal/usernames?ids=1
+```
+
+(Output: `(eval):1: no matches found: localhost:8080/api/users/internal/usernames?ids=1`)
+
+**Key response:** Explained that zsh treats `?` as a filename wildcard and stops before curl runs. Quoting the URL avoids it, and the expected answer is `{"detail":"Not Found"}`.
+
+### 15. Task 6: creating, reading and listing errands (generate)
+
+```text
+update ai logs, commit and start task 6
+```
+
+**Key response:** Committed Task 5. Added:
+- `POST /`: creating an errand;
+- `GET /`: Explore;
+- `GET /{id}`: one errand;
+- `GET /me/requests` and `GET /me/tasks`, by tab;
+- `GET /admin/errands`: a read-only admin view.
+
+Creating an errand checks the supplier (422, or 503 if it can't be checked) and the wallet (advisory). It then writes the errand, OPEN with credits PENDING, and its `ReserveCredits` command in one transaction. A new delivery point from the form becomes the requester's own location.
+
+Lists search title, location and supplier names, sort, and page. Each page makes one batched supplier call and one username call. Fields fall back to `null` when a service is down. The AI named the reward `credits` to match the frontend, and treated a time with no zone as campus time. 134 tests passed.
+
+### 16. Service calls outside database transactions (review, generate)
+
+```text
+"Database transaction held open during service calls.": any reason why this was chosen? why not just have the checks before the transaction opens?
+```
+
+**Key response:** Acknowledged that this wasn't a deliberate choice: the shared `Connection` dependency opened the transaction before the handler ran. A slow service could therefore hold database connections and exhaust the pool at peak load. Changed the code:
+- create calls supplier-service and credit-service first, then writes in one short transaction;
+- lists search suppliers before the query, and add supplier details and names after the connection is closed.
+
+Added an `Engine` dependency, a test that no connection is checked out during any service call, and the rule in `order-service/AGENTS.md`. 135 tests passed.
+
+### 17. Errands whose supplier is deactivated (explain)
+
+```text
+is there any existing or planned way to deal with possible de-sync where a supplier is deactivated a moment after the check? or actually, can we just deal with it more generally: what do we do with existing errands if a supplier is deactivated? does the background sweeper help to cancel those errands?
+```
+
+**Key response:** Nothing handled it, and the sweeper only expires errands and resends credit commands. Compared three options:
+- refuse accepts for a deactivated supplier, and show it in the UI;
+- have the sweeper cancel OPEN errands, which needs service-to-service credentials;
+- a `SupplierDeactivated` event from supplier-service.
+
+```text
+how about option 3 but through a synchronous endpoint on order-service?
+```
+
+**Key response:** Explained that a synchronous callback would work as a best-effort cleanup, but a failed call is never retried, and it makes supplier-service depend on order-service. Neither the event nor the callback closes the race at creation, so an accept-time check is needed regardless.
+
+```text
+nevermind, lets just go with just option 1. it's good enough for the scope of this project. add option 2 and 3 as alternatives that were rejected to @CS3219-Milestone-D3.docx
+```
+
+**Key response:** Recorded decision D13 in the plan: accept refuses a deactivated supplier (409) and goes ahead if supplier-service is down, which the AI chose. The UI shows "Supplier unavailable". Added the chosen approach and the rejected alternatives, highlighted, under Part 1's question on referenced data changing in the D3 document. Pointed out that the document's earlier "set the id to 0" line now contradicts this.
+
+### 18. Task 7: errand actions and editing (generate)
+
+```text
+yup update the usage log, commit Task 6 and start Task 7
+```
+
+**Key response:** Committed Task 6. Added `transitions.py`, where each state change is one conditional `UPDATE` with its credit command written to the outbox in the same transaction, and these endpoints:
+- `POST /{id}/accept`, `/pickup`, `/deliver`, `/complete` and `/cancel`;
+- `PATCH /{id}`: editing an OPEN errand whose credits are HELD, sending `AdjustReservation` only if the reward changes.
+
+When an update matches no rows, `explain()` gives a 404, 403 or 409 with a specific message. Tests cover the D3 corner cases: 10 simultaneous accepts (one wins), accept racing cancel, complete sent twice (one `TransferCredits`), the deadline guards, the delivery-location share lock and a deactivated supplier. Raised five decisions for review.
+
+### 19. Reviewing the Task 7 decisions (review, explain, generate)
+
+```text
+decisions to review:
+2. i want only confirmation to work for 5 mins after deadline, everything else should be cutoff at the deadline
+3. why can't we allow errands to be extended indefinitely? also, what are credit audit flags? is that by aaron?
+5. what do you mean by "The supplier check only runs when an accept could succeed"? does the supplier check not run when the errand is created, or when it is edited? are you saying the supplier check waits for the credit transaction to finish first?
+```
+
+**Key response:**
+- **Point 2:** accept, pick up, deliver, cancel and edit now stop at the deadline, and only `complete` works during the 5-minute grace period. Updated the tests and the plan (D2, D3, the state machine and Task 9's sweeper rule).
+- **Point 3:** explained that the 24-hours-from-posting cap on edits was the AI's own addition. The credit audit (by Aaron, `credit-service/src/credit_service/audit.py`) warns about holds older than 48 hours, so errands extended indefinitely would show up there. Recommended keeping the cap.
+- **Point 5:** the supplier is always checked on create, on edit only when `supplierId` changes, and on accept only when the errand is OPEN with credits HELD. Nothing waits for a credit transaction.
+
+```text
+keep the cap, update the logs, commit and start task 8
+```
+
+(The session moved on to the questions below before this was done; the commit happened in entry 23.)
+
+### 20. The share lock in accept (explain, generate)
+
+```text
+what's this select for?
+```
+
+**Key response:** Explained that the `SELECT … FOR SHARE` on the delivery location exists only for its lock. A location edit locks the row `FOR UPDATE` and then checks that no courier is on the way, so without the share lock an accept could slip in between and the drop-off could move under a courier. A share lock lets accepts at the same location run together.
+
+```text
+add the share-lock explanation above that select block
+```
+
+**Key response:** Added the explanation as comments in `transitions.py`. Only comments changed.
+
+### 21. `Engine` versus `Connection` (explain, generate)
+
+```text
+why do some endpoints use engine.connect, while others get a Connection object straight away
+```
+
+```text
+what determines whether the endpoint receives a connection or engine? is it just the method signature of the endpoint function?
+```
+
+**Key response:** Endpoints that call other services take `Engine` and open short transactions themselves, so no connection is held during an HTTP call; the others take `Connection`, one transaction for the whole request. FastAPI chooses by the parameter's type (`Annotated[..., Depends(...)]` in `db.py`), not its name.
+
+```text
+add a brief explaination for share-lock vs update lock and the engine vs connection in the @../CS3219-Milestone-D3.docx
+```
+
+**Key response:** Added both explanations, highlighted in yellow, under Part 1.4 (corner cases) and Part 1.5 (integration) of the D3 document.
+
+### 22. The locked read in edit (explain)
+
+```text
+why is this lock block not just put below with the setting of the update fields?
+```
+
+```text
+is the block just checking if the reward update actually changes anything?
+```
+
+**Key response:** Yes: the edit needs the old reward to decide whether to send `AdjustReservation`, and `RETURNING` only gives values after the update. The row lock keeps that comparison valid until the update runs. Skipping an unchanged reward matters because the edit form is likely to send every field back. Offered a single-statement version using Postgres 18's `RETURNING old.reward`, but recommended keeping the locked read for readability.
+
+### 23. The errand edit model's validators (explain, generate)
+
+```text
+what are these functions for
+```
+
+```text
+so is this ErrandUpdate used before the request gets to the PATCH handler, or after?
+```
+
+```text
+does the @src/order_service/schemas.py file also contain classes that act on the response from the endpoint?
+```
+
+```text
+what's this doing
+```
+
+```text
+does this mean that the errand update must change the building AND lat/long?
+```
+
+```text
+so it's just making sure the builidng, lat and long is not cleared by the update?
+```
+
+```text
+so it's preventing updates to the errand that would create incomplete delivery location records?
+```
+
+**Key response:**
+- **When it runs:** FastAPI validates the body into `ErrandUpdate` before calling the handler, and a failure becomes a 422 without the handler running. Response models such as `ErrandOut` run after the handler, filtering and serialising what it returns.
+- **`fields_cannot_be_cleared`:** rejects an explicit `null` for fields an errand must always have.
+- **`check_changes`:** rejects an empty body, rejects both a saved location and a new one, and requires `building`, `latitude` and `longitude` whenever any custom-location field is sent. Custom fields always create a new delivery location; they never edit the current one. The check gives a clear 422 instead of a database `NOT NULL` error on insert.
+- **Unused code:** pointed out that the `new_delivery_point` property was unused, after wrongly describing it as used by the handler.
+
+```text
+remove the unused new_delivery_point property, keep the cap, commit task 7 and update ai logs
+```
+
+**Key response:** Removed the property, kept the 24-hour cap on edits, and committed Task 7. 210 tests passed.
+
+### 24. The "never a read-then-write" rule (explain, generate)
+
+```text
+what does the never a read-and-write mean, and what was it meant for?
+update the readme disclosure at the end.
+```
+
+**Key response:** Explained the race the rule prevents: two couriers both read OPEN, then both write ACCEPTED, and the second overwrites the first. A conditional `UPDATE` re-checks its `WHERE` under the row lock, so the loser matches 0 rows. Pointed out that `edit` and `accept` read before writing, but with `FOR UPDATE`, so the rule's wording was stricter than the code. Added Tasks 2–7, two of the author's decisions and the verification to the README's Order Service disclosure.
+
+```text
+change agents.md to improve the wording, then commit and move on to Task 8
+```
+
+**Key response:** Reworded the rule in `order-service/AGENTS.md` to "never decide a change from an unlocked read" and committed. For Task 8, read the credit service's reply format and ledger. With the advisor, settled on these rules for applying a reply:
+- only while the errand's credits are PENDING;
+- only if the reply reaches the target for the errand's state;
+- for an unfinished errand, only if the revision matches.
+
+Added `credit.py` (`ReservationResult`, `apply_reply`) and 19 tests. Fixed three stale grace-period comments. 229 tests passed.
+
+### 25. Explaining an unclear sentence (explain)
+
+```text
+"For example, a HELD reply for an errand cancelled in the meantime is ignored, and the release's reply settles it." what are you even saying
+```
+
+**Key response:** Apologised for the compressed sentence. Walked through it step by step: the requester cancels before the reserve's reply arrives, so the HELD reply is ignored and the RELEASED reply is applied. The credits stay PENDING in between, so the reconciler can resend the release if its reply is lost.
+
+### 26. Adding reply handling to the D3 document (generate)
+
+```text
+add the three unexpected cases and the guarding against clearning of credit rejection "a release reply that would otherwise clear the credit_rejection set by a refused reserve. The PENDING check is what stops it." into @../CS3219-Milestone-D3.docx
+```
+
+**Key response:** Added highlighted bullets under Part 3 §3 ("Does message ordering matter?"):
+- the PENDING and target rules, as context;
+- the guard that keeps a refused reserve's `credit_rejection`;
+- three cases: a refused reward increase, a transfer the courier has no wallet for, and a transfer naming another courier.
+
+The document passed validation, and the previous version was backed up.
+
+### 27. Who calls `apply_reply` (explain)
+
+```text
+who calls apply_reply
+```
+
+**Key response:** Only the tests, for now. Task 9's reply consumer in `order-worker` will:
+- check the sender and the message type;
+- parse the reply;
+- call `apply_reply` in a transaction, and acknowledge only after it commits.
+
+```text
+update ai logs, commit task 8 and start task 9
+```
+
+**Key response:** Committed Task 8 and started Task 9.
+
+### 28. Task 9: the order-worker (generate)
+
+(Continued from the previous entry's prompt, `update ai logs, commit task 8 and start task 9`.)
+
+**Key response:** Built `order-worker`'s three loops, run side by side so the process exits (and Compose restarts it) if one fails:
+- **Outbox relay:** publishes the credit commands written by the API.
+- **Reply consumer:**
+  - checks the message type and that it was sent by the `credit-service` login;
+  - applies each reply with retries while the database is unavailable;
+  - acknowledges only after the commit;
+  - drops invalid or repeatedly failing replies.
+- **Sweeper:**
+  - expires OPEN, ACCEPTED and PICKED_UP errands at their deadline, and DELIVERED ones when the grace period ends, with `ReleaseCredits`;
+  - resends the right command for errands whose credits have been PENDING longer than `RECONCILE_AFTER_MINUTES`.
+
+Both sweeper jobs work in batches, and the rows they pick are locked and skipped by other sweepers. Also:
+- added `GET /admin/stuck`;
+- fixed `expiresAt`, which now includes the grace period only for delivered errands;
+- added logs for creations, transitions, replies, expiries and resends;
+- added the `SWEEP_SECONDS`, `RECONCILE_AFTER_MINUTES` and `WORKER_PREFETCH` settings.
+
+256 tests passed, including two sweepers and two reconcilers at once. Decided by the AI, for the author to review:
+- replies that are dropped are recovered by the reconciler, so no dead-letter queue was added for the reply queue;
+- a resend bumps the errand's `updated_at`.
+
+The worker had not been run end to end against RabbitMQ.
+
+### 29. Merging a parallel session (explain)
+
+```text
+i accidentally continued the tasks in another chat instance. here are the updates. after this, update the AI usage logs, and start on task 10
+```
+
+(Followed by a handoff summary of Tasks 7 to 9 from the other session: commits `dd3c9f4`, `77b2099`, `2ab934c` and `4156a78`, the design of `credit.py`, `worker.py` and `sweeper.py`, and the D3 document additions.)
+
+**Key response:** Checked that the branch matched the handoff. Added the missing Task 9 entry to this log, then started Task 10.
+
+### 30. Task 10: delivery locations removed from supplier-service (generate)
+
+(Continued from the previous entry's prompt.)
+
+**Key response:** Removed delivery locations from supplier-service, now that order-service has its own copy:
+- the routes, the request and response models, the table, the seed code and CSV, and the tests;
+- added migration `d69018bb0bdf`, which drops the table, and whose downgrade recreates it empty.
+
+Supplier-service's 61 tests passed, and the migration upgraded, downgraded and re-upgraded on a throwaway database. The AI pointed out:
+- the plan said to wait until Task 9 had run end to end;
+- rows an admin had added in supplier-service wouldn't carry over, because order-service seeded from the CSV;
+- the change removes Aaron's code.
+
+### 31. Checking it on the running stack (review)
+
+```text
+run the checks for me this time while i look over the code
+```
+
+**Key response:** Ran the three checks against the author's local stack:
+- `supplier-migrate` applied `d69018bb0bdf` and kept the existing suppliers;
+- after `docker compose up -d --build`, supplier-service's API no longer listed `/delivery-locations`;
+- `/api/orders/delivery-locations` returned the 100 predefined locations with a test token, signed inside the order-service container so the secret wasn't printed, and 401 without one.
+
+Also confirmed that `order-worker` started cleanly against RabbitMQ and was waiting for credit replies; a full command-and-reply run is left for Task 11's demo.
+
+```text
+update ai logs, commit task 10 and start task 11
+```
+
+**Key response:** Committed Task 10 and started Task 11.
+
+### 32. Task 11: the demo script and the D3 answers (generate, review)
+
+(Continued from the previous entry's prompt, `update ai logs, commit task 10 and start task 11`.)
+
+**Key response:** Wrote `order-service/scripts/demo.sh`, a nine-step demo through the gateway (`--pause` waits between steps):
+- registration and wallets, and an errand's credits reserved;
+- two couriers accepting at once;
+- pick-up, delivery and payment, and a repeated confirmation;
+- `credit-worker` stopped while an errand completes, then restarted;
+- an errand expiring and its credits being released;
+- the credit audit.
+
+It ran end to end against the author's stack, which was also the first full run of Task 9's worker, and the audit reported no problems. Updated the order-service README.
+
+The D3 document was open in Word, so the AI didn't write to it, and listed what it still needed: Part 1.1's database justification still described suppliers, its `orders` table was out of date, and Parts 1.2–1.5, 2.4 and 3.1–3.4 had no answers yet. Also flagged that Part 2's credit tables don't match Aaron's built code.
+
+```text
+why does the deadline get moved into the past at step 8
+```
+
+**Key response:** Deadlines must be at least 15 minutes away, longer than the D3 demo slot, so the script sets one errand's deadline to a minute ago with `psql`. Everything after that is the real sweeper, outbox and credit worker. Offered a configurable minimum instead; the author kept the shortcut.
+
+```text
+keep the psql shortcut, i've closed the doc
+```
+
+**Key response:** Added highlighted answers to the D3 document:
+- **Part 1.1:**
+  - a database justification for errands;
+  - a corrected errands table and the outbox table.
+- **Part 1.2:** the state-transition table.
+- **Part 1.3:**
+  - validation and error responses;
+  - the endpoint table;
+  - identity and relationship checks.
+- **Part 1.4:** answers to the concurrency questions.
+- **Part 1.5:** the demo steps.
+- **Part 2.4:** the Order Service's side of the failure answers.
+- **Parts 3.1–3.4:**
+  - the workflow and technology choice;
+  - a sample command and reply with each field explained;
+  - repeated messages, the outbox, and what can be observed.
+
+The document passed XML validation, and the original was backed up first.
+
+```text
+"■    The PENDING rule also stops a later reply from clearing a refusal. If the requester cancels while the reserve is still being processed and the reserve is refused, the errand records INSUFFICIENT_CREDITS. The release's reply that follows describes the same refused reservation, but without a rejection; the credits are no longer PENDING, so it's ignored and the reason is kept."
+
+this sentence in the doc is really confusing
+```
+
+**Key response:** Rewrote the bullet in the D3 document as one lead sentence and four numbered steps through the order of events.
+
+```text
+i'm getting command not found cat/curl for the demo script
+```
+
+**Key response:** The script had been run with zsh, where the variable `path` is tied to `PATH`, so the helper's `local path=...` emptied `PATH`. Renamed it to `route`, and the `status` helper to `last_status`. Added a guard that re-runs the script under bash. Tested by starting it with zsh.
+
+```text
+update ai logs, commit task 11 and start task 12
+```
+
+**Key response:** Committed Task 11 and started Task 12.
+
+---

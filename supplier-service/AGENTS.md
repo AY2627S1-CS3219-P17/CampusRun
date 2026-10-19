@@ -1,12 +1,12 @@
 <!--
 AI Assistance Disclosure:
 Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
-Scope: AI-generated agent notes for the supplier service.
+Scope: AI-generated agent notes for the supplier service; AI-removed delivery locations (Claude Code, 2026-10-19).
 Author review: <to be completed by author>
 -->
 
 # Service Overview
-The Supplier Service stores and serves campus suppliers (pickup points) and delivery locations for CampusRun (backlog
+The Supplier Service stores and serves campus suppliers (pickup points) for CampusRun (backlog
 F4 to F6, N3). It uses FastAPI with SQLAlchemy Core (async, asyncpg) on its own Postgres database, with Alembic
 migrations, following the same structure as `user-service`. It should be containerised and deployable via docker.
 
@@ -19,5 +19,5 @@ migrations, following the same structure as `user-service`. It should be contain
   `Food`, `Drinks`, `Shopping`, `Printing`.
 - Validate every input in `schemas.py`. Errors use `{"detail": ...}`, and 422 responses add `"errors": {field: message}`.
 - One transaction per request (`db.Connection`), committed before the response is sent.
-- Suppliers and delivery locations are retained and can be deactivated with `active: false`.
+- Suppliers are retained and can be deactivated with `active: false`. Delivery locations moved to the order service.
 - Every AI-influenced file carries an "AI Assistance Disclosure" header (see the root `AGENTS.md`).

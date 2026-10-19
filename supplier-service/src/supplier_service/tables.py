@@ -1,13 +1,15 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated suppliers and delivery_locations tables, indexes and constraints,
-#        following the conventions in user-service/tables.py.
+#        following the conventions in user-service/tables.py; AI-removed delivery_locations, which moved to the
+#        order service (Claude Code, 2026-10-19).
 # Author review: <to be completed by author>
 
 """Database schema (SQLAlchemy Core).
 
-Two independent tables. Other services refer to rows here only by id; there
-are no foreign keys across services because each owns its own database.
+Suppliers. Other services refer to rows here only by id; there are no foreign
+keys across services because each owns its own database. Delivery locations
+moved to the order service (docs/order-service-plan.md, D7).
 """
 
 from sqlalchemy import (
@@ -97,23 +99,6 @@ suppliers = Table(
     ),
 )
 
-delivery_locations = Table(
-    "delivery_locations",
-    metadata,
-    Column("id", Integer, Identity(), primary_key=True),
-    Column("name", String(100), nullable=False),
-    Column("description", String(300), nullable=False),
-    Column("latitude", Double, nullable=False),
-    Column("longitude", Double, nullable=False),
-    Column("active", Boolean, nullable=False, server_default=true()),
-    *_timestamps(),
-    *_audit_columns(),
-    CheckConstraint(
-        "latitude BETWEEN -90 AND 90 AND longitude BETWEEN -180 AND 180",
-        name="coordinates",
-    ),
-)
-
 # Text that keyword search runs over. Built with || (not concat_ws) so Postgres
 # accepts it in an index; queries must use this exact expression to use the index.
 _SPACE = literal_column("' '")
@@ -140,9 +125,4 @@ Index(
     supplier_search_text.label("search_text"),
     postgresql_using="gin",
     postgresql_ops={"search_text": "gin_trgm_ops"},
-)
-Index(
-    "uq_delivery_locations_name_lower",
-    func.lower(delivery_locations.c.name),
-    unique=True,
 )

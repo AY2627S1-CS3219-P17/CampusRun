@@ -1,6 +1,8 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-assisted review for tests for the seed loader and the seed data.
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
+# Scope: AI-removed the delivery location parts, which moved to the order service.
 # Author review: <to be completed by author>
 
 from datetime import time
@@ -11,7 +13,7 @@ from sqlalchemy import func, select
 
 from supplier_service.config import get_settings
 from supplier_service.seed import parse_hours, raw_image_url, read_csv, seed_if_empty, supplier_from_row
-from supplier_service.tables import delivery_locations, suppliers
+from supplier_service.tables import suppliers
 
 pytestmark = pytest.mark.anyio
 
@@ -53,6 +55,4 @@ async def test_seed_runs_once(engine):
         await seed_if_empty(conn, seed_dir)
         await seed_if_empty(conn, seed_dir)
         count = await conn.scalar(select(func.count()).select_from(suppliers))
-        points = await conn.scalar(select(func.count()).select_from(delivery_locations))
     assert count == len(read_csv(seed_dir / "suppliers.csv"))
-    assert points > 0

@@ -1,6 +1,10 @@
 # AI Assistance Disclosure:
 # Tool: OpenAI Codex (GPT-6), date: 2026-10-17
 # Scope: Added database-free order-service Compose startup and backend-only Groq settings.
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
+# Scope: AI-added order-db, order-migrate and order-worker, the order-service DATABASE_URL, and the credit-demo note;
+#        AI-added the delivery-location seed to order-migrate and the user and credit URLs for order-service, and the
+#        sweeper settings for order-worker (2026-10-19).
 # Author review: <to be completed by author>
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
@@ -128,17 +132,73 @@ services:
       supplier-migrate:
         condition: service_completed_successfully
 
+  order-db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: ${ORDER_DB_USER:-order_service}
+      POSTGRES_PASSWORD: ${ORDER_DB_PASSWORD:?set ORDER_DB_PASSWORD in .env}
+      POSTGRES_DB: ${ORDER_DB_NAME:-order_service}
+    volumes:
+      # Postgres 18+ images keep data under /var/lib/postgresql (not .../data)
+      - order-db-data:/var/lib/postgresql
+    ports:
+      # Bound to localhost only; 5436 because the other databases use 5433 to 5435
+      - "127.0.0.1:5436:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-off: applies Alembic migrations and loads the predefined delivery locations (if not already there), then exits
+  order-migrate:
+    build: ./order-service
+    command: ["sh", "-c", "alembic upgrade head && python -m order_service.seed"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${ORDER_DB_USER:-order_service}:${ORDER_DB_PASSWORD:?set ORDER_DB_PASSWORD in .env}@order-db:5432/${ORDER_DB_NAME:-order_service}
+    depends_on:
+      order-db:
+        condition: service_healthy
+
+  # HTTP API: errands and AI autofill. It never connects to RabbitMQ: credit commands go into the outbox table,
+  # and order-worker publishes them, so errands can be created while the broker is down.
   order-service:
     build: ./order-service
     environment:
+      DATABASE_URL: postgresql+asyncpg://${ORDER_DB_USER:-order_service}:${ORDER_DB_PASSWORD:?set ORDER_DB_PASSWORD in .env}@order-db:5432/${ORDER_DB_NAME:-order_service}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
       SUPPLIER_SERVICE_URL: http://supplier-service:8000
+      USER_SERVICE_URL: http://user-service:8000
+      CREDIT_API_URL: http://credit-service:8000
+      # Local only: deployed environments leave this unset, so the docs are off
       ENABLE_DOCS: "true"
       ROOT_PATH: "/api/orders"
     depends_on:
-      - supplier-service
+      order-migrate:
+        condition: service_completed_successfully
+      supplier-service:
+        condition: service_started
+
+  # Publishes the outbox, applies the credit service's replies and expires errands. Same image as the API,
+  # different process, like credit-worker.
+  order-worker:
+    build: ./order-service
+    command: ["order-worker"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${ORDER_DB_USER:-order_service}:${ORDER_DB_PASSWORD:?set ORDER_DB_PASSWORD in .env}@order-db:5432/${ORDER_DB_NAME:-order_service}
+      RABBITMQ_URL: amqp://order-service:${RABBITMQ_ORDER_SERVICE_PASSWORD:?set RABBITMQ_ORDER_SERVICE_PASSWORD in .env}@rabbitmq:5672/
+      # Lower these in the root .env for a demo, e.g. ORDER_SWEEP_SECONDS=5 and ORDER_RECONCILE_AFTER_MINUTES=1
+      SWEEP_SECONDS: ${ORDER_SWEEP_SECONDS:-30}
+      RECONCILE_AFTER_MINUTES: ${ORDER_RECONCILE_AFTER_MINUTES:-5}
+    # A crash leaves its messages unacknowledged, so RabbitMQ hands them to the restarted worker
+    restart: unless-stopped
+    depends_on:
+      order-migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
 
   # Message broker for the commands that change credit balances (official image, unchanged; see
   # docs/credit-service-plan.md). provision.sh creates one login per service and loads definitions.json:
@@ -235,6 +295,8 @@ services:
 
   # Demo only, not started by `docker compose up`: stands in for the Order Service's errand flow until it's built.
   # docker compose run --rm credit-demo scenario <requester id> <courier id> --pause
+  # It logs in as order-service and reads the same reply queue as order-worker, so stop order-worker first
+  # (docker compose stop order-worker), or the two split the replies between them.
   credit-demo:
     build: ./credit-service
     entrypoint: ["credit-demo"]
@@ -272,4 +334,5 @@ volumes:
   user-db-data:
   supplier-db-data:
   credit-db-data:
+  order-db-data:
   rabbitmq-data:

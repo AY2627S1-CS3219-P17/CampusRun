@@ -5,6 +5,7 @@
 #        AI-generated the PATCH /users/me endpoint (2026-09-27); AI-merged the admin login into /auth/login and removed /admins/me (2026-09-28);
 #        AI-added the validation error handler that leaves request input out of 422 responses (2026-09-29).
 #        AI-added the OpenWallet outbox message on registration and the outbox relay in the lifespan (Claude, claude.ai, 2026-10-17).
+#        AI-added GET /internal/usernames for the Order Service (Claude Code, 2026-10-19).
 # Author review: reviewed by Nathan
 
 import asyncio
@@ -14,7 +15,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
@@ -23,6 +24,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import func, or_, select, text, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from pydantic import Field
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from user_service.auth import CurrentUser, credentials_error
@@ -34,6 +36,7 @@ from user_service.schemas import (
     RegisterRequest,
     TokenResponse,
     UpdateUserRequest,
+    UsernameResponse,
     UserResponse,
 )
 from user_service.security import DUMMY_HASH, create_access_token, password_hash
@@ -225,3 +228,20 @@ async def update_current_user(body: UpdateUserRequest, account: CurrentUser, con
         raise credentials_error()
     return UserResponse.model_validate(row, from_attributes=True)
 
+
+# Internal: the gateway blocks /api/users/internal/, so only other services on the private network can call this.
+# The Order Service uses it to show requester and courier names on errands, forwarding the signed-in user's token.
+@app.get("/internal/usernames")
+async def lookup_usernames(
+    account: CurrentUser,
+    conn: Connection,
+    ids: Annotated[
+        list[Annotated[int, Field(ge=1)]],
+        Query(min_length=1, max_length=100, description="Repeat for each id: ?ids=1&ids=2. At most 100."),
+    ],
+) -> list[UsernameResponse]:
+    # Unknown ids are left out, e.g. an account deleted after it made an errand
+    rows = await conn.execute(
+        select(users.c.id, users.c.username).where(users.c.id.in_(set(ids))).order_by(users.c.id)
+    )
+    return [UsernameResponse.model_validate(row, from_attributes=True) for row in rows]

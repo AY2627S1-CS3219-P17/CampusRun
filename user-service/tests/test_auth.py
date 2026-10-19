@@ -3,7 +3,8 @@
 # Scope: AI-generated tests for password login, JWT validation and the /users/me and /admins/me endpoints;
 #        AI-updated for the "student" token type (Claude Code, 2026-09-27);
 #        AI-updated for admins as users with the admin role and the "role" claim (Claude Code, 2026-09-28);
-#        AI-replaced the require_student checks: both roles pass require_user (Claude Code, 2026-09-28).
+#        AI-replaced the require_student checks: both roles pass require_user (Claude Code, 2026-09-28);
+#        AI-added tests for the session messages and unknown roles (Claude Code, 2026-10-19).
 # Author review: <to be completed by author>
 
 from datetime import UTC, datetime, timedelta
@@ -121,6 +122,24 @@ async def test_me_rejects_invalid_tokens(client: AsyncClient, user: dict, token:
     assert response.status_code == 401
 
 
+@pytest.mark.parametrize(
+    ("token", "message"),
+    [
+        (make_token(exp=datetime.now(UTC) - timedelta(minutes=1)), "Your session has expired. Sign in again."),
+        (make_token(secret="some-other-secret-that-is-32-chars-long!"), "Your session is not valid. Sign in again."),
+        (make_token(role="superuser"), "Your session is not valid. Sign in again."),
+        (make_token(sub="not-a-number"), "Your session is not valid. Sign in again."),
+    ],
+    ids=["expired", "forged", "unknown-role", "non-numeric-id"],
+)
+async def test_invalid_tokens_say_why(client: AsyncClient, user: dict, token: str, message: str) -> None:
+    # The same wording as the other services, so the web client shows one message everywhere
+    response = await client.get("/users/me", headers=bearer(token))
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == message
+
+
 async def test_me_rejects_token_for_deleted_account(
     client: AsyncClient, engine: AsyncEngine, user: dict
 ) -> None:
@@ -165,3 +184,6 @@ async def test_role_checks(client: AsyncClient, user: dict, admin: None) -> None
     assert (await require_user(admin_token, get_settings())).role == "admin"
     assert await check(require_admin, admin_token) == 200
     assert await check(require_admin, student_token) == 403
+    with pytest.raises(HTTPException) as error:
+        await require_admin(await require_user(student_token, get_settings()))
+    assert error.value.detail == "Only administrators can do this."

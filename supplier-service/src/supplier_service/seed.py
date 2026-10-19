@@ -1,6 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
-# Scope: AI-generated seed loader for seed/*.csv, run as a separate command after migrations.
+# Scope: AI-generated seed loader for seed/*.csv, run as a separate command after migrations;
+#        AI-removed the delivery locations, which moved to the order service (Claude Code, 2026-10-19).
 # Author review: <to be completed by author>
 
 """Load the seed data into empty tables.
@@ -34,8 +35,8 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from supplier_service.config import get_settings
 from supplier_service.db import create_engine
-from supplier_service.schemas import DeliveryLocationCreate, SupplierCreate, SupplierType, to_db
-from supplier_service.tables import delivery_locations, suppliers
+from supplier_service.schemas import SupplierCreate, SupplierType, to_db
+from supplier_service.tables import suppliers
 
 log = logging.getLogger(__name__)
 
@@ -102,15 +103,6 @@ def supplier_from_row(row: dict[str, str]) -> SupplierCreate:
     )
 
 
-def delivery_location_from_row(row: dict[str, str]) -> DeliveryLocationCreate:
-    return DeliveryLocationCreate(
-        name=row["Name"],
-        description=row["Description"],
-        latitude=float(row["Latitude"]),
-        longitude=float(row["Longitude"]),
-    )
-
-
 def _load(path: Path, parse) -> list[dict]:
     if not path.exists():
         log.warning("Seed file %s not found; skipping.", path)
@@ -136,14 +128,6 @@ async def seed_if_empty(conn: AsyncConnection, seed_dir: Path) -> None:
         log.info("Seeded %d suppliers.", len(rows))
     else:
         log.info("Suppliers table already has data; not seeding it.")
-
-    if await conn.scalar(select(func.count()).select_from(delivery_locations)) == 0:
-        rows = _load(seed_dir / "delivery-locations.csv", delivery_location_from_row)
-        if rows:
-            await conn.execute(insert(delivery_locations), rows)
-        log.info("Seeded %d delivery locations.", len(rows))
-    else:
-        log.info("Delivery locations table already has data; not seeding it.")
 
 
 async def main() -> None:

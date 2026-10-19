@@ -3,6 +3,8 @@
 # Scope: AI-assisted review for tests for access control (401 vs 403) and the health check;
 #        AI-updated paths after the /suppliers prefix was removed, and tokens for the "type" claim (Claude Code, 2026-09-27),
 #        then the "role" claim (2026-09-28).
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
+# Scope: AI-removed the delivery location parts, which moved to the order service.
 # Author review: <to be completed by author>
 
 import jwt
@@ -68,9 +70,8 @@ async def test_student_can_read(client):
     assert (await client.get("/meta", headers=STUDENT)).status_code == 200
 
 
-@pytest.mark.parametrize("path", ["/", "/delivery-locations"])
-async def test_student_cannot_create(client, path):
-    response = await client.post(path, headers=STUDENT, json=supplier_body())
+async def test_student_cannot_create(client):
+    response = await client.post("/", headers=STUDENT, json=supplier_body())
     assert response.status_code == 403
     assert response.json()["detail"] == "Only administrators can make this change."
 

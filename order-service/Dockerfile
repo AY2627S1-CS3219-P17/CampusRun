@@ -1,6 +1,8 @@
 # AI Assistance Disclosure:
 # Tool: OpenAI Codex (GPT-6), date: 2026-10-17
 # Scope: Containerized the database-free FastAPI order service using the repository's uv pattern.
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
+# Scope: Noted that the same image runs the API, order-worker and the migrations.
 # Author review: <to be completed by author>
 
 FROM python:3.14.7-slim
@@ -31,5 +33,6 @@ USER app
 
 EXPOSE 8000
 
+# The HTTP API by default. order-worker and Alembic run the same image with another command (see compose.yaml).
 # Shell form expands PORT on Cloud Run; local Compose uses 8000.
 CMD fastapi run src/order_service/main.py --host 0.0.0.0 --port ${PORT:-8000}

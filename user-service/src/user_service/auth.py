@@ -2,11 +2,12 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated token-checking dependencies (from docs/auth-plan.md); AI-renamed the user token type from "user" to "student" (Claude Code, 2026-09-27);
 #        AI-merged the admin login into the user one and switched to the "role" claim (Claude Code, 2026-09-28);
-#        AI-removed require_student, since admins keep every student capability (Claude Code, 2026-09-28).
+#        AI-removed require_student, since admins keep every student capability (Claude Code, 2026-09-28);
+#        AI-aligned the error messages and role check with the other services' auth.py (Claude Code, 2026-10-19).
 # Author review: <to be completed by author>
 
 from dataclasses import dataclass
-from typing import Annotated
+from typing import Annotated, get_args
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -27,10 +28,15 @@ class Account:
     role: Role
 
 
-def credentials_error() -> HTTPException:
+# The same messages as the other services' auth.py, so the web client shows one wording everywhere
+SESSION_EXPIRED = "Your session has expired. Sign in again."
+SESSION_INVALID = "Your session is not valid. Sign in again."
+
+
+def credentials_error(message: str = SESSION_INVALID) -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail=message,
         headers={"WWW-Authenticate": "Bearer"},
     )
 
@@ -38,15 +44,23 @@ def credentials_error() -> HTTPException:
 def _account_from_token(token: str, settings: Settings) -> Account:
     try:
         payload = decode_access_token(token, settings)
+    except jwt.ExpiredSignatureError:
+        raise credentials_error(SESSION_EXPIRED) from None
     except jwt.InvalidTokenError:
         raise credentials_error() from None
-    return Account(id=int(payload["sub"]), role=payload["role"])
+    # Role is only a type hint, so check the value too: a token with any other role is not a valid session
+    if payload["role"] not in get_args(Role):
+        raise credentials_error()
+    try:
+        return Account(id=int(payload["sub"]), role=payload["role"])
+    except ValueError:
+        raise credentials_error() from None
 
 
 def _require(account: Account, expected: Role) -> Account:
     # Valid token, wrong role: authenticated but not allowed
     if account.role != expected:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only administrators can do this.")
     return account
 
 

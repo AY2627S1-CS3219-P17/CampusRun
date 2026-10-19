@@ -1,13 +1,15 @@
 <!--
 AI Assistance Disclosure:
 Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
-Scope: AI-generated service README; AI-updated paths, Docker access and settings for the gateway (Claude Code, 2026-09-27).
+Scope: AI-generated service README; AI-updated paths, Docker access and settings for the gateway (Claude Code, 2026-09-27);
+       AI-added GET /lookup, and removed the delivery locations, which moved to the order service (Claude Code, 2026-10-19).
 Author review: <to be completed by author>
 -->
 
 # Service Overview
 The Supplier Service manages the campus suppliers students can request pickups from (shops, printers and other
-places) and the predefined delivery locations. It covers backlog requirements F4 to F6 and N3.
+places). It covers backlog requirements F4 to F6 and N3. Delivery locations used to live here too; they moved to the
+Order Service (`/api/orders/delivery-locations`).
 
 It uses FastAPI with SQLAlchemy Core on a Postgres 18 database, with Alembic for migrations, like the User Service.
 uv is the package manager of choice, optionally with mise for python versioning and the tasks below.
@@ -72,10 +74,10 @@ Paths are relative to the service. Behind the gateway they're under `/api/suppli
 | `GET /meta` | signed in | Supplier types and the served-area bounds |
 | `GET /` | signed in | Query options: `q`, `type` (repeatable), `building`, `openNow`, `active` (`false` lists deactivated records), `nearLat` + `nearLng` (+ `radius`, in metres), `sort` (`name`, `-name`, `type`, `-createdAt`, `-updatedAt`, `distance`), `page`, `pageSize` |
 | `GET /buildings` | signed in | Building names, for the location filter |
+| `GET /lookup?ids=1&ids=2` | signed in | Up to 100 suppliers by id in one call, deactivated ones included; unknown ids are left out. Used by the Order Service to show errands' suppliers |
 | `GET /{id}` | signed in | One supplier |
 | `POST /` | admin | Create |
 | `PATCH /{id}` | admin | Change any fields; `{"active": false}` deactivates and `{"active": true}` reactivates |
-| `/delivery-locations` and `/delivery-locations/{id}` | same as above | Delivery locations (`q`, `active`, `page`, `pageSize`) |
 
 A request with no token, or an invalid one, gets 401; a request whose role isn't allowed gets 403. Validation errors
 return 422 with `{"detail": "...", "errors": {"fieldName": "message"}}`.

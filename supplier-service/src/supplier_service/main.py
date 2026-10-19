@@ -1,7 +1,8 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-assisted review and debugging for FastAPI app, lifespan and health check, following user-service/main.py;
-#        AI-added ROOT_PATH and ENABLE_DOCS support and the router order for the gateway (Claude Code, 2026-09-27).
+#        AI-added ROOT_PATH and ENABLE_DOCS support and the router order for the gateway (Claude Code, 2026-09-27);
+#        AI-removed the delivery location routes, which moved to the order service (Claude Code, 2026-10-19).
 # Author review: <to be completed by author>
 
 from collections.abc import AsyncGenerator
@@ -18,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from supplier_service.config import get_settings
 from supplier_service.db import create_engine, get_engine
 from supplier_service.errors import install_error_handlers
-from supplier_service.routes import delivery_locations, meta, suppliers
+from supplier_service.routes import meta, suppliers
 
 
 @asynccontextmanager
@@ -64,7 +65,6 @@ async def health(engine: Annotated[AsyncEngine, Depends(get_engine)]) -> JSONRes
     return JSONResponse(content={"status": "ok", "database": "ok"})
 
 
-app.include_router(delivery_locations.router)
 app.include_router(meta.router)
-# Last: its /{supplier_id} route sits at the root and would otherwise catch /meta and /delivery-locations
+# Last: its /{supplier_id} route sits at the root and would otherwise catch /meta
 app.include_router(suppliers.router)

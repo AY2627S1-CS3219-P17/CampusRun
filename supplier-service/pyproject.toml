@@ -1,12 +1,13 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
-# Scope: AI-generated project definition and dependency list for the supplier service.
+# Scope: AI-generated project definition and dependency list for the supplier service; AI-updated the description
+#        after delivery locations moved to the order service (Claude Code, 2026-10-19).
 # Author review: <to be completed by author>
 
 [project]
 name = "supplier-service"
 version = "0.1.0"
-description = "CampusRun Supplier Service: campus suppliers and delivery locations"
+description = "CampusRun Supplier Service: campus suppliers"
 readme = "README.md"
 requires-python = ">=3.14.7"
 dependencies = [

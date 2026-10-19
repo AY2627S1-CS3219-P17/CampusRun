@@ -2,6 +2,8 @@
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-assisted review and debugging for request/response models and validation rules. JSON field names
 #        and supplier types follow frontend/src/types/supplier.ts.
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
+# Scope: AI-removed the delivery location models, which moved to the order service.
 # Author review: <to be completed by author>
 
 """Request and response models. Every value from a client is checked here (N8.2.1).
@@ -207,51 +209,6 @@ class SupplierSort(StrEnum):
     NEWEST = "-createdAt"
     RECENTLY_UPDATED = "-updatedAt"
     DISTANCE = "distance"
-
-
-# ------------------------------------------------------- delivery locations
-
-
-class DeliveryLocationCreate(RequestModel):
-    name: Name
-    description: Description
-    latitude: Latitude
-    longitude: Longitude
-    active: bool = True
-
-
-class DeliveryLocationUpdate(RequestModel):
-    name: Name | None = None
-    description: Description | None = None
-    latitude: Latitude | None = None
-    longitude: Longitude | None = None
-    active: bool | None = None
-
-    @field_validator("*", mode="before")
-    @classmethod
-    def fields_cannot_be_cleared(cls, value):
-        if value is None:
-            raise ValueError("This field is required and cannot be empty.")
-        return value
-
-    @model_validator(mode="after")
-    def not_empty(self):
-        if not self.model_fields_set:
-            raise ValueError("Send at least one field to change.")
-        return self
-
-
-class DeliveryLocationOut(CamelModel):
-    id: int
-    name: str
-    description: str
-    latitude: float
-    longitude: float
-    active: bool
-    created_at: datetime
-    updated_at: datetime
-    created_by: str | None
-    updated_by: str | None
 
 
 # --------------------------------------------------------------------- meta

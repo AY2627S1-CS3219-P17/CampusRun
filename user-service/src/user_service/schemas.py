@@ -4,7 +4,8 @@
 #        AI-added the profile update request model, and aligned the username and password rules with the web client (2026-09-27);
 #        AI-limited emails to @u.nus.edu, added role to UserResponse and removed AdminResponse (2026-09-28);
 #        AI-made the profile update request reject unknown fields (2026-09-28);
-#        AI-changed the password fields to SecretStr so they're masked if a request model is logged (2026-09-29).
+#        AI-changed the password fields to SecretStr so they're masked if a request model is logged (2026-09-29);
+#        AI-added UsernameResponse for the internal username lookup (2026-10-19).
 # Author review: reviewed by Nathan
 
 import re
@@ -139,6 +140,12 @@ class UserResponse(BaseModel):
     email_verified_at: datetime | None
     role: Role
     created_at: datetime
+
+
+class UsernameResponse(BaseModel):
+    # Only what other students may see about a user; never the email address
+    id: int
+    username: str
 
 
 class TokenResponse(BaseModel):

@@ -6,11 +6,19 @@
 //        edit and action request types.
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-20
 // Scope: AI-added the delivery location type and the predefined-location option on create and edit.
+// Tool: OpenAI Codex (GPT-6), date: 2026-10-20
+// Scope: Typed the matched predefined delivery location in autofill suggestions.
 // Author review: <to be completed by author>
 
 export type AutofillSuggestion = {
   title: string | null
   supplier: { id: number; name: string } | null
+  locationRef: {
+    id: number
+    name: string
+    latitude: number
+    longitude: number
+  } | null
   building: string | null
   floor: string | null
   description: string | null

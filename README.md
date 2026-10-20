@@ -4,7 +4,8 @@ Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
 Tool: OpenAI Codex (GPT-6), date: 2026-10-16; 2026-10-17; 2026-10-20
 Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 Scope: AI-written "Gateway, root paths and API docs" section and AI Use Summary bullets, including the frontend AI entry view disclosure,
-       the credit-service routing note, the Credit Service AI Use Summary, and frontend list/navigation fixes; the rest was written by the team.
+       the credit-service routing note, the Credit Service AI Use Summary, frontend list/navigation fixes,
+       and predefined delivery-location autofill; the rest was written by the team.
 Author review: <to be completed by author>
 -->
 

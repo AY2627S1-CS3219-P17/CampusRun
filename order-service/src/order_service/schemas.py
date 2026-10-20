@@ -1,6 +1,8 @@
 # AI Assistance Disclosure:
 # Tool: OpenAI Codex (GPT-6), date: 2026-10-17
 # Scope: Defined partial autofill contracts and a strict model schema with delivery-only location details and nullable string credits.
+# Tool: OpenAI Codex (GPT-6), date: 2026-10-20
+# Scope: Added a predefined delivery location reference to autofill responses.
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: AI-added the camelCase base models, the paged list shape and the delivery location models, copied from
 #        supplier-service/schemas.py, with optional floor and description; the supplier summary and the errand
@@ -335,9 +337,17 @@ class SupplierRef(BaseModel):
     name: str
 
 
+class AutofillLocationRef(BaseModel):
+    id: int
+    name: str
+    latitude: float
+    longitude: float
+
+
 class AutofillResponse(BaseModel):
     title: str | None
     supplier: SupplierRef | None
+    locationRef: AutofillLocationRef | None
     building: str | None
     floor: str | None
     description: str | None

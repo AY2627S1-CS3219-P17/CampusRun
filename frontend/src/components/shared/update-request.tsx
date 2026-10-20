@@ -9,6 +9,9 @@
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-20
 // Scope: AI-added the pickup and dropoff headings, and the predefined delivery location picker that fills the
 //        dropoff fields and zooms the map to it.
+// Tool: OpenAI Codex (GPT-6), date: 2026-10-20
+// Scope: Applied matched autofill locations as predefined choices with their saved coordinates and cleared
+//        stale map coordinates when autofill suggests an unmatched location.
 // Author review: <to be completed by author>
 
 import { useEffect, useRef, useState, type SubmitEvent } from 'react'
@@ -480,16 +483,28 @@ export default function UpdateRequestDialog({
         setSupplierQuery(suggestion.supplier.name)
       }
 
-      if (
-        suggestion.building !== null ||
-        suggestion.floor !== null ||
-        suggestion.description !== null
-      )
-        detachPredefined()
-      if (suggestion.building !== null) setBuilding(suggestion.building)
-      if (suggestion.floor !== null) setFloor(suggestion.floor)
-      if (suggestion.description !== null) {
-        setDescription(suggestion.description)
+      if (suggestion.locationRef) {
+        const { id, name, latitude, longitude } = suggestion.locationRef
+        const position = { latitude, longitude }
+        setPredefined({ id, name })
+        setBuilding(suggestion.building ?? name)
+        setFloor(suggestion.floor ?? '')
+        setDescription(suggestion.description ?? '')
+        setLocation(position)
+        setMapFocus(position)
+      } else {
+        if (
+          suggestion.building !== null ||
+          suggestion.floor !== null ||
+          suggestion.description !== null
+        ) {
+          detachPredefined()
+          setLocation(null)
+        }
+        if (suggestion.building !== null) setBuilding(suggestion.building)
+        if (suggestion.floor !== null) setFloor(suggestion.floor)
+        if (suggestion.description !== null)
+          setDescription(suggestion.description)
       }
 
       if (suggestion.deliveryBy !== null) setDeliveryBy(suggestion.deliveryBy)

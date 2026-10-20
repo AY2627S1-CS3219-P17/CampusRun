@@ -12,10 +12,12 @@
 // Scope: Removed duplicated navigation state and derived the active section from the page prop.
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 // Scope: AI-added opening My Requests after a request is created.
+// Tool: OpenAI Codex (GPT-6), date: 2026-10-20
+// Scope: Derived the active navigation link from the route in the persistent main layout.
 // Author review: <to be completed by author>
 
 import { useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { DropdownMenu } from 'radix-ui'
 import { LogOut, Plus, Store, UserRound } from 'lucide-react'
 import EditInfoDialog from './edit-user-info'
@@ -32,11 +34,8 @@ const sectionPaths: Record<HeaderSection, string> = {
   'My Requests': '/my-requests',
 }
 
-type HeaderProps = {
-  initialSection: HeaderSection
-}
-
-export default function Header({ initialSection }: HeaderProps) {
+export default function Header() {
+  const { pathname } = useLocation()
   const [editingInfo, setEditingInfo] = useState(false)
   const [creatingRequest, setCreatingRequest] = useState(false)
   const navigate = useNavigate()
@@ -51,7 +50,9 @@ export default function Header({ initialSection }: HeaderProps) {
             key={section}
             to={sectionPaths[section]}
             className="header-nav-item"
-            aria-current={initialSection === section ? 'page' : undefined}
+            aria-current={
+              pathname === sectionPaths[section] ? 'page' : undefined
+            }
           >
             <span>{section}</span>
           </Link>
@@ -140,6 +141,7 @@ export default function Header({ initialSection }: HeaderProps) {
         <UpdateRequestDialog
           onClose={() => setCreatingRequest(false)}
           onCreated={() => {
+            setCreatingRequest(false)
             void navigate('/my-requests')
           }}
           onRestoreFocus={() => createRef.current?.focus()}

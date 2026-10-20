@@ -13,13 +13,14 @@
 // Scope: AI-replaced the sample tasks with Explore from the Order Service, loaded as the list scrolls.
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 // Scope: AI-moved the card actions into the shared errand mapper.
+// Tool: OpenAI Codex (GPT-6), date: 2026-10-20
+// Scope: Moved the shared header into the persistent main-route layout.
 // Author review: <to be completed by author>
 
 import { useState } from 'react'
 import CreditBanner from '../../components/shared/credit-banner'
 import ErrandList from '../../components/shared/errand-list'
 import Toolbar from '../../components/shared/toolbar'
-import Header from '../../components/shared/header'
 import { ERRAND_SORTS, toErrandSort } from '../../utils/toolbar'
 import { useErrandList } from '../../utils/use-errand-list'
 import type { ErrandSort } from '../../types/order'
@@ -31,34 +32,31 @@ export default function ExplorePage() {
   const list = useErrandList('explore', 'active', query, sort)
 
   return (
-    <div className="explore-page">
-      <Header initialSection="Explore" />
-      <main className="explore-content">
-        <CreditBanner pending={list.pending} />
-        <Toolbar
-          subheader="Available Tasks"
-          search={{
-            value: query,
-            onChange: setQuery,
-            placeholder: 'Search errands',
-            label: 'Search errands',
-            maxLength: 100,
-          }}
-          sort={{
-            options: ERRAND_SORTS,
-            value: sort,
-            onChange: (value) => setSort(toErrandSort(value) ?? sort),
-            label: 'Sort available tasks',
-          }}
-        />
-        <ErrandList
-          list={list}
-          viewer="explore"
-          label="Available tasks"
-          emptyText="No errands are waiting for a courier."
-          onClearSearch={() => setQuery('')}
-        />
-      </main>
-    </div>
+    <main className="explore-content">
+      <CreditBanner pending={list.pending} />
+      <Toolbar
+        subheader="Available Tasks"
+        search={{
+          value: query,
+          onChange: setQuery,
+          placeholder: 'Search errands',
+          label: 'Search errands',
+          maxLength: 100,
+        }}
+        sort={{
+          options: ERRAND_SORTS,
+          value: sort,
+          onChange: (value) => setSort(toErrandSort(value) ?? sort),
+          label: 'Sort available tasks',
+        }}
+      />
+      <ErrandList
+        list={list}
+        viewer="explore"
+        label="Available tasks"
+        emptyText="No errands are waiting for a courier."
+        onClearSearch={() => setQuery('')}
+      />
+    </main>
   )
 }

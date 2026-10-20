@@ -3,6 +3,12 @@
 // Scope: AI-generated hook that loads an errand list from the Order Service with a debounced search, infinite
 //        scrolling and polling while any loaded errand's credits are PENDING; AI-added reloading in place when an
 //        errand changes.
+// Tool: OpenAI Codex (GPT-6), date: 2026-10-20
+// Scope: Cached per-view errand totals so counts stay visible during navigation refreshes.
+// Scope: Kept the previous search results visible until the debounced request completes.
+// Scope: Kept empty messages and Clear search consistent with those visible results.
+// Scope: Preserved the previous subtab result until its replacement loads.
+// Scope: Cached first pages so returning through the top navigation does not blank the list.
 // Author review: <to be completed by author>
 
 import { useCallback, useEffect, useState } from 'react'
@@ -24,10 +30,21 @@ const PAGE_SIZE = 10
 const SEARCH_DELAY_MS = 300
 // How often to check again while credits are being processed
 const PENDING_POLL_MS = 2000
+const cachedPages = new Map<string, ErrandPage>()
 
-// Everything here belongs to one requestKey, so changing the filters starts again from nothing
+function rememberPage(key: string, page: ErrandPage) {
+  cachedPages.delete(key)
+  cachedPages.set(key, page)
+  if (cachedPages.size > 30)
+    cachedPages.delete(cachedPages.keys().next().value!)
+}
+
+// Loaded pages belong to one request, but can remain visible while a new search loads
 type Loaded = {
   key: string
+  viewKey: string
+  tab: ErrandTab
+  search: string
   pages: ErrandPage[]
   error: string | null
   // The pages asked for so far, and how many times the user pressed Try again
@@ -79,22 +96,41 @@ export function useErrandList(
 
   const q = debouncedSearch.trim()
   // A change here starts the list again from the first page, and aborts the request in flight
+  const viewKey = session ? JSON.stringify([scope, session.token]) : null
   const requestKey = session
     ? JSON.stringify([scope, scope === 'explore' ? null : tab, q, sort]) +
       `#${session.token}`
     : null
   const current = loaded?.key === requestKey ? loaded : null
+  const cachedPage = requestKey ? cachedPages.get(requestKey) : undefined
+  const cached: Loaded | null =
+    cachedPage && requestKey && viewKey
+      ? {
+          key: requestKey,
+          viewKey,
+          tab,
+          search: q,
+          pages: [cachedPage],
+          error: null,
+          count: 1,
+          attempt: 0,
+        }
+      : null
+  const visible =
+    current ?? cached ?? (loaded?.viewKey === viewKey ? loaded : null)
   const count = current?.count ?? 1
   const attempt = current?.attempt ?? 0
 
   // Load page `count`: the first page after a change, then the next one each time the list scrolls to its end
   useEffect(() => {
-    if (!requestKey) return
+    if (!requestKey || !viewKey) return
 
     const controller = new AbortController()
     const query = { q, sort, page: count, pageSize: PAGE_SIZE }
     fetchPage(scope, tab, query, controller.signal)
-      .then((page) =>
+      .then((page) => {
+        if (controller.signal.aborted) return
+        if (count === 1) rememberPage(requestKey, page)
         setLoaded((prev) =>
           prev?.key === requestKey
             ? {
@@ -102,16 +138,28 @@ export function useErrandList(
                 pages: [...prev.pages.slice(0, count - 1), page],
                 error: null,
               }
-            : { key: requestKey, pages: [page], error: null, count, attempt },
-        ),
-      )
+            : {
+                key: requestKey,
+                viewKey,
+                tab,
+                search: q,
+                pages: [page],
+                error: null,
+                count,
+                attempt,
+              },
+        )
+      })
       .catch((error: unknown) => {
-        if (isAbort(error)) return
+        if (controller.signal.aborted || isAbort(error)) return
         setLoaded((prev) =>
           prev?.key === requestKey
             ? { ...prev, error: messageOf(error) }
             : {
                 key: requestKey,
+                viewKey,
+                tab,
+                search: q,
                 pages: [],
                 error: messageOf(error),
                 count,
@@ -120,7 +168,7 @@ export function useErrandList(
         )
       })
     return () => controller.abort()
-  }, [requestKey, count, attempt, scope, tab, q, sort])
+  }, [requestKey, viewKey, count, attempt, scope, tab, q, sort])
 
   const pending =
     current?.pages.some((page) =>
@@ -156,7 +204,8 @@ export function useErrandList(
             ),
           ),
         )
-          .then((fresh) =>
+          .then((fresh) => {
+            if (fresh[0]) rememberPage(key, fresh[0])
             setLoaded((prev) =>
               prev?.key === key
                 ? {
@@ -165,8 +214,8 @@ export function useErrandList(
                     stale: false,
                   }
                 : prev,
-            ),
-          )
+            )
+          })
           .catch((error: unknown) => {
             if (isAbort(error)) return
             // Keep what's shown; a new object runs this effect again, so the next poll still happens
@@ -187,7 +236,7 @@ export function useErrandList(
   // A refresh can move an errand onto a page that's already loaded, so show each one once
   const seen = new Set<number>()
   const items: Errand[] = []
-  for (const page of current?.pages ?? []) {
+  for (const page of visible?.pages ?? []) {
     for (const errand of page.items) {
       if (seen.has(errand.id)) continue
       seen.add(errand.id)
@@ -197,6 +246,8 @@ export function useErrandList(
 
   const pageCount = current?.pages.length ?? 0
   const lastPage = current?.pages.at(-1)
+  const visiblePage = visible?.pages.at(-1)
+  const knownTotal = visiblePage?.total
   const error = current?.error ?? null
   const loading = requestKey !== null && pageCount === 0 && !error
   const loadingMore = pageCount > 0 && count > pageCount && !error
@@ -222,10 +273,13 @@ export function useErrandList(
 
   return {
     items,
-    total: lastPage?.total ?? 0,
+    total: knownTotal ?? 0,
+    hasTotal: knownTotal !== undefined,
+    hasVisiblePage: visiblePage !== undefined,
+    visibleTab: visible?.tab ?? tab,
     // False if any page couldn't search supplier names because the Supplier Service was down
-    supplierSearch: current?.pages.every((page) => page.supplierSearch) ?? true,
-    searching: q !== '',
+    supplierSearch: visible?.pages.every((page) => page.supplierSearch) ?? true,
+    searching: (visible?.search ?? q) !== '',
     loading,
     loadingMore,
     hasMore,

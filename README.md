@@ -1,10 +1,10 @@
 <!--
 AI Assistance Disclosure:
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
-Tool: OpenAI Codex (GPT-6), date: 2026-10-16; 2026-10-17
+Tool: OpenAI Codex (GPT-6), date: 2026-10-16; 2026-10-17; 2026-10-20
 Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 Scope: AI-written "Gateway, root paths and API docs" section and AI Use Summary bullets, including the frontend AI entry view disclosure,
-       the credit-service routing note and the Credit Service AI Use Summary; the rest was written by the team.
+       the credit-service routing note, the Credit Service AI Use Summary, and frontend list/navigation fixes; the rest was written by the team.
 Author review: <to be completed by author>
 -->
 
@@ -171,11 +171,6 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 
 **Key response:** Added a database-free FastAPI order-service with authenticated `POST /autofill`, backend-only Groq structured extraction, active supplier matching, and gateway/Compose wiring. Connected the frontend AI Autofill view with a 20–500-character prompt, counter, blocking loading state, errors, and partial suggestions that replace existing values when non-null. Request creation remains a separate unimplemented operation. The preceding planning request specified these requirements.
 
-**Files affected:** Each changed source and configuration file carries an AI Assistance Disclosure header. The generated `order-service/uv.lock` also identifies AI assistance.
-
-**Files affected:** each carries an "AI Assistance Disclosure" header comment.
-
-**Prompts and key exchanges:** see [`ai/usage-log.md`](ai/usage-log.md).
 ### Order Service (Nathan)
 
 **Tool and mode:** Claude Code (model: Claude Opus 5.5), review, explain and generate (2026-10-18 to 2026-10-19).
@@ -217,3 +212,9 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 - **Explaining** the code for the author's review: the delivery-location share lock, `Engine` versus `Connection` dependencies, the locked read in edit, and the request and response models. Explanations of the locks and transactions were added to the D3 document.
 
 **Verification:** 256 order-service tests pass, including concurrent accepts, accept against cancel, complete sent twice, the deadline guards and two sweepers at once; the race tests passed on six repeated runs. Task 1 also passed `docker compose config`, `nginx -t` and the image build. The demo script ran end to end against the full Compose stack, and the credit audit afterwards reported no problems. <!-- TODO(author): describe your own review and testing -->
+
+**Files affected:** Each changed source and configuration file carries an AI Assistance Disclosure header. The generated `order-service/uv.lock` also identifies AI assistance.
+
+**Files affected:** each carries an "AI Assistance Disclosure" header comment.
+
+**Prompts and key exchanges:** see [`ai/usage-log.md`](ai/usage-log.md).

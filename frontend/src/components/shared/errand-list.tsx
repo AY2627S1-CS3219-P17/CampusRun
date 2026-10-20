@@ -3,9 +3,13 @@
 // Scope: AI-generated errand list shared by Explore, My Requests and My Tasks: the count line, loading, empty and
 //        error states, the note when supplier names weren't searched, and loading the next page on scroll;
 //        each card's actions come from the mapper, for the signed-in user.
+// Tool: OpenAI Codex (GPT-6), date: 2026-10-20
+// Scope: Kept a cached errand count visible while the list refreshes.
+// Scope: Kept the visible empty message and Clear search control during a new search.
+// Scope: Delayed the loading label so fast empty-list responses do not flash it.
 // Author review: <to be completed by author>
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import TaskCard from './task-card'
 import { toTaskCard, type ErrandViewer } from '../../utils/errand'
 import { useSession } from '../../utils/session'
@@ -20,6 +24,15 @@ type Props = {
   onClearSearch: () => void
 }
 
+function DelayedLoadingLabel() {
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    const timer = window.setTimeout(() => setVisible(true), 200)
+    return () => window.clearTimeout(timer)
+  }, [])
+  return visible ? 'Loading errands...' : null
+}
+
 export default function ErrandList({
   list,
   viewer,
@@ -28,7 +41,17 @@ export default function ErrandList({
   onClearSearch,
 }: Props) {
   const userId = useSession()?.userId ?? null
-  const { items, total, loading, loadingMore, hasMore, error, loadMore } = list
+  const {
+    items,
+    total,
+    hasTotal,
+    hasVisiblePage,
+    loading,
+    loadingMore,
+    hasMore,
+    error,
+    loadMore,
+  } = list
   const sentinel = useRef<HTMLDivElement>(null)
   const canLoadMore = hasMore && !loadingMore && !error
 
@@ -51,11 +74,13 @@ export default function ErrandList({
     <>
       <div className="errand-list-status" aria-live="polite">
         <span>
-          {loading
-            ? 'Loading errands...'
-            : !error || items.length > 0
-              ? `${total} ${total === 1 ? 'errand' : 'errands'}`
-              : ''}
+          {loading && !hasTotal ? (
+            <DelayedLoadingLabel />
+          ) : !error || items.length > 0 ? (
+            `${total} ${total === 1 ? 'errand' : 'errands'}`
+          ) : (
+            ''
+          )}
         </span>
         {!list.supplierSearch && (
           <span className="errand-list-note">
@@ -78,7 +103,7 @@ export default function ErrandList({
             <TaskCard key={errand.id} {...toTaskCard(errand, viewer, userId)} />
           ))}
 
-          {!loading && items.length === 0 && (
+          {hasVisiblePage && items.length === 0 && (
             <div className="errand-list-empty">
               <p>{emptyText}</p>
               {list.searching && (

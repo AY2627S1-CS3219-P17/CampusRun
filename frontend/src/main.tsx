@@ -2,6 +2,8 @@
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-28
 // Scope: AI-added StudentRoute, which keeps admins out of the errand pages; AI-removed it again, since admins
 //        keep every student capability (2026-09-28).
+// Tool: OpenAI Codex (GPT-6), date: 2026-10-20
+// Scope: Kept the main navigation header mounted across the three errand routes.
 // Author review: <to be completed by author>
 
 import { StrictMode } from 'react'
@@ -13,10 +15,21 @@ import Explore from './pages/main/explore.tsx'
 import MyTasks from './pages/main/my-tasks.tsx'
 import MyRequests from './pages/main/my-requests.tsx'
 import Suppliers from './pages/header/suppliers.tsx'
+import Header from './components/shared/header.tsx'
+import './pages/main/explore.css'
 import { useSession } from './utils/session'
 
 export default function ProtectedRoute() {
   return useSession() ? <Outlet /> : <Navigate to="/login" replace />
+}
+
+function MainLayout() {
+  return (
+    <div className="explore-page">
+      <Header />
+      <Outlet />
+    </div>
+  )
 }
 
 createRoot(document.getElementById('root')!).render(
@@ -24,9 +37,11 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <Routes>
         <Route element={<ProtectedRoute />}>
-          <Route path="/explore" element={<Explore />} />
-          <Route path="/my-tasks" element={<MyTasks />} />
-          <Route path="/my-requests" element={<MyRequests />} />
+          <Route element={<MainLayout />}>
+            <Route path="/explore" element={<Explore />} />
+            <Route path="/my-tasks" element={<MyTasks />} />
+            <Route path="/my-requests" element={<MyRequests />} />
+          </Route>
           <Route path="/suppliers" element={<Suppliers />} />
         </Route>
 

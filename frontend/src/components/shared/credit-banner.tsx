@@ -6,12 +6,15 @@
 //        and added the pending state.
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 // Scope: AI-added reloading the wallet straight away when an errand changes.
+// Tool: OpenAI Codex (GPT-6), date: 2026-10-20
+// Scope: Kept the last wallet balance for the signed-in user across main-page navigation.
 // Author review: <to be completed by author>
 
 import { useEffect, useState } from 'react'
 import { CircleDollarSign } from 'lucide-react'
 import { getWallet } from '../../api/credit'
 import { onErrandsChanged } from '../../utils/errand-events'
+import { useSession } from '../../utils/session'
 import { ApiError } from '../../api/client'
 import type { Wallet } from '../../types/credit'
 import sharedBanner from '../../assets/shared_banner.png'
@@ -20,6 +23,8 @@ import './credit-banner.css'
 // Check often while something is on its way, otherwise just keep the numbers fresh
 const PENDING_POLL_MS = 2000
 const IDLE_POLL_MS = 15000
+type WalletSnapshot = { userId: string; wallet: Wallet }
+let cachedWallet: WalletSnapshot | null = null
 
 type CreditBannerProps = {
   // Set while a page knows a credit change is in flight that the wallet doesn't show yet,
@@ -28,7 +33,9 @@ type CreditBannerProps = {
 }
 
 export default function CreditBanner({ pending = false }: CreditBannerProps) {
-  const [wallet, setWallet] = useState<Wallet | null>(null)
+  const userId = useSession()?.userId
+  const [walletSnapshot, setWalletSnapshot] = useState(cachedWallet)
+  const wallet = walletSnapshot && walletSnapshot.userId === userId ? walletSnapshot.wallet : null
   const [error, setError] = useState('')
   const waiting = pending || wallet?.status === 'PENDING'
 
@@ -39,7 +46,10 @@ export default function CreditBanner({ pending = false }: CreditBannerProps) {
     const load = () => {
       getWallet(controller.signal)
         .then((next) => {
-          setWallet(next)
+          if (userId) {
+            cachedWallet = { userId, wallet: next }
+            setWalletSnapshot(cachedWallet)
+          }
           setError('')
         })
         .catch((reason: unknown) => {
@@ -72,7 +82,7 @@ export default function CreditBanner({ pending = false }: CreditBannerProps) {
       controller.abort()
       window.clearTimeout(timer)
     }
-  }, [waiting])
+  }, [waiting, userId])
 
   const active = wallet?.status === 'ACTIVE'
   const label = !wallet

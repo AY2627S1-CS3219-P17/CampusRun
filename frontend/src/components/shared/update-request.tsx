@@ -6,17 +6,26 @@
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 // Scope: AI-connected Create to the Order Service with the server's field errors mapped onto the form; AI-added
 //        edit mode, pre-filled from the errand, which validates and sends only the changed fields.
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-20
+// Scope: AI-added the pickup and dropoff headings, and the predefined delivery location picker that fills the
+//        dropoff fields and zooms the map to it.
 // Author review: <to be completed by author>
 
 import { useEffect, useRef, useState, type SubmitEvent } from 'react'
 import { Dialog, DropdownMenu } from 'radix-ui'
 import { Check, ChevronDown, MapPin, Search, Sparkles, X } from 'lucide-react'
 import { listSuppliers } from '../../api/supplier'
-import { autofillRequest, createErrand, editErrand } from '../../api/order'
+import {
+  autofillRequest,
+  createErrand,
+  editErrand,
+  listPredefinedLocations,
+} from '../../api/order'
 import { ApiError } from '../../api/client'
 import type { Supplier } from '../../types/supplier'
 import type {
   CreateErrandPayload,
+  DeliveryLocation,
   EditErrandPayload,
   Errand,
 } from '../../types/order'
@@ -39,6 +48,7 @@ type Field =
 
 type Errors = Partial<Record<Field, string>>
 type SupplierRef = Pick<Supplier, 'id' | 'name'>
+type LocationRef = Pick<DeliveryLocation, 'id' | 'name'>
 
 type Props = {
   // Edits this errand instead of creating one
@@ -89,6 +99,8 @@ type Values = {
   floor: string
   description: string
   location: MapPosition | null
+  // The predefined location the delivery point was filled from, until any of its fields is changed
+  predefined: LocationRef | null
   deliveryBy: string
   credits: string
 }
@@ -102,6 +114,7 @@ function initialValues(errand?: Errand): Values {
       floor: '',
       description: '',
       location: null,
+      predefined: null,
       deliveryBy: inputDate(new Date(Date.now() + 30 * 60_000)),
       credits: '',
     }
@@ -117,6 +130,7 @@ function initialValues(errand?: Errand): Values {
     floor: place.floor ?? '',
     description: place.description ?? '',
     location: { latitude: place.latitude, longitude: place.longitude },
+    predefined: place.predefined ? { id: place.id, name: place.name } : null,
     deliveryBy: inputDate(new Date(errand.deliverBy)),
     credits: String(errand.credits),
   }
@@ -128,6 +142,7 @@ function changedFields(values: Values, initial: Values): Set<Field> {
   if (values.title.trim() !== initial.title) changed.add('title')
   if (values.supplier?.id !== initial.supplier?.id) changed.add('supplier')
   if (
+    values.predefined?.id !== initial.predefined?.id ||
     values.building.trim() !== initial.building ||
     values.floor.trim() !== initial.floor ||
     values.description.trim() !== initial.description ||
@@ -155,7 +170,9 @@ function createPayload(values: Values): CreateErrandPayload {
   return {
     title: values.title.trim(),
     supplierId: values.supplier?.id ?? 0,
-    ...placeOf(values),
+    ...(values.predefined
+      ? { deliveryLocationId: values.predefined.id }
+      : placeOf(values)),
     deliverBy: new Date(values.deliveryBy).toISOString(),
     credits: Number(values.credits),
   }
@@ -167,7 +184,9 @@ function editPayload(values: Values, changed: Set<Field>): EditErrandPayload {
   if (changed.has('title')) payload.title = values.title.trim()
   if (changed.has('supplier') && values.supplier)
     payload.supplierId = values.supplier.id
-  if (changed.has('location')) {
+  if (changed.has('location') && values.predefined)
+    payload.deliveryLocationId = values.predefined.id
+  else if (changed.has('location')) {
     // null clears a floor the old location had
     Object.assign(payload, placeOf(values), {
       floor: values.floor.trim() || null,
@@ -186,6 +205,8 @@ function validate(
   floor: string,
   description: string,
   location: MapPosition | null,
+  // A predefined location is valid as it is, e.g. without a description
+  predefined: boolean,
   deliveryBy: string,
   credits: string,
   // The latest deadline allowed: 24 hours from now, or from when an edited errand was posted
@@ -199,16 +220,18 @@ function validate(
   else if (title.trim().length > 100) errors.title = 'At most 100 characters'
 
   if (!supplier) errors.supplier = 'Required'
-  if (!building.trim()) errors.building = 'Building is required'
-  else if (building.trim().length > 100)
-    errors.building = 'At most 100 characters'
+  if (!predefined) {
+    if (!building.trim()) errors.building = 'Building is required'
+    else if (building.trim().length > 100)
+      errors.building = 'At most 100 characters'
 
-  if (floor.trim().length > 10) errors.floor = 'At most 10 characters'
-  if (!description.trim()) errors.description = 'Required'
-  else if (description.trim().length > 200)
-    errors.description = 'At most 200 characters'
+    if (floor.trim().length > 10) errors.floor = 'At most 10 characters'
+    if (!description.trim()) errors.description = 'Required'
+    else if (description.trim().length > 200)
+      errors.description = 'At most 200 characters'
 
-  if (!location) errors.location = 'Choose a location on the map'
+    if (!location) errors.location = 'Choose a location on the map'
+  }
 
   if (!deliveryBy || Number.isNaN(deliveryTime)) errors.deliveryBy = 'Required'
   else if (deliveryTime < now + 15 * 60_000)
@@ -247,6 +270,15 @@ export default function UpdateRequestDialog({
   const [floor, setFloor] = useState(initial.floor)
   const [description, setDescription] = useState(initial.description)
   const [location, setLocation] = useState<MapPosition | null>(initial.location)
+  const [predefined, setPredefined] = useState<LocationRef | null>(
+    initial.predefined,
+  )
+  // Where the map flies to: the predefined location just picked
+  const [mapFocus, setMapFocus] = useState<MapPosition | null>(null)
+  const [locationQuery, setLocationQuery] = useState('')
+  const [locations, setLocations] = useState<DeliveryLocation[]>([])
+  const [locationOpen, setLocationOpen] = useState(false)
+  const [locationError, setLocationError] = useState('')
   const [deliveryBy, setDeliveryBy] = useState(initial.deliveryBy)
   const [credits, setCredits] = useState(initial.credits)
   const [saving, setSaving] = useState(false)
@@ -296,6 +328,28 @@ export default function UpdateRequestDialog({
     }
   }, [supplierOpen, supplierQuery])
 
+  useEffect(() => {
+    if (!locationOpen) return
+    const controller = new AbortController()
+    const timeout = setTimeout(() => {
+      listPredefinedLocations(locationQuery, controller.signal)
+        .then((page) => {
+          setLocations(page.items)
+          setLocationError('')
+        })
+        .catch((error: unknown) => {
+          if (error instanceof DOMException && error.name === 'AbortError')
+            return
+          setLocationError('Could not load locations.')
+        })
+    }, 250)
+
+    return () => {
+      clearTimeout(timeout)
+      controller.abort()
+    }
+  }, [locationOpen, locationQuery])
+
   const values: Values = {
     title,
     supplier,
@@ -303,6 +357,7 @@ export default function UpdateRequestDialog({
     floor,
     description,
     location,
+    predefined,
     deliveryBy,
     credits,
   }
@@ -320,6 +375,7 @@ export default function UpdateRequestDialog({
     floor,
     description,
     location,
+    predefined !== null,
     deliveryBy,
     credits,
     latestDelivery,
@@ -340,6 +396,28 @@ export default function UpdateRequestDialog({
     setTouched((current) => new Set(current).add(field))
   const clearServerError = (field: Field) =>
     setServerErrors((current) => ({ ...current, [field]: undefined }))
+  // Changing any of the delivery point's fields makes it a new location of the requester's own
+  const detachPredefined = () => {
+    setPredefined(null)
+    setMapFocus(null)
+  }
+
+  function choosePredefined(option: DeliveryLocation) {
+    const position = { latitude: option.latitude, longitude: option.longitude }
+    setPredefined(option)
+    setBuilding(option.name)
+    setFloor(option.floor ?? '')
+    setDescription(option.description ?? '')
+    setLocation(position)
+    setMapFocus(position)
+    setServerErrors((current) => ({
+      ...current,
+      building: undefined,
+      floor: undefined,
+      description: undefined,
+      location: undefined,
+    }))
+  }
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -371,6 +449,7 @@ export default function UpdateRequestDialog({
 
   function showAiView() {
     setSupplierOpen(false)
+    setLocationOpen(false)
     setAiView(true)
     dialogContent?.scrollTo({ top: 0 })
   }
@@ -401,6 +480,12 @@ export default function UpdateRequestDialog({
         setSupplierQuery(suggestion.supplier.name)
       }
 
+      if (
+        suggestion.building !== null ||
+        suggestion.floor !== null ||
+        suggestion.description !== null
+      )
+        detachPredefined()
       if (suggestion.building !== null) setBuilding(suggestion.building)
       if (suggestion.floor !== null) setFloor(suggestion.floor)
       if (suggestion.description !== null) {
@@ -553,7 +638,10 @@ export default function UpdateRequestDialog({
                   />
                   {errorFor('title') && <small>{errorFor('title')}</small>}
                 </label>
+              </div>
 
+              <div className="request-dialog-section">
+                <h3 className="request-dialog-section-title">Select pickup</h3>
                 <div className="request-field">
                   <span>Supplier</span>
                   <DropdownMenu.Root
@@ -629,6 +717,73 @@ export default function UpdateRequestDialog({
               </div>
 
               <div className="request-dialog-section">
+                <h3 className="request-dialog-section-title">Select dropoff</h3>
+                <div className="request-field">
+                  <span>Predefined location</span>
+                  <DropdownMenu.Root
+                    open={locationOpen}
+                    onOpenChange={setLocationOpen}
+                    modal={false}
+                  >
+                    <DropdownMenu.Trigger asChild>
+                      <button
+                        className="request-supplier-trigger"
+                        type="button"
+                      >
+                        <span>
+                          {predefined?.name ??
+                            'Choose a campus location, or enter your own below'}
+                        </span>
+                        <ChevronDown size={16} aria-hidden="true" />
+                      </button>
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Portal container={dialogContent}>
+                      <DropdownMenu.Content
+                        className="request-supplier-menu"
+                        align="start"
+                        sideOffset={6}
+                        collisionPadding={12}
+                      >
+                        <label className="request-supplier-search">
+                          <Search size={16} aria-hidden="true" />
+                          <input
+                            value={locationQuery}
+                            placeholder="Search locations"
+                            aria-label="Search locations"
+                            onChange={(event) =>
+                              setLocationQuery(event.target.value)
+                            }
+                            onKeyDown={(event) => event.stopPropagation()}
+                          />
+                        </label>
+                        {locationError ? (
+                          <p>{locationError}</p>
+                        ) : locations.length ? (
+                          locations.map((option) => (
+                            <DropdownMenu.Item
+                              className="request-supplier-option"
+                              key={option.id}
+                              onSelect={() => choosePredefined(option)}
+                            >
+                              <span>
+                                <strong>{option.name}</strong>
+                                {option.description && (
+                                  <small>{option.description}</small>
+                                )}
+                              </span>
+                              {predefined?.id === option.id && (
+                                <Check size={16} aria-hidden="true" />
+                              )}
+                            </DropdownMenu.Item>
+                          ))
+                        ) : (
+                          <p>No locations found.</p>
+                        )}
+                      </DropdownMenu.Content>
+                    </DropdownMenu.Portal>
+                  </DropdownMenu.Root>
+                </div>
+
                 <div className="request-dialog-row-group">
                   <div className="request-dialog-row">
                     <label>
@@ -638,6 +793,7 @@ export default function UpdateRequestDialog({
                         placeholder="COM3"
                         onChange={(event) => {
                           setBuilding(event.target.value)
+                          detachPredefined()
                           clearServerError('building')
                         }}
                         onBlur={() => touch('building')}
@@ -656,6 +812,7 @@ export default function UpdateRequestDialog({
                         placeholder="1 (optional)"
                         onChange={(event) => {
                           setFloor(event.target.value)
+                          detachPredefined()
                           clearServerError('floor')
                         }}
                         onBlur={() => touch('floor')}
@@ -689,6 +846,7 @@ export default function UpdateRequestDialog({
                     placeholder="Next to LT19"
                     onChange={(event) => {
                       setDescription(event.target.value)
+                      detachPredefined()
                       clearServerError('description')
                     }}
                     onBlur={() => touch('description')}
@@ -704,8 +862,11 @@ export default function UpdateRequestDialog({
                   <InteractiveMap
                     value={location}
                     ariaLabel="Choose location on map"
+                    focus={mapFocus}
+                    redPin={predefined !== null}
                     onChange={(position) => {
                       setLocation(position)
+                      detachPredefined()
                       setServerErrors((current) => ({
                         ...current,
                         location: undefined,

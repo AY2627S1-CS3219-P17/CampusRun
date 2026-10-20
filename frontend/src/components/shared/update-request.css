@@ -3,6 +3,8 @@
  * Scope: Styled the request dialog, scrollable supplier menu, validation, grouped form sections, AI Autofill view, and consolidated duplicate input declarations.
  * Tool: OpenAI Codex (GPT-6), date: 2026-10-17
  * Scope: Styled the AI prompt counter, validation feedback, and blocking loading overlay.
+ * Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-20
+ * Scope: AI-added the section headings.
  * Author review: <to be completed by author>
  */
 .request-dialog-overlay {
@@ -191,6 +193,11 @@
   display: grid;
   gap: 16px;
   padding: 24px 0;
+}
+.request-dialog-section-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
 }
 .request-dialog-section:first-child {
   padding-top: 0;

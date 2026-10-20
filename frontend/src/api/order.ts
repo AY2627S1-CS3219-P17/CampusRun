@@ -3,12 +3,16 @@
 // Scope: Added the authenticated order-service AI autofill API contract and optional request cancellation.
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 // Scope: AI-added the Explore, My Requests and My Tasks list calls, and create, edit and the errand actions.
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-20
+// Scope: AI-added the predefined delivery location search.
 // Author review: <to be completed by author>
 
 import { request } from './client'
+import type { Page } from '../types/supplier'
 import type {
   AutofillSuggestion,
   CreateErrandPayload,
+  DeliveryLocation,
   EditErrandPayload,
   Errand,
   ErrandAction,
@@ -26,6 +30,16 @@ export function autofillRequest(description: string, signal?: AbortSignal) {
     body: JSON.stringify({ description }),
     signal,
   })
+}
+
+// The shared campus list, by name
+export function listPredefinedLocations(q: string, signal?: AbortSignal) {
+  const params = new URLSearchParams({ predefined: 'true', pageSize: '100' })
+  if (q.trim()) params.set('q', q.trim())
+  return request<Page<DeliveryLocation>>(
+    `${ORDER_API_URL}/delivery-locations?${params}`,
+    { signal },
+  )
 }
 
 function listParams(query: ErrandQuery, tab?: ErrandTab) {

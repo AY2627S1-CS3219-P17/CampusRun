@@ -4,6 +4,8 @@
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 // Scope: AI-added the errand, list page and list query types, matching the Order Service API, and the create,
 //        edit and action request types.
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-20
+// Scope: AI-added the delivery location type and the predefined-location option on create and edit.
 // Author review: <to be completed by author>
 
 export type AutofillSuggestion = {
@@ -103,7 +105,21 @@ export type ErrandQuery = {
   pageSize: number
 }
 
-// A new delivery point of the requester's own; the form doesn't offer the saved locations yet
+// As returned by GET /delivery-locations
+export type DeliveryLocation = {
+  id: number
+  name: string
+  floor: string | null
+  description: string | null
+  latitude: number
+  longitude: number
+  predefined: boolean
+}
+
+// A saved location, such as one of the predefined campus spots
+type SavedDeliveryPoint = { deliveryLocationId: number }
+
+// A new delivery point of the requester's own
 type NewDeliveryPoint = {
   building: string
   floor?: string | null
@@ -112,16 +128,22 @@ type NewDeliveryPoint = {
   longitude: number
 }
 
-// Leave optional fields out rather than sending empty strings, which fail validation
-export type CreateErrandPayload = NewDeliveryPoint & {
+type ErrandFields = {
   title: string
   supplierId: number
   deliverBy: string
   credits: number
 }
 
-// Only the fields sent are changed; a new delivery point sends all of its fields together
-export type EditErrandPayload = Partial<CreateErrandPayload>
+// Leave optional fields out rather than sending empty strings, which fail validation
+export type CreateErrandPayload = ErrandFields &
+  (SavedDeliveryPoint | NewDeliveryPoint)
+
+// Only the fields sent are changed; a new delivery point sends all of its fields together, and never with
+// deliveryLocationId
+export type EditErrandPayload = Partial<
+  ErrandFields & SavedDeliveryPoint & NewDeliveryPoint
+>
 
 export type ErrandAction =
   'accept' | 'pickup' | 'deliver' | 'complete' | 'cancel'

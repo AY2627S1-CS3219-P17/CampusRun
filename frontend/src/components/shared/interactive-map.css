@@ -1,6 +1,8 @@
 /* AI Assistance Disclosure:
  * Tool: Codex (OpenAI), date: 2026-10-16
  * Scope: AI-generated shared interactive-map sizing, supplier-style pins, optional two-pin legend, and fullscreen save control.
+ * Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-20
+ * Scope: AI-added the red pin.
  * Author review: <to be completed by author>
  */
 .interactive-map,
@@ -92,6 +94,10 @@
 
 .interactive-map-pin-dropoff {
   background: #2563b8;
+}
+
+.interactive-map-pin-red {
+  background: #d92d20;
 }
 
 .interactive-map-legend {

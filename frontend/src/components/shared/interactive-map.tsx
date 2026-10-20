@@ -3,6 +3,8 @@
 // Scope: AI-generated NUS-bounded Leaflet map with editable and read-only fullscreen modes; optional two-pin pickup/dropoff display.
 // Tool: Codex (OpenAI), date: 2026-10-17
 // Scope: Removed redundant usage comments from the typed single- and two-pin map modes.
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-20
+// Scope: AI-added the wider default view, flying to a chosen position, and the red pin option.
 // Author review: <to be completed by author>
 
 import { useEffect, useRef, useState } from 'react'
@@ -22,8 +24,8 @@ import {
   useMapEvents,
 } from 'react-leaflet'
 import {
+  DEFAULT_VIEW_BOUNDS,
   MAP_LIMITS,
-  NUS_CENTER,
   OUTER_RING,
   SERVED_AREA_HOLE,
   SERVED_BOUNDS,
@@ -47,7 +49,26 @@ const dropoffIcon = divIcon({
   iconAnchor: [20, 38],
 })
 
+const redIcon = divIcon({
+  className: 'interactive-map-marker',
+  html: '<span class="interactive-map-pin interactive-map-pin-red"></span>',
+  iconSize: [40, 40],
+  iconAnchor: [20, 38],
+})
+
 type TwoPins = { pickup: MapPosition; dropoff: MapPosition }
+
+// Zooms in on the position each time it changes
+function FlyTo({ position }: { position: MapPosition }) {
+  const map = useMap()
+  const { latitude, longitude } = position
+
+  useEffect(() => {
+    map.flyTo([latitude, longitude], 17, { duration: 0.6 })
+  }, [map, latitude, longitude])
+
+  return null
+}
 
 function FitTwoPins({
   pins,
@@ -81,10 +102,12 @@ function Pin({
   position,
   onChange,
   readOnly,
+  red,
 }: {
   position: MapPosition | null
   onChange?: (position: MapPosition) => void
   readOnly: boolean
+  red: boolean
 }) {
   const markerRef = useRef<LeafletMarker>(null)
 
@@ -99,7 +122,7 @@ function Pin({
     <Marker
       ref={markerRef}
       position={[position.latitude, position.longitude]}
-      icon={markerIcon}
+      icon={red ? redIcon : markerIcon}
       alt="Selected location"
       draggable={!readOnly}
       interactive={!readOnly}
@@ -120,6 +143,9 @@ function Pin({
 type Props = {
   ariaLabel?: string
   className?: string
+  // The map flies here whenever it changes, e.g. when a predefined location is picked
+  focus?: MapPosition | null
+  redPin?: boolean
 } & (
   | ({ value: MapPosition | null; pins?: never } & (
       | { readOnly: true; onChange?: never }
@@ -135,6 +161,8 @@ export default function InteractiveMap({
   readOnly = false,
   ariaLabel,
   className,
+  focus,
+  redPin = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<LeafletMap>(null)
@@ -195,9 +223,12 @@ export default function InteractiveMap({
     >
       <MapContainer
         ref={mapRef}
-        center={value ? [value.latitude, value.longitude] : NUS_CENTER}
-        zoom={17}
-        minZoom={14}
+        {...(value
+          ? { center: [value.latitude, value.longitude], zoom: 17 }
+          : { bounds: DEFAULT_VIEW_BOUNDS })}
+        // Fractional zoom, so the default view fits the area closely in a short map
+        zoomSnap={0.25}
+        minZoom={13}
         maxBounds={[
           [MAP_LIMITS.minLat, MAP_LIMITS.minLng],
           [MAP_LIMITS.maxLat, MAP_LIMITS.maxLng],
@@ -245,8 +276,10 @@ export default function InteractiveMap({
             position={displayedPosition}
             onChange={changePosition}
             readOnly={readOnly}
+            red={redPin}
           />
         )}
+        {focus && <FlyTo position={focus} />}
       </MapContainer>
 
       {pins && (

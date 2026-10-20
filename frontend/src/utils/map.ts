@@ -1,6 +1,8 @@
 // AI Assistance Disclosure:
 // Tool: Codex (OpenAI), date: 2026-10-16
 // Scope: AI-generated shared NUS map geometry and coordinate validation.
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-20
+// Scope: AI-added the default view, the middle 80% of the served area.
 // Author review: <to be completed by author>
 
 import type { LatLngExpression } from 'leaflet'
@@ -25,6 +27,13 @@ export const MAP_LIMITS = {
 export const SERVED_BOUNDS: [[number, number], [number, number]] = [
   [NUS_SERVED_AREA.minLat, NUS_SERVED_AREA.minLng],
   [NUS_SERVED_AREA.maxLat, NUS_SERVED_AREA.maxLng],
+]
+// What a map without a pin opens on: the middle 80% of the served area
+const latInset = (NUS_SERVED_AREA.maxLat - NUS_SERVED_AREA.minLat) * 0.1
+const lngInset = (NUS_SERVED_AREA.maxLng - NUS_SERVED_AREA.minLng) * 0.1
+export const DEFAULT_VIEW_BOUNDS: [[number, number], [number, number]] = [
+  [NUS_SERVED_AREA.minLat + latInset, NUS_SERVED_AREA.minLng + lngInset],
+  [NUS_SERVED_AREA.maxLat - latInset, NUS_SERVED_AREA.maxLng - lngInset],
 ]
 export const OUTER_RING: LatLngExpression[] = [
   [MAP_LIMITS.minLat, MAP_LIMITS.minLng],

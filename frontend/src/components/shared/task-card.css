@@ -5,6 +5,9 @@
  * Scope: Added full-card click target and a user row aligned with the reward.
  * Tool: Codex (OpenAI), date: 2026-10-17
  * Scope: Removed the outer user row and restored reward alignment with the due date.
+ * Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
+ * Scope: AI-grouped the status with extra badges (credits processing, supplier unavailable), reusing the
+ *        pending palette.
  * Author review: <to be completed by author>
  */
 
@@ -101,14 +104,19 @@
   grid-row: 3;
 }
 
-.task-card > .task-card-status {
+.task-card > .task-card-badges {
   grid-column: 2;
   grid-row: 1;
   justify-self: end;
   align-self: start;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
-.task-card-status {
+.task-card-status,
+.task-card-badge {
   padding: 5px 10px;
   border-radius: 999px;
   font-size: 12px;
@@ -120,7 +128,7 @@
   background: #e6f7ed;
 }
 
-.task-card-status-pending {
+.task-card-badge-pending {
   color: #955000;
   background: #fff0d9;
 }
@@ -138,7 +146,8 @@
 }
 
 .task-card-status-cancelled,
-.task-card-status-expired {
+.task-card-status-expired,
+.task-card-badge-warning {
   color: #a22e38;
   background: #fde9eb;
 }

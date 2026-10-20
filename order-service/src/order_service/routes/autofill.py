@@ -3,24 +3,31 @@
 # Scope: Implemented authenticated Groq extraction, delivery-only location details, nullable credits parsing, and supplier resolution.
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: Moved unchanged from main.py into a router; the token now comes from AnyUser.
+# Tool: OpenAI Codex (GPT-6), date: 2026-10-20
+# Scope: Matched extracted delivery places to active predefined locations and returned saved values.
 # Author review: <to be completed by author>
 
 import json
+import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import httpx
 from fastapi import APIRouter, HTTPException
+from sqlalchemy import select
 
 from order_service.auth import AnyUser
 from order_service.config import get_settings
+from order_service.db import Engine
 from order_service.schemas import (
     EXTRACTION_SCHEMA,
+    AutofillLocationRef,
     AutofillRequest,
     AutofillResponse,
     Extraction,
     SupplierRef,
 )
+from order_service.tables import delivery_locations
 
 settings = get_settings()
 router = APIRouter(tags=["autofill"])
@@ -64,6 +71,34 @@ def normalized_name(value: str) -> str:
     return " ".join(value.casefold().split())
 
 
+def location_names(name: str) -> set[str]:
+    names = {normalized_name(name)}
+    match = re.fullmatch(r"(.+?) \(([^()]+)\)", name)
+    if match:
+        names.update(normalized_name(part) for part in match.groups())
+    return names
+
+
+async def resolve_location(engine: Engine, building: str | None):
+    name = validated_text(building, 100)
+    if name is None:
+        return None
+    async with engine.connect() as conn:
+        result = await conn.execute(
+            select(delivery_locations).where(
+                delivery_locations.c.active.is_(True),
+                delivery_locations.c.predefined.is_(True),
+            )
+        )
+        rows = result.mappings().all()
+    needle = normalized_name(name)
+    exact = [row for row in rows if normalized_name(row["name"]) == needle]
+    if exact:
+        return exact[0]
+    aliases = [row for row in rows if needle in location_names(row["name"])]
+    return aliases[0] if len(aliases) == 1 else None
+
+
 async def extract(client: httpx.AsyncClient, prompt: str, now: datetime) -> Extraction:
     key = settings.groq_api_key.get_secret_value()
     if not key:
@@ -86,7 +121,7 @@ async def extract(client: httpx.AsyncClient, prompt: str, now: datetime) -> Extr
                             "do not abbreviate a supplier name. "
                             "Pickup and delivery are distinct: 'from YIH' means pickup, not delivery; "
                             "'from YIH to COM3' means delivery to COM3. "
-                            "building: only an explicitly stated delivery building, at most 100 "
+                            "building: only an explicitly stated delivery building or campus spot, at most 100 "
                             "characters; null if none is given. "
                             "floor: only the delivery floor, at most 10 characters; null if absent. "
                             "description: only details describing or locating the delivery building, "
@@ -193,18 +228,35 @@ async def resolve_supplier(
 
 
 @router.post("/autofill", response_model=AutofillResponse)
-async def autofill(body: AutofillRequest, user: AnyUser) -> AutofillResponse:
+async def autofill(
+    body: AutofillRequest, user: AnyUser, engine: Engine
+) -> AutofillResponse:
     now = datetime.now(CAMPUS_TZ)
     async with httpx.AsyncClient(timeout=20) as client:
         extracted = await extract(client, body.description, now)
         supplier = await resolve_supplier(client, extracted.supplierName, user.token)
 
+    location = await resolve_location(engine, extracted.building)
     return AutofillResponse(
         title=validated_text(extracted.title, 100),
         supplier=supplier,
-        building=validated_text(extracted.building, 100),
-        floor=validated_text(extracted.floor, 10),
-        description=validated_text(extracted.description, 200),
+        building=location["name"]
+        if location
+        else validated_text(extracted.building, 100),
+        floor=location["floor"] if location else validated_text(extracted.floor, 10),
+        description=location["description"]
+        if location
+        else validated_text(extracted.description, 200),
+        locationRef=(
+            AutofillLocationRef(
+                **{
+                    key: location[key]
+                    for key in ("id", "name", "latitude", "longitude")
+                }
+            )
+            if location
+            else None
+        ),
         deliveryBy=delivery_time(extracted.deliveryBy, now),
         credits=parsed_credits(extracted.credits),
     )

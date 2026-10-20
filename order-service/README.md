@@ -2,6 +2,8 @@
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-10-17
 Scope: Documented the database-free AI autofill endpoint, local settings, and Groq free-plan limits.
+Tool: OpenAI Codex (GPT-6), date: 2026-10-20
+Scope: Documented predefined delivery-location matching in autofill.
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 Scope: Documented the database, the order-worker process, the local development commands and delivery locations;
        AI-updated the overview and added the demo section (2026-10-19).
@@ -69,7 +71,7 @@ deadline into the past with `psql`. Set `ORDER_SWEEP_SECONDS=5` in the root `.en
 
 ## Autofill
 
-`POST /autofill` requires a user-service bearer token and JSON `{"description":"..."}` with 20–500 trimmed characters. It extracts nullable title, supplier, delivery building and floor, short description, delivery deadline, and credits. The supplier is resolved to an active supplier ID and name. Unknown or invalid suggestions return `null`. This endpoint never creates an order. The map position remains a manual selection. The `description` suggestion contains only stated details describing or locating the delivery building.
+`POST /autofill` requires a user-service bearer token and JSON `{"description":"..."}` with 20–500 trimmed characters. It extracts nullable title, supplier, delivery building and floor, short description, delivery deadline, and credits. The supplier is resolved to an active supplier ID and name. Unknown or invalid suggestions return `null`. When the extracted delivery building or campus spot matches one active predefined location (including a unique parenthesized base or abbreviation), the response uses its saved building, floor and description and includes `locationRef` with its ID, name and coordinates. The form selects and maps that location. Otherwise `locationRef` is null and the individual extracted fields are returned. This endpoint never creates an order. The `description` suggestion for unmatched locations contains only stated delivery-location details.
 
 ## Groq free-plan limits
 

@@ -2,6 +2,8 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: AI-generated tests pinning the existing POST /autofill behaviour after it moved into routes/autofill.py,
 #        with Groq and the Supplier Service replaced by a fake HTTP transport.
+# Tool: OpenAI Codex (GPT-6), date: 2026-10-20
+# Scope: Tested predefined delivery-location matching and custom-field fallback.
 # Author review: <to be completed by author>
 
 import json
@@ -14,6 +16,7 @@ from pydantic import SecretStr
 
 from order_service.routes import autofill
 from tests.conftest import auth, make_token
+from tests.factories import add_location
 
 pytestmark = pytest.mark.anyio
 
@@ -84,6 +87,7 @@ async def test_fills_the_form_and_resolves_the_supplier(client: AsyncClient, fak
     assert response.json() == {
         "title": "Collect printed notes",
         "supplier": {"id": 7, "name": "Printer @ Com 2"},
+        "locationRef": None,
         "building": "COM2",
         "floor": "1",
         "description": "Outside LT19",
@@ -113,3 +117,61 @@ async def test_reports_groq_rate_limits(client: AsyncClient, fake_http) -> None:
     response = await client.post("/autofill", json={"description": PROMPT}, headers=auth())
     assert response.status_code == 429
     assert response.json()["detail"] == "AI autofill is busy. Try again shortly."
+
+
+async def test_matches_a_predefined_delivery_location(client: AsyncClient, engine, fake_http) -> None:
+    location_id = await add_location(
+        engine,
+        name="COM2 (LT19)",
+        floor="2",
+        description="Meet at the LT19 entrance.",
+        latitude=1.29373,
+        longitude=103.7743,
+    )
+    response = await client.post("/autofill", json={"description": PROMPT}, headers=auth())
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["locationRef"] == {
+        "id": location_id,
+        "name": "COM2 (LT19)",
+        "latitude": 1.29373,
+        "longitude": 103.7743,
+    }
+    assert (body["building"], body["floor"], body["description"]) == (
+        "COM2 (LT19)", "2", "Meet at the LT19 entrance."
+    )
+
+
+async def test_matches_a_unique_location_abbreviation(client: AsyncClient, engine, fake_http) -> None:
+    location_id = await add_location(engine, name="Yusof Ishak House (YIH)")
+    content = extraction(building="YIH")
+    fake_http["groq"] = lambda: httpx.Response(200, json={"choices": [{"message": {"content": json.dumps(content)}}]})
+
+    body = (await client.post("/autofill", json={"description": PROMPT}, headers=auth())).json()
+
+    assert body["locationRef"]["id"] == location_id
+    assert body["building"] == "Yusof Ishak House (YIH)"
+
+
+async def test_ignores_inactive_and_personal_locations(client: AsyncClient, engine, fake_http) -> None:
+    await add_location(engine, name="COM2", active=False)
+    await add_location(engine, name="COM2", predefined=False, created_by=1)
+    response = await client.post("/autofill", json={"description": PROMPT}, headers=auth())
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["locationRef"] is None
+    assert (body["building"], body["floor"], body["description"]) == ("COM2", "1", "Outside LT19")
+
+
+async def test_ambiguous_abbreviation_keeps_custom_fields(client: AsyncClient, engine, fake_http) -> None:
+    await add_location(engine, name="Yusof Ishak House (YIH)")
+    await add_location(engine, name="Yet Another House (YIH)")
+    content = extraction(building="YIH")
+    fake_http["groq"] = lambda: httpx.Response(200, json={"choices": [{"message": {"content": json.dumps(content)}}]})
+
+    body = (await client.post("/autofill", json={"description": PROMPT}, headers=auth())).json()
+
+    assert body["locationRef"] is None
+    assert body["building"] == "YIH"

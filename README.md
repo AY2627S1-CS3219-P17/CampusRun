@@ -1,10 +1,11 @@
 <!--
 AI Assistance Disclosure:
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
-Tool: OpenAI Codex (GPT-6), date: 2026-10-16; 2026-10-17
+Tool: OpenAI Codex (GPT-6), date: 2026-10-16; 2026-10-17; 2026-10-20
 Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 Scope: AI-written "Gateway, root paths and API docs" section and AI Use Summary bullets, including the frontend AI entry view disclosure,
-       the credit-service routing note and the Credit Service AI Use Summary; the rest was written by the team.
+       the credit-service routing note, the Credit Service AI Use Summary, frontend list/navigation fixes,
+       and predefined delivery-location autofill; the rest was written by the team.
 Author review: <to be completed by author>
 -->
 
@@ -171,11 +172,6 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 
 **Key response:** Added a database-free FastAPI order-service with authenticated `POST /autofill`, backend-only Groq structured extraction, active supplier matching, and gateway/Compose wiring. Connected the frontend AI Autofill view with a 20–500-character prompt, counter, blocking loading state, errors, and partial suggestions that replace existing values when non-null. Request creation remains a separate unimplemented operation. The preceding planning request specified these requirements.
 
-**Files affected:** Each changed source and configuration file carries an AI Assistance Disclosure header. The generated `order-service/uv.lock` also identifies AI assistance.
-
-**Files affected:** each carries an "AI Assistance Disclosure" header comment.
-
-**Prompts and key exchanges:** see [`ai/usage-log.md`](ai/usage-log.md).
 ### Order Service (Nathan)
 
 **Tool and mode:** Claude Code (model: Claude Opus 5.5), review, explain and generate (2026-10-18 to 2026-10-19).
@@ -209,6 +205,17 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 - **Generating** `order-worker` (Task 9): the outbox relay, the reply consumer (sender and type checked, acknowledged only after the transaction commits) and the sweeper, which expires errands past their deadline and resends credit commands stuck PENDING; `GET /admin/stuck` lists the stuck errands.
 - **Generating** the removal of delivery locations from supplier-service (Task 10): its routes, models, seed data and tests, and a migration that drops the table.
 - **Generating** the D3 demo script `order-service/scripts/demo.sh` and the D3 answers for the Order Service (Task 11): the errands and outbox tables, the state-transition and endpoint tables, the concurrency and failure answers, and the message design with sample payloads.
+- **Generating** the frontend's connection to the Order Service (Task 12), with UI choices checked with the author because the screens are another member's work:
+  - Explore, My Requests and My Tasks load real errands through one mapper and one list hook. The list searches 300 ms after typing stops, loads 10 more errands as you scroll, checks again every 2 seconds while any errand's credits are processing, and replaces the Pending tab with a "Credits processing" badge (D4);
+  - the details dialog's actions follow the service's rules: Accept, Picked up, Delivered, Cancel and Completed, with busy and error states. A deactivated supplier hides Accept and prompts the requester to cancel (D13);
+  - Create and Edit submit to the service and show its field errors on the form. Edit sends only the changed fields;
+  - a `campusrun:errands-changed` event reloads the lists and the credit banner after any change.
 - **Explaining** the code for the author's review: the delivery-location share lock, `Engine` versus `Connection` dependencies, the locked read in edit, and the request and response models. Explanations of the locks and transactions were added to the D3 document.
 
 **Verification:** 256 order-service tests pass, including concurrent accepts, accept against cancel, complete sent twice, the deadline guards and two sweepers at once; the race tests passed on six repeated runs. Task 1 also passed `docker compose config`, `nginx -t` and the image build. The demo script ran end to end against the full Compose stack, and the credit audit afterwards reported no problems. <!-- TODO(author): describe your own review and testing -->
+
+**Files affected:** Each changed source and configuration file carries an AI Assistance Disclosure header. The generated `order-service/uv.lock` also identifies AI assistance.
+
+**Files affected:** each carries an "AI Assistance Disclosure" header comment.
+
+**Prompts and key exchanges:** see [`ai/usage-log.md`](ai/usage-log.md).

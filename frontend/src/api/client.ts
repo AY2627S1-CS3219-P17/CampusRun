@@ -4,7 +4,8 @@
 //        AI-added form bodies and FastAPI's default 422 format (Claude Code, 2026-09-27).
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 // Scope: AI-added refreshing the access token before a request when it's about to run out, and once after a 401,
-//        retrying the request with the new token.
+//        retrying the request with the new token; AI-changed a 401 that can't be refreshed because the User Service
+//        is unreachable to say so, instead of showing the service's "session expired" message (2026-11-10).
 // Author review: Validated authentication, request bodies, and error boundaries.
 
 import { clearSession, getSession, refreshSession } from '../utils/session'
@@ -91,8 +92,7 @@ export async function request<T>(
   const session = getSession()
   const margin = Math.min(EXPIRY_MARGIN_MS, (session?.lifetimeMs ?? 0) / 4)
   if (session && session.expiresAt - Date.now() < margin) {
-    if ((await tryRefresh()) === false)
-      throw new ApiError(401, SESSION_ENDED)
+    if ((await tryRefresh()) === false) throw new ApiError(401, SESSION_ENDED)
   }
 
   let response = await send(url, init)
@@ -103,6 +103,10 @@ export async function request<T>(
   if (response.status === 401 && session) {
     const refreshed = await tryRefresh()
     if (refreshed === false) throw new ApiError(401, SESSION_ENDED)
+    // The User Service couldn't be reached to renew the token. The session may
+    // still be fine, so it's kept, and the service's "session expired" 401
+    // would be wrong: Try again works once the User Service is back.
+    if (refreshed === null) throw new ApiError(0, UNREACHABLE)
     if (refreshed) {
       response = await send(url, init)
       // Refused even with fresh tokens (e.g. the account was deleted): give up

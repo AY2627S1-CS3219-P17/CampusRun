@@ -6,6 +6,8 @@ Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 Scope: AI-written "Opening the user's wallet" section.
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 Scope: AI-added the internal endpoints section and the 401 messages.
+Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
+Scope: AI-added the managing admins section.
 Author review: Originally written and then verified by Nathan
 -->
 
@@ -86,7 +88,7 @@ The `--build` flag rebuilds the images so your latest code changes are included.
 
 ## Creating the initial admin
 
-The `create-initial-admin` command creates the first admin (a user with the `admin` role) from `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD`. These follow the same rules as registration, so the email must be an `@u.nus.edu` address. It does nothing once any admin exists, so it's safe to re-run. It fails if a student already uses the email or username. Run it after migrations. Registration always creates students, and no endpoint changes a user's role.
+The `create-initial-admin` command creates the first admin (a user with the `admin` role) from `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD`. These follow the same rules as registration, so the email must be an `@u.nus.edu` address. It does nothing once any admin exists, so it's safe to re-run. It fails if a student already uses the email or username. Run it after migrations. Registration always creates students. After that, admins promote other users through the API (see [Managing admins](#managing-admins)).
 
 - **Local development:** set all three variables in `user-service/.env`, then run:
 
@@ -101,6 +103,25 @@ The `create-initial-admin` command creates the first admin (a user with the `adm
   ```sh
   docker compose run --rm user-seed-admin
   ```
+
+## Managing admins
+
+Admin-only endpoints for the web app's admin page (`src/user_service/admin.py`):
+
+| Endpoint | What it does |
+| --- | --- |
+| `GET /admin/users?q=&role=&page=&page_size=` | Searches users by username or email. Returns id, username, email and role only. |
+| `POST /admin/users/{user_id}/promote` | Makes a student an admin. `404` if there's no such user, `409` if they're already an admin. |
+| `POST /admin/me/step-down` | Gives up your own admin role. `409` if you're the only admin left. |
+
+An admin can't demote anyone else, so there's always at least one admin and no admin can lock another out.
+
+Two safeguards protect these endpoints:
+
+- **Role changes run one at a time.** Each change takes a Postgres transaction-level advisory lock (`pg_advisory_xact_lock`) first. Without it, the last two admins stepping down at the same moment would each count two admins, and both would succeed, leaving none.
+- **The caller's role is re-checked in the database,** inside the lock. The role in an access token can be up to `JWT_ACCESS_TOKEN_TTL_SECONDS` old. Without the re-check, an admin who just stepped down could use their old token to promote themselves straight back. A `403` is returned instead.
+
+Sessions don't end on a role change. `/auth/refresh` reads the role from the database, so the new role reaches the user's next access token, at most `JWT_ACCESS_TOKEN_TTL_SECONDS` (5 minutes) later. Until then, a demoted admin's old token still passes the role checks in the other services. Each change is logged with the acting admin's id and the target's id.
 
 ## Opening the user's wallet
 

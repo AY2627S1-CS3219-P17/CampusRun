@@ -9,6 +9,7 @@
 #        AI-added the start-up check for JWT_PRIVATE_KEY (Claude Code, 2026-11-09).
 #        AI-added refresh sessions: login starts one, POST /auth/refresh and /auth/logout, and a password change ends
 #        every session (Claude Code, 2026-11-09).
+#        AI-included the admin user management router (Claude Code, 2026-11-09).
 # Author review: reviewed by Nathan
 
 import asyncio
@@ -31,6 +32,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from pydantic import Field
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from user_service import admin
 from user_service.auth import CurrentUser, credentials_error
 from user_service.config import Settings, get_settings
 from user_service.db import Connection, create_engine, get_engine
@@ -86,6 +88,7 @@ app = FastAPI(
     redoc_url="/redoc" if settings.enable_docs else None,
     openapi_url="/openapi.json" if settings.enable_docs else None,
 )
+app.include_router(admin.router)
 
 
 @app.exception_handler(RequestValidationError)

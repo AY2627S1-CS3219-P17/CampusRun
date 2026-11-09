@@ -59,7 +59,7 @@ Not yet verified against a real database. Docker wasn't running, so no container
 
 ## Decisions
 - **FastAPI + SQLAlchemy Core** and an auto-increment integer `users.id`. These were decided by the team.
-- **Admins are users with the `admin` role.** At first they were separate accounts in their own table, but the team replaced that on 2026-09-28. Admins can't post or accept errands, so other services check `role == "student"` on those routes. Only the `create-initial-admin` script creates admins; no endpoint changes a role.
+- **Admins are users with the `admin` role.** At first they were separate accounts in their own table, but the team replaced that on 2026-09-28. Admins can't post or accept errands, so other services check `role == "student"` on those routes. Only the `create-initial-admin` script creates admins; no endpoint changes a role. (Superseded: admins keep every student capability (2026-09-28), and since 2026-11-09 admins can promote students and step down through the API; see `admin-dashboard-plan.md`.)
 - **Migrations run as a separate one-off step,** not on app start. This is a common pattern but isn't officially documented as a recommendation. It maps directly onto a Cloud Run job later.
 - **No hostnames or secrets in code or the image.** Only `compose.yaml` mentions `user-db`.
 - **`compose.yaml` is for local development and demos only.** Cloud Run (Cloud SQL, Secret Manager, a Cloud Run job for migrations, the injected `PORT`) will be configured separately later.

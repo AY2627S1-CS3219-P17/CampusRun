@@ -6,7 +6,8 @@
 #        AI-made the profile update request reject unknown fields (2026-09-28);
 #        AI-changed the password fields to SecretStr so they're masked if a request model is logged (2026-09-29);
 #        AI-added UsernameResponse for the internal username lookup (2026-10-19);
-#        AI-added the refresh token to TokenResponse and the refresh/logout request model (2026-11-09).
+#        AI-added the refresh token to TokenResponse and the refresh/logout request model (2026-11-09);
+#        AI-added AdminUserResponse and AdminUserPage for the admin user list (2026-11-09).
 # Author review: reviewed by Nathan
 
 import re
@@ -147,6 +148,22 @@ class UsernameResponse(BaseModel):
     # Only what other students may see about a user; never the email address
     id: int
     username: str
+
+
+class AdminUserResponse(BaseModel):
+    # What an admin needs to find and promote an account; nothing else about it
+    id: int
+    username: str
+    email: str
+    role: Role
+
+
+class AdminUserPage(BaseModel):
+    items: list[AdminUserResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
 
 
 class TokenResponse(BaseModel):

@@ -2,7 +2,8 @@
 AI Assistance Disclosure:
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-28
 Scope: AI-generated plan for replacing the separate admins table with a role on users, based on the team's decisions;
-       AI-revised it so admins keep every student capability (2026-09-28).
+       AI-revised it so admins keep every student capability (2026-09-28);
+       AI-marked the "created only by the script" decision as superseded by admin promotion (2026-11-09).
 Author review: <to be completed by author>
 -->
 
@@ -22,7 +23,7 @@ Admins stop being separate accounts in their own `admins` table. They become row
 - **Add a new migration.** Teammates have already applied `717eccffe95a`, so don't edit it. Rows in `admins` are dropped, not moved over: they have no email.
 - ~~**Admins are admin-only.** They have no credit account and can't post or accept errands.~~ **Superseded:** admins keep every student capability: they can post and accept errands and have a credit account. Admin powers can't be used on errands or credits involving the admin themselves, and admin actions are logged.
 - **Registration accepts `@u.nus.edu` only,** and `@nus.edu.sg` staff addresses are no longer allowed. Registration always creates a `student`.
-- **Admins are created only by the `create-initial-admin` script.** Admins also use an `@u.nus.edu` email, checked by the same rule as registration. No API sets `role`, and promotion is deferred.
+- ~~**Admins are created only by the `create-initial-admin` script.** Admins also use an `@u.nus.edu` email, checked by the same rule as registration. No API sets `role`, and promotion is deferred.~~ **Superseded (2026-11-09):** the script still creates the first admin. Admins can now promote students and step down themselves through the API; see [`admin-dashboard-plan.md`](admin-dashboard-plan.md).
 - **Trade-off:** a demoted admin keeps admin access until their current token expires, up to `JWT_ACCESS_TOKEN_TTL`.
 
 ## user-service

@@ -79,6 +79,7 @@ def _unauthorized(message: str) -> HTTPException:
 def decode_token(token: str) -> CurrentUser:
     try:
         settings = get_settings()
+        assert settings.jwt_public_key is not None  # checked when the API starts
         claims = jwt.decode(
             token,
             _load_public_key(settings.jwt_public_key),

@@ -5,7 +5,8 @@
 # Scope: AI-added order-db, order-migrate and order-worker, the order-service DATABASE_URL, and the credit-demo note;
 #        AI-added the delivery-location seed to order-migrate and the user and credit URLs for order-service, and the
 #        sweeper settings for order-worker (2026-10-19).
-#        AI-replaced JWT_SECRET with JWT_PRIVATE_KEY (user-service, credit-demo) and JWT_PUBLIC_KEY (the rest) (2026-11-09).
+#        AI-replaced JWT_SECRET with JWT_PRIVATE_KEY (user-service, credit-demo) and JWT_PUBLIC_KEY (the rest) (2026-11-09);
+#        AI-removed the key from supplier-migrate, which doesn't check tokens (2026-11-09).
 # Author review: <to be completed by author>
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
@@ -114,7 +115,6 @@ services:
     command: ["sh", "-c", "alembic upgrade head && python -m supplier_service.seed"]
     environment:
       DATABASE_URL: postgresql+asyncpg://${SUPPLIER_DB_USER:-supplier_service}:${SUPPLIER_DB_PASSWORD:?set SUPPLIER_DB_PASSWORD in .env}@supplier-db:5432/${SUPPLIER_DB_NAME:-supplier_service}
-      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:?set JWT_PUBLIC_KEY in .env (scripts/generate-jwt-keys.sh)}
     depends_on:
       supplier-db:
         condition: service_healthy

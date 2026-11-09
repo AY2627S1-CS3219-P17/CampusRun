@@ -2,7 +2,8 @@
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated settings for the supplier service, following user-service/config.py;
 #        AI-added ENABLE_DOCS and ROOT_PATH (Claude Code, 2026-09-27).
-#        AI-replaced JWT_SECRET and JWT_ALGORITHM with the User Service's RS256 public key JWT_PUBLIC_KEY (Claude Code, 2026-11-09).
+#        AI-replaced JWT_SECRET and JWT_ALGORITHM with the User Service's RS256 public key JWT_PUBLIC_KEY (Claude Code, 2026-11-09),
+#        and made it optional like order and credit, so migrations and seeding run without it (2026-11-09).
 # Author review: <to be completed by author>
 
 from functools import lru_cache
@@ -25,7 +26,8 @@ class Settings(BaseSettings):
     database_url: SecretStr
 
     # The User Service's RSA public key (PEM). It verifies access tokens but can't sign them, so it isn't a secret.
-    jwt_public_key: str
+    # Only the HTTP API needs it (main.py refuses to start without it); migrations and the seed command don't.
+    jwt_public_key: str | None = None
 
     seed_dir: Path = SERVICE_ROOT / "seed"
 

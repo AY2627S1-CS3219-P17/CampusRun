@@ -4,7 +4,7 @@ Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 Scope: AI-generated service README; AI-updated paths, Docker access and settings for the gateway (Claude Code, 2026-09-27);
        AI-added GET /lookup, and removed the delivery locations, which moved to the order service (Claude Code, 2026-10-19).
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
-Scope: AI-updated the setup steps for JWT_PUBLIC_KEY, which replaced JWT_SECRET.
+Scope: AI-updated the setup steps for JWT_PUBLIC_KEY, which replaced JWT_SECRET, and noted that only the API needs it.
 Author review: <to be completed by author>
 -->
 
@@ -87,7 +87,7 @@ return 422 with `{"detail": "...", "errors": {"fieldName": "message"}}`.
 | Variable | Default | Meaning |
 |---|---|---|
 | `DATABASE_URL` | none, required | Postgres connection (`postgresql+asyncpg://...`) |
-| `JWT_PUBLIC_KEY` | none, required | The User Service's RSA public key (PEM; one line with `\n` is fine). Verifies RS256 tokens |
+| `JWT_PUBLIC_KEY` | none, required by the API (not by migrations or seeding) | The User Service's RSA public key (PEM; one line with `\n` is fine). Verifies RS256 tokens |
 | `CORS_ORIGINS` | empty | Comma-separated browser origins allowed to call the service directly |
 | `ENABLE_DOCS` | `false` | Serves `/docs`, `/redoc` and `/openapi.json` |
 | `ROOT_PATH` | empty | Path prefix the gateway serves the service under (`/api/suppliers` in Compose) |

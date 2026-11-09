@@ -2,6 +2,9 @@
  * Tool: Codex (OpenAI), date: 2026-10-15
  * Scope: Styled the reusable responsive supplier and errand toolbar.
  * Author review: <to be completed by author>
+ * Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-10
+ * Scope: AI-added the actions slot's layout: left of the search on wide screens, on the tabs' row on narrow ones.
+ * Author review: <to be completed by author>
  */
 
 .toolbar {
@@ -34,6 +37,21 @@
 
 .toolbar-controls {
   margin-left: auto;
+}
+
+/* Wide screens: as if the tabs, actions and controls were all direct children, so the actions sit left of the
+   search. Narrow screens: a row of its own, so the actions stay beside the tabs instead of adding a row. */
+.toolbar-lead {
+  display: contents;
+}
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+.toolbar:has(.toolbar-actions) .toolbar-controls {
+  margin-left: 0;
 }
 
 .toolbar-tabs button {
@@ -162,6 +180,13 @@
     justify-content: flex-start;
     width: 100%;
     margin-left: 0;
+  }
+
+  .toolbar-lead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
   }
 }
 

@@ -6,7 +6,7 @@
 // Scope: AI-hid the errand sections and create-request button from admins; AI-showed them again, since admins
 //        keep every student capability (2026-09-28).
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
-// Scope: AI-changed Logout to end the session on the server too (signOut).
+// Scope: AI-changed Logout to end the session on the server too (signOut); AI-added the Admin link for admins.
 // Author review: <to be completed by author>
 // Tool: Codex (OpenAI), date: 2026-10-15
 // Scope: Wired the create-request header action to the shared request editor dialog.
@@ -21,10 +21,10 @@
 import { useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { DropdownMenu } from 'radix-ui'
-import { LogOut, Plus, Store, UserRound } from 'lucide-react'
+import { LogOut, Plus, ShieldCheck, Store, UserRound } from 'lucide-react'
 import EditInfoDialog from './edit-user-info'
 import UpdateRequestDialog from './update-request'
-import { signOut } from '../../utils/session'
+import { signOut, useSession } from '../../utils/session'
 import './header.css'
 
 const sections = ['Explore', 'My Tasks', 'My Requests'] as const
@@ -38,6 +38,7 @@ const sectionPaths: Record<HeaderSection, string> = {
 
 export default function Header() {
   const { pathname } = useLocation()
+  const isAdmin = useSession()?.role === 'admin'
   const [editingInfo, setEditingInfo] = useState(false)
   const [creatingRequest, setCreatingRequest] = useState(false)
   const navigate = useNavigate()
@@ -62,6 +63,16 @@ export default function Header() {
       </nav>
 
       <div className="header-actions">
+        {isAdmin && (
+          <Link
+            to="/admin"
+            className="header-icon-button header-secondary-action"
+            aria-label="Admin"
+          >
+            <ShieldCheck size={20} strokeWidth={1.8} aria-hidden="true" />
+          </Link>
+        )}
+
         <Link
           to="/suppliers"
           className="header-icon-button header-secondary-action"
@@ -121,6 +132,18 @@ export default function Header() {
                   Suppliers
                 </Link>
               </DropdownMenu.Item>
+
+              {isAdmin && (
+                <DropdownMenu.Item
+                  className="header-menu-item header-mobile-action"
+                  asChild
+                >
+                  <Link to="/admin">
+                    <ShieldCheck size={18} aria-hidden="true" />
+                    Admin
+                  </Link>
+                </DropdownMenu.Item>
+              )}
 
               <DropdownMenu.Separator className="header-menu-separator" />
 

@@ -2,8 +2,13 @@
 // Tool: Codex (OpenAI), date: 2026-10-15
 // Scope: Added the reusable configurable toolbar used by supplier and errand pages.
 // Author review: <to be completed by author>
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
+// Scope: AI-made the sort menu optional, for lists with a fixed order (the admin user list), and added an
+//        actions slot (the admin page's Step down button): left of the search on wide screens, and on the tabs'
+//        row on narrow ones (2026-11-10).
+// Author review: <to be completed by author>
 
-import type { MouseEventHandler } from 'react'
+import type { MouseEventHandler, ReactNode } from 'react'
 import { DropdownMenu } from 'radix-ui'
 import {
   ArrowUpDown,
@@ -42,9 +47,11 @@ type LeadingContent =
 
 type Props = LeadingContent & {
   search?: SearchConfig
-  sort: ChoiceConfig
+  sort?: ChoiceConfig
   filter?: ChoiceConfig
   createAction?: CreateAction
+  // Extra buttons: left of the search on wide screens, at the end of the tabs' row on narrow ones
+  actions?: ReactNode
 }
 
 function ChoiceMenu({
@@ -110,30 +117,34 @@ export default function Toolbar({
   sort,
   filter,
   createAction,
+  actions,
 }: Props) {
   return (
     <section
       className="toolbar"
       aria-label={subheader ?? tabs?.label ?? search?.label}
     >
-      {tabs ? (
-        <div className="toolbar-tabs" role="tablist" aria-label={tabs.label}>
-          {tabs.options.map((tab) => (
-            <button
-              className={tabs.value === tab.value ? 'is-active' : ''}
-              key={tab.value}
-              type="button"
-              role="tab"
-              aria-selected={tabs.value === tab.value}
-              onClick={() => tabs.onChange(tab.value)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      ) : (
-        <h4 className="toolbar-subheader">{subheader}</h4>
-      )}
+      <div className="toolbar-lead">
+        {tabs ? (
+          <div className="toolbar-tabs" role="tablist" aria-label={tabs.label}>
+            {tabs.options.map((tab) => (
+              <button
+                className={tabs.value === tab.value ? 'is-active' : ''}
+                key={tab.value}
+                type="button"
+                role="tab"
+                aria-selected={tabs.value === tab.value}
+                onClick={() => tabs.onChange(tab.value)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <h4 className="toolbar-subheader">{subheader}</h4>
+        )}
+        {actions && <div className="toolbar-actions">{actions}</div>}
+      </div>
 
       <div className="toolbar-controls">
         {search && (
@@ -150,7 +161,7 @@ export default function Toolbar({
         )}
         {filter && <ChoiceMenu config={filter} kind="filter" />}
 
-        <ChoiceMenu config={sort} kind="sort" />
+        {sort && <ChoiceMenu config={sort} kind="sort" />}
         {createAction && (
           <button
             className="toolbar-create"

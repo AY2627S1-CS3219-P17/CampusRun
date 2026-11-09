@@ -4,6 +4,8 @@
 //        keep every student capability (2026-09-28).
 // Tool: OpenAI Codex (GPT-6), date: 2026-10-20
 // Scope: Kept the main navigation header mounted across the three errand routes.
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
+// Scope: AI-added the admin page and AdminRoute, which sends non-admins to Explore.
 // Author review: <to be completed by author>
 
 import { StrictMode } from 'react'
@@ -15,12 +17,22 @@ import Explore from './pages/main/explore.tsx'
 import MyTasks from './pages/main/my-tasks.tsx'
 import MyRequests from './pages/main/my-requests.tsx'
 import Suppliers from './pages/header/suppliers.tsx'
+import Admin from './pages/header/admin.tsx'
 import Header from './components/shared/header.tsx'
 import './pages/main/explore.css'
 import { useSession } from './utils/session'
 
 export default function ProtectedRoute() {
   return useSession() ? <Outlet /> : <Navigate to="/login" replace />
+}
+
+// The admin services make the real check (403); this only keeps students off a page they can't use
+function AdminRoute() {
+  return useSession()?.role === 'admin' ? (
+    <Outlet />
+  ) : (
+    <Navigate to="/explore" replace />
+  )
 }
 
 function MainLayout() {
@@ -43,6 +55,9 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/my-requests" element={<MyRequests />} />
           </Route>
           <Route path="/suppliers" element={<Suppliers />} />
+          <Route element={<AdminRoute />}>
+            <Route path="/admin" element={<Admin />} />
+          </Route>
         </Route>
 
         <Route path="/" element={<Navigate to="/login" replace />} />

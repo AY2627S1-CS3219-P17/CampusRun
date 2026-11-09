@@ -239,6 +239,7 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 
 - **Planning** the work (`docs/admin-dashboard-plan.md`) from the scope the team chose: an all-errands view, predefined delivery locations, promoting students to admin, and stepping down from your own admin role while another admin is left. The team approved the endpoint shapes.
 - **Generating** the User Service admin endpoints (Task 1): `GET /admin/users`, `POST /admin/users/{id}/promote` and `POST /admin/me/step-down`. The AI proposed two safeguards, which the team adopted: role changes are serialized with a Postgres advisory lock, so the last two admins can't both step down at once; and the caller's role is re-checked in the database, so an old admin token can't undo a step-down. Also the tests and doc updates.
+- **Generating** the admin page (Task 2): `/admin`, reachable only by admins (others are sent to Explore) from a header link only admins see. Its Users tab searches and filters accounts, promotes a student after a confirmation, and lets an admin step down while another admin is left, then refreshes their token so admin access ends at once. The shared toolbar's sort menu became optional.
 
 **Verification:** all 156 user-service tests pass. The concurrent step-down test was checked to fail with the lock removed (both requests succeeded, leaving no admin). <!-- TODO(author): describe your own review and testing -->
 

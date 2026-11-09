@@ -54,7 +54,7 @@ def create_access_token(account_id: int, role: Role, settings: Settings) -> str:
         "sub": str(account_id),
         "role": role,
         "iat": now,
-        "exp": now + timedelta(minutes=settings.jwt_access_token_ttl),
+        "exp": now + timedelta(seconds=settings.jwt_access_token_ttl_seconds),
     }
     return jwt.encode(payload, _private_key(settings), algorithm=ALGORITHM)
 

@@ -175,14 +175,14 @@ async def login(form: LoginForm, conn: Connection, settings: SettingsDep) -> Tok
     valid = await check_password(form.password, row.password_hash if row else None)
     if row is None or not valid:
         raise login_failed()
-    refresh_token = await start_session(conn, row.id, timedelta(minutes=settings.jwt_refresh_token_ttl))
+    refresh_token = await start_session(conn, row.id, timedelta(seconds=settings.jwt_refresh_token_ttl_seconds))
     return token_response(row.id, row.role, refresh_token, settings)
 
 
 def token_response(account_id: int, role: Role, refresh_token: str, settings: Settings) -> TokenResponse:
     return TokenResponse(
         access_token=create_access_token(account_id, role, settings),
-        expires_in=settings.jwt_access_token_ttl * 60,
+        expires_in=settings.jwt_access_token_ttl_seconds,
         refresh_token=refresh_token,
     )
 
@@ -253,7 +253,7 @@ async def update_current_user(body: UpdateUserRequest, account: CurrentUser, con
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
         changes["password_hash"] = await run_in_threadpool(password_hash.hash, body.new_password.get_secret_value())
         # Every session ends, this one included, so a stolen session can't outlive the password. Access tokens already
-        # issued still work until they expire (at most JWT_ACCESS_TOKEN_TTL minutes).
+        # issued still work until they expire (at most JWT_ACCESS_TOKEN_TTL_SECONDS).
         await end_all_sessions(conn, account.id)
 
     columns = (users.c.id, users.c.email, users.c.username, users.c.email_verified_at, users.c.role, users.c.created_at)

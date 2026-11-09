@@ -3,7 +3,8 @@
 # Scope: AI-generated pydantic-settings Settings class reading DATABASE_URL and ENABLE_DOCS; AI-added Pyright ignore on Settings();
 #        AI-added INITIAL_ADMIN_EMAIL (Claude Code, 2026-09-28); AI-added RABBITMQ_URL and OUTBOX_POLL_SECONDS (Claude, claude.ai, 2026-10-17);
 #        AI-replaced JWT_SECRET with the RS256 private key JWT_PRIVATE_KEY (Claude Code, 2026-11-09);
-#        AI-shortened the access token to 5 minutes and added JWT_REFRESH_TOKEN_TTL (Claude Code, 2026-11-09).
+#        AI-shortened the access token to 5 minutes and added JWT_REFRESH_TOKEN_TTL (Claude Code, 2026-11-09);
+#        AI-switched both lifetimes to seconds, renamed with a _SECONDS suffix (Claude Code, 2026-11-09).
 # Author review: reviewed by Nathan
 
 from functools import lru_cache
@@ -24,11 +25,12 @@ class Settings(BaseSettings):
     # RSA private key (PEM) that signs access tokens. Only this service has it; the others verify with the public
     # key. Optional so Alembic and the create-initial-admin script run without it; main.py refuses to start without it.
     jwt_private_key: SecretStr | None = None
-    # Minutes an access token stays valid. Also the longest a revoked session keeps working, since services check
-    # access tokens without asking this service; the web client refreshes before it runs out.
-    jwt_access_token_ttl: int = Field(default=5, ge=1)
-    # Minutes a refresh session lasts from sign-in (7 days). Refreshing never extends it.
-    jwt_refresh_token_ttl: int = Field(default=7 * 24 * 60, ge=1)
+    # Seconds an access token stays valid (5 minutes). Also the longest a revoked session keeps working, since
+    # services check access tokens without asking this service; the web client refreshes before it runs out.
+    # The _seconds suffix is in the variable name, so an old value in minutes isn't silently read as seconds.
+    jwt_access_token_ttl_seconds: int = Field(default=5 * 60, ge=1)
+    # Seconds a refresh session lasts from sign-in (7 days). Refreshing never extends it.
+    jwt_refresh_token_ttl_seconds: int = Field(default=7 * 24 * 60 * 60, ge=1)
 
     # Only read by the create-initial-admin script; the server runs without them
     initial_admin_email: str | None = None

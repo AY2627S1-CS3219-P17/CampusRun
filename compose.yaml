@@ -7,7 +7,8 @@
 #        sweeper settings for order-worker (2026-10-19).
 #        AI-replaced JWT_SECRET with JWT_PRIVATE_KEY (user-service, credit-demo) and JWT_PUBLIC_KEY (the rest) (2026-11-09);
 #        AI-removed the key from supplier-migrate, which doesn't check tokens (2026-11-09);
-#        AI-set the 5-minute access token and passed JWT_REFRESH_TOKEN_TTL to user-service (2026-11-09).
+#        AI-set the 5-minute access token and passed JWT_REFRESH_TOKEN_TTL to user-service (2026-11-09);
+#        AI-switched both token lifetimes to seconds (2026-11-09).
 # Author review: <to be completed by author>
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
@@ -85,8 +86,8 @@ services:
       # Signs access tokens. Only this container has it; the others get the public key, which can't sign
       JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:?set JWT_PRIVATE_KEY in .env (scripts/generate-jwt-keys.sh)}
       # Minutes: a 5-minute access token, refreshed by the web client, inside a 7-day session
-      JWT_ACCESS_TOKEN_TTL: ${JWT_ACCESS_TOKEN_TTL:-5}
-      JWT_REFRESH_TOKEN_TTL: ${JWT_REFRESH_TOKEN_TTL:-10080}
+      JWT_ACCESS_TOKEN_TTL_SECONDS: ${JWT_ACCESS_TOKEN_TTL_SECONDS:-300}
+      JWT_REFRESH_TOKEN_TTL_SECONDS: ${JWT_REFRESH_TOKEN_TTL_SECONDS:-604800}
       # For the outbox relay that sends OpenWallet to the credit service. user-service deliberately doesn't wait
       # for RabbitMQ: registration works without it and the messages wait in the outbox.
       RABBITMQ_URL: amqp://user-service:${RABBITMQ_USER_SERVICE_PASSWORD:?set RABBITMQ_USER_SERVICE_PASSWORD in .env}@rabbitmq:5672/

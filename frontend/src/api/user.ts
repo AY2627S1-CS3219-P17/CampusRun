@@ -1,6 +1,8 @@
 // AI Assistance Disclosure:
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
 // Scope: AI-replaced the mocked calls with calls to the User Service (register, login, get and update profile).
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
+// Scope: AI-changed login to return the refresh token as well.
 // Author review: Validated request payloads, responses, and error handling.
 
 import { request } from './client'
@@ -14,7 +16,11 @@ import type {
 // Relative, so it's same-origin behind the gateway; the Vite dev server proxies it (see vite.config.ts)
 const USER_API_URL = '/api/users'
 
-type TokenResponse = { access_token: string; token_type: 'bearer' }
+type TokenResponse = {
+  access_token: string
+  token_type: 'bearer'
+  refresh_token: string
+}
 
 export function registerUser(registerUserPayload: RegisterUserPayload) {
   return request<User>(`${USER_API_URL}/auth/register`, {
@@ -28,7 +34,10 @@ export async function loginUser({ email, password }: LoginUserPayload) {
     method: 'POST',
     body: new URLSearchParams({ username: email, password }),
   })
-  return response.access_token
+  return {
+    accessToken: response.access_token,
+    refreshToken: response.refresh_token,
+  }
 }
 
 export function updateUser(updateUserPayload: UpdateUserPayload) {

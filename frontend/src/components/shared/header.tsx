@@ -5,6 +5,8 @@
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-28
 // Scope: AI-hid the errand sections and create-request button from admins; AI-showed them again, since admins
 //        keep every student capability (2026-09-28).
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
+// Scope: AI-changed Logout to end the session on the server too (signOut).
 // Author review: <to be completed by author>
 // Tool: Codex (OpenAI), date: 2026-10-15
 // Scope: Wired the create-request header action to the shared request editor dialog.
@@ -22,7 +24,7 @@ import { DropdownMenu } from 'radix-ui'
 import { LogOut, Plus, Store, UserRound } from 'lucide-react'
 import EditInfoDialog from './edit-user-info'
 import UpdateRequestDialog from './update-request'
-import { clearSession } from '../../utils/session'
+import { signOut } from '../../utils/session'
 import './header.css'
 
 const sections = ['Explore', 'My Tasks', 'My Requests'] as const
@@ -125,7 +127,7 @@ export default function Header() {
               <DropdownMenu.Item
                 className="header-menu-item"
                 asChild
-                onSelect={clearSession}
+                onSelect={() => void signOut()}
               >
                 <Link to="/login" replace>
                   <LogOut size={18} aria-hidden="true" />

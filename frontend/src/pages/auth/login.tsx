@@ -1,6 +1,8 @@
 // AI Assistance Disclosure:
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
 // Scope: AI-wired the form to the User Service's login and saved the returned access token.
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
+// Scope: AI-changed sign-in to keep the refresh token too.
 // Author review: Validated authentication flow and user-facing errors.
 
 import { useState, type SubmitEvent } from 'react'
@@ -8,7 +10,7 @@ import { Link, useNavigate } from 'react-router'
 import { Label } from 'radix-ui'
 import { ApiError } from '../../api/client'
 import { loginUser } from '../../api/user'
-import { saveToken } from '../../utils/session'
+import { startSession } from '../../utils/session'
 
 import { Eye, EyeOff, Footprints, LockKeyhole, Mail } from 'lucide-react'
 import './login.css'
@@ -31,12 +33,13 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const token = await loginUser({
+      const { accessToken, refreshToken } = await loginUser({
         email: email.trim(),
         password,
       })
       // Only fails if the token isn't one the app understands (e.g. a different claim format)
-      if (!saveToken(token)) throw new Error('Unrecognised access token')
+      if (!startSession(accessToken, refreshToken))
+        throw new Error('Unrecognised access token')
 
       setEmail('')
       setPassword('')

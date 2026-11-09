@@ -2,6 +2,8 @@
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
 // Scope: AI-wired the dialog to the User Service: loads the current username, sends only changed fields,
 //        and keeps Save disabled until something has changed.
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
+// Scope: AI-updated the comment on signing out after a password change, which now ends every session on the server.
 // Author review: Validated changed-field updates and form-state boundaries.
 
 import { validateUsername, validatePassword } from '../../utils/validation'
@@ -114,8 +116,8 @@ export default function EditInfoDialog({
       onClose()
 
       if (newPassword) {
-        // Sign in again with the new password. The old token would keep working
-        // until it expires, since the service can't revoke it.
+        // The User Service has ended every session for the account, this one
+        // included, so sign in again with the new password
         clearSession()
         await navigate('/login', { replace: true })
       }

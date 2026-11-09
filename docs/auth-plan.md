@@ -4,7 +4,8 @@ Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 Scope: AI-generated step-by-step guide for the nginx gateway and JWT authentication in the user service,
        based on design decisions discussed with the team; AI-added the session revocation options and
        renamed the user token type to "student" (2026-09-27);
-       AI-updated for admins as users with the admin role and the "role" claim (2026-09-28).
+       AI-updated for admins as users with the admin role and the "role" claim (2026-09-28);
+       AI-added the note on the switch to RS256 (2026-11-09).
 Author review: <to be completed by author>
 -->
 
@@ -13,6 +14,8 @@ Author review: <to be completed by author>
 This guide walks through adding an **nginx gateway** in front of the services and **password login with JWT access tokens** in `user-service`. It follows FastAPI's [Security tutorial](https://fastapi.tiangolo.com/tutorial/security/first-steps/), adapted for our setup (async SQLAlchemy Core, one `users` table with a `role` column, multiple services).
 
 > **Updated 2026-09-28:** admins are now users with `role = 'admin'` rather than rows in a separate `admins` table. There is one login, and the token's claim is `role`, not `type`. The steps below have been updated to match. See [admin-role-plan.md](admin-role-plan.md) for the change itself.
+
+> **Updated 2026-11-09:** tokens are now signed with **RS256**, not HS256 with a shared `JWT_SECRET`. Only user-service holds the private key (`JWT_PRIVATE_KEY`); the other services verify with the public key (`JWT_PUBLIC_KEY`), so a compromised service can no longer mint tokens. Generate the pair with `sh scripts/generate-jwt-keys.sh >> .env`. The `JWT_SECRET` steps below are kept as the original record; see each service's `auth.py`/`security.py` for the current code.
 
 Work through the parts in order. Each step ends with a **Check** so you know it worked before moving on.
 

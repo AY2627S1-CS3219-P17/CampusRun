@@ -6,7 +6,7 @@ Tool: OpenAI Codex (GPT-6), date: 2026-10-20
 Scope: Documented predefined delivery-location matching in autofill.
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 Scope: Documented the database, the order-worker process, the local development commands and delivery locations;
-       AI-updated the overview and added the demo section (2026-10-19).
+       AI-updated the overview and added the demo section (2026-10-19); AI-replaced JWT_SECRET with JWT_PUBLIC_KEY (2026-11-09).
 Author review: <to be completed by author>
 -->
 
@@ -36,7 +36,7 @@ Groq key, but autofill returns 503 until it is configured.
 ## Run directly on your machine
 
 [Install uv](https://docs.astral.sh/uv/getting-started/installation/) and Docker Desktop. Copy `.env.example` to
-`.env` and fill in the passwords and `JWT_SECRET` to match the root `.env`. Then, in `order-service`:
+`.env` and fill in the passwords and `JWT_PUBLIC_KEY` to match the root `.env`. Then, in `order-service`:
 
 | With mise | Without mise | What it does |
 |---|---|---|

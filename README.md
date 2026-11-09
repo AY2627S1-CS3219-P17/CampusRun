@@ -29,6 +29,8 @@ The local database can be run using the service-specific database service in the
 
 To run the entire project locally, use `docker compose up` with [`compose.yaml`](compose.yaml), where the env vars overwrite those in the service-level .env file.
 
+Before the first `docker compose up`, copy `.env.example` to `.env`, fill in the passwords, and add the access-token key pair with `sh scripts/generate-jwt-keys.sh >> .env`. User-service signs tokens with the private key (RS256); the other services only get the public key.
+
 For cloud deployments, separate configuration will be required.
 
 ### Gateway, root paths and API docs
@@ -215,6 +217,17 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 **Verification:** 256 order-service tests pass, including concurrent accepts, accept against cancel, complete sent twice, the deadline guards and two sweepers at once; the race tests passed on six repeated runs. Task 1 also passed `docker compose config`, `nginx -t` and the image build. The demo script ran end to end against the full Compose stack, and the credit audit afterwards reported no problems. <!-- TODO(author): describe your own review and testing -->
 
 **Files affected:** Each changed source and configuration file carries an AI Assistance Disclosure header. The generated `order-service/uv.lock` also identifies AI assistance.
+
+### Session Management and Token Signing (Nathan)
+
+**Tool:** Claude Code (Claude Opus 5.5), 2026-11-09.
+
+- **Explaining** the current session mechanism (stateless JWT access tokens checked in each service, `sessionStorage` in the browser) and reviewing its gaps: tokens can't be revoked early, every service could create tokens with the shared HS256 secret, users are signed out mid-task when the token expires, and there's no login rate limit. The AI listed options; the team chose refresh tokens and asymmetric signing, and picked RS256 over EdDSA and environment variables over Compose secret files.
+- **Generating** the switch from HS256 to RS256: User Service signs with `JWT_PRIVATE_KEY`, and Supplier, Order and Credit services verify with `JWT_PUBLIC_KEY` and a pinned algorithm. Also `scripts/generate-jwt-keys.sh`, the Compose and `.env.example` changes, the credit demo and supplier token script, and test fixtures that use a fresh key pair per run, plus an algorithm-confusion test in each service's `tests/test_auth.py`.
+- **Generating** per-IP rate limits in the gateway (`limit_req`, JSON 429s): sign-in and registration (10 a minute, burst 20), AI autofill (6 a minute, burst 3) and every request (30 a second, burst 60). The team decided to add them; the AI proposed the numbers.
+- **Drafting** the session-management design notes for the D4 presentation (`docs/D4-presentation.md`), **including the trade-off analysis**, at the author's request. The team is to review and reword them before presenting.
+
+**Verification:** a script signed tokens with User Service's code and checked them in all four services, rejecting a token signed with another key and an HS256 token keyed with the public key. The key script's output was parsed by `docker compose config` and python-dotenv. All four test suites collect, and the new database-free order and credit auth tests pass. The full suites were **not** run, because the session's sandbox had no Docker access for the test databases. <!-- TODO(author): run the test suites and describe your own review -->
 
 **Files affected:** each carries an "AI Assistance Disclosure" header comment.
 

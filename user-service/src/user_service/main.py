@@ -6,6 +6,7 @@
 #        AI-added the validation error handler that leaves request input out of 422 responses (2026-09-29).
 #        AI-added the OpenWallet outbox message on registration and the outbox relay in the lifespan (Claude, claude.ai, 2026-10-17).
 #        AI-added GET /internal/usernames for the Order Service (Claude Code, 2026-10-19).
+#        AI-added the start-up check for JWT_PRIVATE_KEY (Claude Code, 2026-11-09).
 # Author review: reviewed by Nathan
 
 import asyncio
@@ -66,7 +67,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
 
 settings = get_settings()
-SettingsDep = Annotated[Settings, Depends(get_settings)]
+if settings.jwt_private_key is None:
+    raise RuntimeError("Set JWT_PRIVATE_KEY (the RSA key that signs access tokens) to run the API")
+SettingsDep =Annotated[Settings, Depends(get_settings)]
 LoginForm = Annotated[OAuth2PasswordRequestForm, Depends()]
 
 app = FastAPI(

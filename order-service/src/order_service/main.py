@@ -2,7 +2,8 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: AI-generated FastAPI app, engine lifespan and health check, following credit-service/main.py; the autofill
 #        endpoint (OpenAI Codex, 2026-10-17) now lives in routes/autofill.py; AI-added the delivery location routes
-#        the shared service clients and the errand, My Requests/My Tasks, admin and action routes (2026-10-19).
+#        the shared service clients and the errand, My Requests/My Tasks, admin and action routes (2026-10-19);
+#        AI-changed the start-up check from JWT_SECRET to JWT_PUBLIC_KEY (2026-11-09).
 # Author review: <to be completed by author>
 
 """The order service's HTTP API.
@@ -39,8 +40,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
 
 settings = get_settings()
-if settings.jwt_secret is None:
-    raise RuntimeError("Set JWT_SECRET (the User Service's token signing secret) to run the API")
+if settings.jwt_public_key is None:
+    raise RuntimeError("Set JWT_PUBLIC_KEY (the User Service's token verification key) to run the API")
 
 app = FastAPI(
     title="CampusRun Order Service",

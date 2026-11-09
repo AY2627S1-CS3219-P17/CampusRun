@@ -5,6 +5,7 @@
 # Scope: AI-added order-db, order-migrate and order-worker, the order-service DATABASE_URL, and the credit-demo note;
 #        AI-added the delivery-location seed to order-migrate and the user and credit URLs for order-service, and the
 #        sweeper settings for order-worker (2026-10-19).
+#        AI-replaced JWT_SECRET with JWT_PRIVATE_KEY (user-service, credit-demo) and JWT_PUBLIC_KEY (the rest) (2026-11-09).
 # Author review: <to be completed by author>
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
@@ -52,7 +53,6 @@ services:
     command: ["alembic", "upgrade", "head"]
     environment:
       DATABASE_URL: postgresql+asyncpg://${USER_DB_USER:-user_service}:${USER_DB_PASSWORD:?set USER_DB_PASSWORD in .env}@user-db:5432/${USER_DB_NAME:-user_service}
-      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
     depends_on:
       user-db:
         condition: service_healthy
@@ -65,7 +65,6 @@ services:
     command: ["create-initial-admin", "--skip-if-unset"]
     environment:
       DATABASE_URL: postgresql+asyncpg://${USER_DB_USER:-user_service}:${USER_DB_PASSWORD:?set USER_DB_PASSWORD in .env}@user-db:5432/${USER_DB_NAME:-user_service}
-      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
       INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
       INITIAL_ADMIN_USERNAME: ${INITIAL_ADMIN_USERNAME:-}
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}
@@ -81,7 +80,8 @@ services:
       # Local only: deployed environments leave this unset, so the docs are off
       ENABLE_DOCS: "true"
       ROOT_PATH: "/api/users"
-      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      # Signs access tokens. Only this container has it; the others get the public key, which can't sign
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:?set JWT_PRIVATE_KEY in .env (scripts/generate-jwt-keys.sh)}
       JWT_ACCESS_TOKEN_TTL: ${JWT_ACCESS_TOKEN_TTL:-60}
       # For the outbox relay that sends OpenWallet to the credit service. user-service deliberately doesn't wait
       # for RabbitMQ: registration works without it and the messages wait in the outbox.
@@ -114,7 +114,7 @@ services:
     command: ["sh", "-c", "alembic upgrade head && python -m supplier_service.seed"]
     environment:
       DATABASE_URL: postgresql+asyncpg://${SUPPLIER_DB_USER:-supplier_service}:${SUPPLIER_DB_PASSWORD:?set SUPPLIER_DB_PASSWORD in .env}@supplier-db:5432/${SUPPLIER_DB_NAME:-supplier_service}
-      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:?set JWT_PUBLIC_KEY in .env (scripts/generate-jwt-keys.sh)}
     depends_on:
       supplier-db:
         condition: service_healthy
@@ -123,7 +123,7 @@ services:
     build: ./supplier-service
     environment:
       DATABASE_URL: postgresql+asyncpg://${SUPPLIER_DB_USER:-supplier_service}:${SUPPLIER_DB_PASSWORD:?set SUPPLIER_DB_PASSWORD in .env}@supplier-db:5432/${SUPPLIER_DB_NAME:-supplier_service}
-      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:?set JWT_PUBLIC_KEY in .env (scripts/generate-jwt-keys.sh)}
       CORS_ORIGINS: http://localhost:5173
       # Local only: deployed environments leave this unset, so the docs are off
       ENABLE_DOCS: "true"
@@ -166,7 +166,7 @@ services:
     build: ./order-service
     environment:
       DATABASE_URL: postgresql+asyncpg://${ORDER_DB_USER:-order_service}:${ORDER_DB_PASSWORD:?set ORDER_DB_PASSWORD in .env}@order-db:5432/${ORDER_DB_NAME:-order_service}
-      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:?set JWT_PUBLIC_KEY in .env (scripts/generate-jwt-keys.sh)}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
       SUPPLIER_SERVICE_URL: http://supplier-service:8000
@@ -268,7 +268,7 @@ services:
     build: ./credit-service
     environment:
       DATABASE_URL: postgresql+asyncpg://${CREDIT_DB_USER:-credit_service}:${CREDIT_DB_PASSWORD:?set CREDIT_DB_PASSWORD in .env}@credit-db:5432/${CREDIT_DB_NAME:-credit_service}
-      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:?set JWT_PUBLIC_KEY in .env (scripts/generate-jwt-keys.sh)}
       # Local only: deployed environments leave this unset, so the docs are off
       ENABLE_DOCS: "true"
       ROOT_PATH: "/api/credits"
@@ -303,7 +303,8 @@ services:
     profiles: ["demo"]
     environment:
       DEMO_RABBITMQ_URL: amqp://order-service:${RABBITMQ_ORDER_SERVICE_PASSWORD:?set RABBITMQ_ORDER_SERVICE_PASSWORD in .env}@rabbitmq:5672/
-      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      # Demo only: lets it sign tokens for any user to read their wallets
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:?set JWT_PRIVATE_KEY in .env (scripts/generate-jwt-keys.sh)}
       CREDIT_API_URL: http://credit-service:8000
       USER_API_URL: http://user-service:8000
     depends_on:

@@ -4,6 +4,8 @@
 #        AI-changed tokens to carry the "type" claim (Claude Code, 2026-09-27), then the "role" claim (2026-09-28).
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 # Scope: AI-removed the delivery location parts, which moved to the order service.
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
+# Scope: AI-changed the test tokens from HS256 with a shared secret to RS256 with a per-run key pair.
 # Author review: <to be completed by author>
 
 """Tests run against a real Postgres, migrated with Alembic.
@@ -21,8 +23,17 @@ import time
 import jwt
 import pytest
 
-TEST_SECRET = "test-secret-that-is-long-enough-for-hs256-0123456789"
-os.environ["JWT_SECRET"] = TEST_SECRET
+from cryptography.hazmat.primitives import serialization  # noqa: E402
+from cryptography.hazmat.primitives.asymmetric import rsa  # noqa: E402
+
+# A fresh key pair per test run, standing in for the User Service's signing key
+TEST_PRIVATE_KEY = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+TEST_PUBLIC_PEM = (
+    TEST_PRIVATE_KEY.public_key()
+    .public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo)
+    .decode()
+)
+os.environ["JWT_PUBLIC_KEY"] = TEST_PUBLIC_PEM
 
 from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402
@@ -95,9 +106,9 @@ async def client(engine):
         yield c
 
 
-def make_token(role: str = "student", sub: str = "user-1", *, expires_in: int = 3600, secret: str = TEST_SECRET) -> str:
+def make_token(role: str = "student", sub: str = "user-1", *, expires_in: int = 3600, key=TEST_PRIVATE_KEY) -> str:
     now = int(time.time())
-    return jwt.encode({"sub": sub, "role": role, "iat": now, "exp": now + expires_in}, secret, algorithm="HS256")
+    return jwt.encode({"sub": sub, "role": role, "iat": now, "exp": now + expires_in}, key, algorithm="RS256")
 
 
 def auth(role: str = "student", sub: str | None = None) -> dict[str, str]:

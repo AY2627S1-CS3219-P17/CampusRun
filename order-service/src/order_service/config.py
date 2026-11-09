@@ -7,12 +7,15 @@
 #        AI-added the served-area bounds and seed directory for delivery locations (copied from supplier-service),
 #        and the user and credit service URLs, the expiry grace period and campus time zone (2026-10-19);
 #        AI-added the sweeper and reply consumer settings (2026-10-19).
+#        AI-replaced JWT_SECRET and JWT_ALGORITHM with the User Service's RS256 public key JWT_PUBLIC_KEY (Claude Code, 2026-11-09).
 # Author review: <to be completed by author>
 
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, SecretStr
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
+from cryptography.hazmat.primitives.serialization import load_pem_public_key
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # order-service/, so the seed files are found wherever the service is started from
@@ -28,10 +31,9 @@ class Settings(BaseSettings):
     # This service's RabbitMQ login (user order-service). Only the worker connects; the HTTP API never does.
     rabbitmq_url: SecretStr | None = None
 
-    # Shared with the User Service, which signs the access tokens. At least 32 characters. Only the HTTP API
-    # needs it (main.py refuses to start without it); the worker never sees it.
-    jwt_secret: SecretStr | None = Field(default=None, min_length=32)
-    jwt_algorithm: str = "HS256"
+    # The User Service's RSA public key (PEM). It verifies access tokens but can't sign them, so it isn't a secret.
+    # Only the HTTP API needs it (main.py refuses to start without it); the worker never sees it.
+    jwt_public_key: str | None = None
 
     groq_api_key: SecretStr = SecretStr("")
     groq_model: str = "openai/gpt-oss-120b"
@@ -69,6 +71,24 @@ class Settings(BaseSettings):
 
     # Path prefix the gateway serves this service under, e.g. "/api/orders"; empty when accessed directly
     root_path: str = ""
+
+    @field_validator("jwt_public_key", mode="before")
+    @classmethod
+    def _check_public_key(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        # Compose passes an unset variable as an empty string
+        if not value.strip():
+            return None
+        # .env files and secret managers often hold the PEM on one line with literal \n
+        pem = value.strip().replace("\\n", "\n")
+        try:
+            key = load_pem_public_key(pem.encode())
+        except ValueError as error:
+            raise ValueError("JWT_PUBLIC_KEY is not a PEM public key (see scripts/generate-jwt-keys.sh)") from error
+        if not isinstance(key, RSAPublicKey) or key.key_size < 2048:
+            raise ValueError("JWT_PUBLIC_KEY must be an RSA key of at least 2048 bits")
+        return pem
 
 
 @lru_cache

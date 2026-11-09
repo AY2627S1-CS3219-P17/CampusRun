@@ -2,12 +2,15 @@
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: Access-token check copied from supplier-service/auth.py; admins keep every student capability,
 #        so wallet routes accept any signed-in user (docs/admin-role-plan.md).
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
+# Scope: AI-switched token verification from HS256 with JWT_SECRET to RS256 with JWT_PUBLIC_KEY.
 # Author review: <to be completed by author>
 
 """Identity and role checks.
 
-The User Service signs an access token (JWT) when a user signs in. This service checks the signature with the
-shared JWT_SECRET and reads two claims from it:
+The User Service signs an access token (JWT) with its RSA private key when a user signs in. This service checks
+the signature with the matching public key (JWT_PUBLIC_KEY), which can verify tokens but not create them, and
+reads two claims from it:
 
     sub   the user's id (string of an integer)
     role  "student" or "admin"
@@ -18,13 +21,28 @@ Valid token, but the role may not do this             -> 403 Forbidden
 
 from dataclasses import dataclass
 from enum import StrEnum
+from functools import lru_cache
 from typing import Annotated
 
 import jwt
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
+from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from credit_service.config import get_settings
+
+# Must match ALGORITHM in user-service/security.py. Pinned, so a token can't choose "none", or HS256 with the
+# public key (which every service has) as its secret.
+ALGORITHM = "RS256"
+
+
+@lru_cache
+def _load_public_key(pem: str) -> RSAPublicKey:
+    # Parsed once instead of on every request; config.py has already checked it is an RSA key
+    key = load_pem_public_key(pem.encode())
+    assert isinstance(key, RSAPublicKey)
+    return key
 
 
 class Role(StrEnum):
@@ -59,12 +77,11 @@ def _unauthorized(message: str) -> HTTPException:
 def decode_token(token: str) -> CurrentUser:
     try:
         settings = get_settings()
-        assert settings.jwt_secret is not None  # checked when the API starts
+        assert settings.jwt_public_key is not None  # checked when the API starts
         claims = jwt.decode(
             token,
-            settings.jwt_secret.get_secret_value(),
-            # Only the configured algorithm is accepted, so a token signed with "none" is rejected
-            algorithms=[settings.jwt_algorithm],
+            _load_public_key(settings.jwt_public_key),
+            algorithms=[ALGORITHM],
             options={"require": ["exp", "sub", "role"]},
         )
     except jwt.ExpiredSignatureError:

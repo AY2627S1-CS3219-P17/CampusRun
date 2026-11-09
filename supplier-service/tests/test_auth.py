@@ -5,14 +5,36 @@
 #        then the "role" claim (2026-09-28).
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 # Scope: AI-removed the delivery location parts, which moved to the order service.
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
+# Scope: AI-changed the forged-token cases from HS256 with a shared secret to RS256 and added the HS256-with-public-key case.
 # Author review: <to be completed by author>
+
+import base64
+import hashlib
+import hmac
+import json
 
 import jwt
 import pytest
+from cryptography.hazmat.primitives.asymmetric import rsa
 
-from .conftest import ADMIN, STUDENT, TEST_SECRET, make_token, supplier_body
+from .conftest import ADMIN, STUDENT, TEST_PRIVATE_KEY, TEST_PUBLIC_PEM, make_token, supplier_body
 
 pytestmark = pytest.mark.anyio
+
+OTHER_KEY = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+
+
+def hs256_signed_with(secret: str, claims: dict) -> str:
+    """The algorithm-confusion attack: HS256 keyed with the RSA public key, which every service has. PyJWT refuses to
+    make such a token, so it's built by hand."""
+
+    def b64(data: bytes) -> bytes:
+        return base64.urlsafe_b64encode(data).rstrip(b"=")
+
+    signing_input = b64(b'{"alg":"HS256","typ":"JWT"}') + b"." + b64(json.dumps(claims).encode())
+    signature = b64(hmac.new(secret.encode(), signing_input, hashlib.sha256).digest())
+    return (signing_input + b"." + signature).decode()
 
 
 async def test_health_needs_no_sign_in(client):
@@ -32,7 +54,7 @@ async def test_no_token_is_401_with_bearer_challenge(client):
     "token",
     [
         "not-a-jwt",
-        make_token(secret="some-other-secret-that-is-also-long-enough-000"),
+        make_token(key=OTHER_KEY),
         make_token(role="superuser"),
         jwt.encode(
             {"sub": "x", "role": "admin", "exp": 9999999999}, None, algorithm="none"
@@ -40,11 +62,12 @@ async def test_no_token_is_401_with_bearer_challenge(client):
         # The old claim name, before the User Service's "role" claim was adopted
         jwt.encode(
             {"sub": "x", "type": "admin", "exp": 9999999999},
-            TEST_SECRET,
-            algorithm="HS256",
+            TEST_PRIVATE_KEY,
+            algorithm="RS256",
         ),
+        hs256_signed_with(TEST_PUBLIC_PEM, {"sub": "x", "role": "admin", "exp": 9999999999}),
     ],
-    ids=["garbage", "wrong-secret", "unknown-role", "alg-none", "type-claim"],
+    ids=["garbage", "wrong-key", "unknown-role", "alg-none", "type-claim", "hs256-with-public-key"],
 )
 async def test_invalid_tokens_are_401(client, token):
     response = await client.get("/", headers={"Authorization": f"Bearer {token}"})
@@ -60,7 +83,7 @@ async def test_expired_token_says_session_expired(client):
 
 
 async def test_token_without_expiry_is_rejected(client):
-    token = jwt.encode({"sub": "x", "role": "admin"}, TEST_SECRET, algorithm="HS256")
+    token = jwt.encode({"sub": "x", "role": "admin"}, TEST_PRIVATE_KEY, algorithm="RS256")
     response = await client.get("/", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 401
 

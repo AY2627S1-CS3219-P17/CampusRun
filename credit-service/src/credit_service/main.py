@@ -1,6 +1,8 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: AI-assisted review and debugging for FastAPI app, lifespan and health check, following supplier-service/main.py.
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
+# Scope: AI-changed the start-up check from JWT_SECRET to JWT_PUBLIC_KEY.
 # Author review: <to be completed by author>
 
 """The credit service's HTTP API: read-only views of wallets, reservations and the audit.
@@ -32,8 +34,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
 
 settings = get_settings()
-if settings.jwt_secret is None:
-    raise RuntimeError("Set JWT_SECRET (the User Service's token signing secret) to run the API")
+if settings.jwt_public_key is None:
+    raise RuntimeError("Set JWT_PUBLIC_KEY (the User Service's token verification key) to run the API")
 
 app = FastAPI(
     title="CampusRun Credit Service",

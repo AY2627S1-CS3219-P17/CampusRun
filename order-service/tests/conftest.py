@@ -3,6 +3,8 @@
 # Scope: AI-generated pytest fixtures following user-service/tests/conftest.py: a disposable Postgres container
 #        migrated with Alembic, per-test empty tables, an HTTP client wired to the test database, and token helpers;
 #        the fake Supplier, User and Credit Services behind the client (2026-10-19).
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
+# Scope: AI-changed the test tokens from HS256 with a shared secret to RS256 with a per-run key pair.
 # Author review: <to be completed by author>
 
 import os
@@ -10,12 +12,22 @@ import time
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 
-TEST_SECRET = "test-secret-that-is-at-least-32-characters-long"
 # main.py reads settings on import; the tests swap in their own engine, so this URL is never used
 os.environ["DATABASE_URL"] = "postgresql+asyncpg://unused@localhost/unused"
-os.environ["JWT_SECRET"] = TEST_SECRET
 # Keep a developer's real Groq key in order-service/.env out of the tests
 os.environ["GROQ_API_KEY"] = ""
+
+from cryptography.hazmat.primitives import serialization  # noqa: E402
+from cryptography.hazmat.primitives.asymmetric import rsa  # noqa: E402
+
+# A fresh key pair per test run, standing in for the User Service's signing key
+TEST_PRIVATE_KEY = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+TEST_PUBLIC_PEM = (
+    TEST_PRIVATE_KEY.public_key()
+    .public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo)
+    .decode()
+)
+os.environ["JWT_PUBLIC_KEY"] = TEST_PUBLIC_PEM
 
 import jwt  # noqa: E402
 import pytest  # noqa: E402
@@ -35,9 +47,9 @@ from tests.fakes import FakeServices  # noqa: E402
 ALEMBIC_INI = Path(__file__).parent.parent / "alembic.ini"
 
 
-def make_token(user_id: int = 1, role: str = "student", *, expires_in: int = 300, secret: str = TEST_SECRET) -> str:
+def make_token(user_id: int = 1, role: str = "student", *, expires_in: int = 300, key=TEST_PRIVATE_KEY) -> str:
     now = int(time.time())
-    return jwt.encode({"sub": str(user_id), "role": role, "iat": now, "exp": now + expires_in}, secret, algorithm="HS256")
+    return jwt.encode({"sub": str(user_id), "role": role, "iat": now, "exp": now + expires_in}, key, algorithm="RS256")
 
 
 def auth(user_id: int = 1, role: str = "student") -> dict[str, str]:

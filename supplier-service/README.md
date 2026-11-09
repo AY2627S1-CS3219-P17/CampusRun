@@ -3,6 +3,8 @@ AI Assistance Disclosure:
 Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 Scope: AI-generated service README; AI-updated paths, Docker access and settings for the gateway (Claude Code, 2026-09-27);
        AI-added GET /lookup, and removed the delivery locations, which moved to the order service (Claude Code, 2026-10-19).
+Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
+Scope: AI-updated the setup steps for JWT_PUBLIC_KEY, which replaced JWT_SECRET.
 Author review: <to be completed by author>
 -->
 
@@ -21,10 +23,9 @@ The design and the reasons for it are in [DESIGN.md](DESIGN.md).
 
 1. In the repo root, copy `.env.example` to `.env` and fill in:
    - `SUPPLIER_DB_PASSWORD`: any password for the local database.
-   - `JWT_SECRET`: 32 or more random characters, the same one the User Service uses. For example, the output of
-     `uv run python -c "import secrets; print(secrets.token_urlsafe(48))"`.
-2. In `supplier-service`, copy `.env.example` to `.env`. Put the same password in `DATABASE_URL` and the same
-   `JWT_SECRET`.
+   - `JWT_PRIVATE_KEY` and `JWT_PUBLIC_KEY`: run `sh scripts/generate-jwt-keys.sh >> .env` in the repo root.
+2. In `supplier-service`, copy `.env.example` to `.env`. Put the same password in `DATABASE_URL` and copy the
+   `JWT_PUBLIC_KEY` line from the root `.env`.
 3. Run these in `supplier-service`:
 
 | With mise | Without mise | What it does |
@@ -86,8 +87,7 @@ return 422 with `{"detail": "...", "errors": {"fieldName": "message"}}`.
 | Variable | Default | Meaning |
 |---|---|---|
 | `DATABASE_URL` | none, required | Postgres connection (`postgresql+asyncpg://...`) |
-| `JWT_SECRET` | none, required (32+ characters) | Shared with the User Service |
-| `JWT_ALGORITHM` | `HS256` | Must match the User Service |
+| `JWT_PUBLIC_KEY` | none, required | The User Service's RSA public key (PEM; one line with `\n` is fine). Verifies RS256 tokens |
 | `CORS_ORIGINS` | empty | Comma-separated browser origins allowed to call the service directly |
 | `ENABLE_DOCS` | `false` | Serves `/docs`, `/redoc` and `/openapi.json` |
 | `ROOT_PATH` | empty | Path prefix the gateway serves the service under (`/api/suppliers` in Compose) |

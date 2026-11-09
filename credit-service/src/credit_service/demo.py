@@ -2,12 +2,15 @@
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: AI-generated demo command that stands in for the Order Service: it sends credit commands over RabbitMQ
 #        as the order-service user, waits for the replies and prints balances before and after.
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
+# Scope: AI-changed the demo to sign its tokens with the User Service's RS256 private key instead of JWT_SECRET.
 # Author review: <to be completed by author>
 
 """credit-demo: drive the credit service the way the Order Service will, and watch the balances.
 
 It connects to RabbitMQ as the order-service user, so the broker treats it exactly like the real Order Service,
-and reads balances through the credit service's HTTP API with tokens it signs using JWT_SECRET.
+and reads balances through the credit service's HTTP API with tokens it signs using the User Service's private key
+(JWT_PRIVATE_KEY). Being able to sign tokens for any user is why only the demo, and never the credit service, gets it.
 Run it inside Compose (see the README), e.g.
 
     docker compose run --rm credit-demo register            # two new students; watch their wallets open
@@ -27,7 +30,7 @@ import aio_pika
 import httpx
 import jwt
 from aio_pika.abc import AbstractIncomingMessage
-from pydantic import Field, SecretStr
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from credit_service.broker import connect
@@ -41,9 +44,17 @@ class DemoSettings(BaseSettings):
 
     # amqp://order-service:<password>@rabbitmq:5672/ : the demo acts as the Order Service
     demo_rabbitmq_url: SecretStr
-    jwt_secret: SecretStr = Field(min_length=32)
+    # The User Service's signing key, so the demo can act as any user. Demo only: the credit service has just the
+    # public key.
+    jwt_private_key: SecretStr
     credit_api_url: str = "http://credit-service:8000"
     user_api_url: str = "http://user-service:8000"
+
+    @field_validator("jwt_private_key", mode="before")
+    @classmethod
+    def _unescape_newlines(cls, value: object) -> object:
+        # .env files often hold the PEM on one line with literal \n
+        return value.strip().replace("\\n", "\n") if isinstance(value, str) else value
 
 
 class OrderServiceStandIn:
@@ -106,8 +117,8 @@ class OrderServiceStandIn:
         now = int(time.time())
         return jwt.encode(
             {"sub": str(user_id), "role": role, "iat": now, "exp": now + 300},
-            self.settings.jwt_secret.get_secret_value(),
-            algorithm="HS256",
+            self.settings.jwt_private_key.get_secret_value(),
+            algorithm="RS256",
         )
 
     async def wallet(self, user_id: int) -> dict:

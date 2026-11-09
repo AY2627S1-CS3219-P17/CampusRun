@@ -2,6 +2,8 @@
 AI Assistance Disclosure:
 Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 Scope: AI-generated service README, following supplier-service/README.md.
+Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
+Scope: AI-updated the setup steps for JWT_PUBLIC_KEY, which replaced JWT_SECRET.
 Author review: <to be completed by author>
 -->
 
@@ -24,10 +26,12 @@ other services. The design, and the reasons for it, are in [docs/credit-service-
 # Getting started
 [Install uv](https://docs.astral.sh/uv/getting-started/installation/) and Docker Desktop first.
 
-1. In the repo root, copy `.env.example` to `.env` and fill in `CREDIT_DB_PASSWORD`, `JWT_SECRET` and the four
+1. In the repo root, copy `.env.example` to `.env` and fill in `CREDIT_DB_PASSWORD` and the four
    `RABBITMQ_*_PASSWORD` values (any random strings, e.g. from
-   `uv run python -c "import secrets; print(secrets.token_urlsafe(24))"`).
-2. In `credit-service`, copy `.env.example` to `.env` and put in the same passwords and `JWT_SECRET`.
+   `uv run python -c "import secrets; print(secrets.token_urlsafe(24))"`), then add the token keys with
+   `sh scripts/generate-jwt-keys.sh >> .env`.
+2. In `credit-service`, copy `.env.example` to `.env` and put in the same passwords and the `JWT_PUBLIC_KEY` line.
+   `uv run credit-demo` also needs the `JWT_PRIVATE_KEY` line.
 3. Run these in `credit-service`:
 
 | With mise | Without mise | What it does |

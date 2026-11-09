@@ -3,13 +3,16 @@
 # Scope: AI-generated access-token check and student/admin role dependencies;
 #        AI-changed it to read the account type from the "type" claim, matching the User Service (Claude Code, 2026-09-27);
 #        AI-renamed the claim to "role" (Claude Code, 2026-09-28).
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
+# Scope: AI-switched token verification from HS256 with JWT_SECRET to RS256 with JWT_PUBLIC_KEY.
 # Author review: <to be completed by author>
 
 """Identity and role checks.
 
-The User Service signs an access token (JWT) when a user signs in. This service
-never calls the User Service per request: it checks the token's signature with the
-shared JWT_SECRET and reads two claims from it:
+The User Service signs an access token (JWT) with its RSA private key when a user
+signs in. This service never calls the User Service per request: it checks the
+token's signature with the matching public key (JWT_PUBLIC_KEY), which can verify
+tokens but not create them, and reads two claims from it:
 
     sub   the user's id (string)
     role  "student" or "admin"
@@ -20,13 +23,28 @@ Valid token, but the role may not do this             -> 403 Forbidden
 
 from dataclasses import dataclass
 from enum import StrEnum
+from functools import lru_cache
 from typing import Annotated
 
 import jwt
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
+from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from supplier_service.config import get_settings
+
+# Must match ALGORITHM in user-service/security.py. Pinned, so a token can't choose "none", or HS256 with the
+# public key (which every service has) as its secret.
+ALGORITHM = "RS256"
+
+
+@lru_cache
+def _load_public_key(pem: str) -> RSAPublicKey:
+    # Parsed once instead of on every request; config.py has already checked it is an RSA key
+    key = load_pem_public_key(pem.encode())
+    assert isinstance(key, RSAPublicKey)
+    return key
 
 
 class Role(StrEnum):
@@ -63,10 +81,8 @@ def decode_token(token: str) -> CurrentUser:
         settings = get_settings()
         claims = jwt.decode(
             token,
-            settings.jwt_secret.get_secret_value(),
-            # Only the configured algorithm is accepted, so a token signed with
-            # "none" or another algorithm is rejected.
-            algorithms=[settings.jwt_algorithm],
+            _load_public_key(settings.jwt_public_key),
+            algorithms=[ALGORITHM],
             options={"require": ["exp", "sub", "role"]},
         )
     except jwt.ExpiredSignatureError:

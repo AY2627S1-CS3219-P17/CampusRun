@@ -19,7 +19,7 @@ dependencies = [
     "fastapi[standard-no-fastapi-cloud-cli]>=0.141.1",
     "httpx>=0.28.1",
     "pydantic-settings>=2.15.0",
-    "pyjwt>=2.15.0",
+    "pyjwt[crypto]>=2.15.0",
     "sqlalchemy[asyncio]>=2.1.0",
     "tzdata>=2026.4",
 ]

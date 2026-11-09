@@ -4,12 +4,19 @@
 #        AI-updated for the "student" token type (Claude Code, 2026-09-27);
 #        AI-updated for admins as users with the admin role and the "role" claim (Claude Code, 2026-09-28);
 #        AI-replaced the require_student checks: both roles pass require_user (Claude Code, 2026-09-28);
-#        AI-added tests for the session messages and unknown roles (Claude Code, 2026-10-19).
+#        AI-added tests for the session messages and unknown roles (Claude Code, 2026-10-19);
+#        AI-changed forged tokens to use another RSA key and added the HS256-with-public-key case (Claude Code, 2026-11-09).
 # Author review: <to be completed by author>
 
+import base64
+import hashlib
+import hmac
+import json
 from datetime import UTC, datetime, timedelta
 
 import jwt
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 import pytest
 from fastapi import HTTPException
 from httpx import AsyncClient
@@ -18,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from user_service.auth import require_admin, require_user
 from user_service.config import get_settings
-from user_service.security import ALGORITHM, password_hash
+from user_service.security import ALGORITHM, password_hash, public_key
 from user_service.tables import users
 
 pytestmark = pytest.mark.anyio
@@ -56,11 +63,30 @@ def bearer(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def make_token(secret: str | None = None, **overrides) -> str:
+OTHER_KEY = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+PUBLIC_PEM = public_key(get_settings()).public_bytes(
+    serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
+).decode()
+
+
+def make_token(key: rsa.RSAPrivateKey | None = None, **overrides) -> str:
     claims = {"sub": "1", "role": "student", "exp": datetime.now(UTC) + timedelta(minutes=5), **overrides}
     # A claim set to None means "leave it out"
     claims = {key: value for key, value in claims.items() if value is not None}
-    return jwt.encode(claims, secret or get_settings().jwt_secret.get_secret_value(), algorithm=ALGORITHM)
+    signing_key = key or get_settings().jwt_private_key.get_secret_value()  # pyright: ignore[reportOptionalMemberAccess]
+    return jwt.encode(claims, signing_key, algorithm=ALGORITHM)
+
+
+def hs256_signed_with(secret: str, claims: dict) -> str:
+    """The algorithm-confusion attack: HS256 keyed with the RSA public key, which every service has. PyJWT refuses to
+    make such a token, so it's built by hand."""
+
+    def b64(data: bytes) -> bytes:
+        return base64.urlsafe_b64encode(data).rstrip(b"=")
+
+    signing_input = b64(b'{"alg":"HS256","typ":"JWT"}') + b"." + b64(json.dumps(claims).encode())
+    signature = b64(hmac.new(secret.encode(), signing_input, hashlib.sha256).digest())
+    return (signing_input + b"." + signature).decode()
 
 
 @pytest.mark.parametrize("identifier", ["alice@u.nus.edu", "ALICE@U.NUS.EDU", "alice", "Alice", "  alice  "])
@@ -110,7 +136,8 @@ async def test_me_requires_token(client: AsyncClient) -> None:
     [
         "not-a-jwt",
         make_token(exp=datetime.now(UTC) - timedelta(minutes=1)),  # expired
-        make_token(secret="some-other-secret-that-is-32-chars-long!"),  # forged
+        make_token(key=OTHER_KEY),  # forged
+        hs256_signed_with(PUBLIC_PEM, {"sub": "1", "role": "admin", "exp": 9999999999}),  # algorithm confusion
         make_token(exp=None),  # no expiry
         make_token(role=None),  # no role
         make_token(role=None, type="student"),  # the old claim name
@@ -126,7 +153,7 @@ async def test_me_rejects_invalid_tokens(client: AsyncClient, user: dict, token:
     ("token", "message"),
     [
         (make_token(exp=datetime.now(UTC) - timedelta(minutes=1)), "Your session has expired. Sign in again."),
-        (make_token(secret="some-other-secret-that-is-32-chars-long!"), "Your session is not valid. Sign in again."),
+        (make_token(key=OTHER_KEY), "Your session is not valid. Sign in again."),
         (make_token(role="superuser"), "Your session is not valid. Sign in again."),
         (make_token(sub="not-a-number"), "Your session is not valid. Sign in again."),
     ],

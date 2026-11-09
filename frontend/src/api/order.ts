@@ -6,7 +6,7 @@
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-20
 // Scope: AI-added the predefined delivery location search.
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-10
-// Scope: AI-added the admin list of all errands.
+// Scope: AI-added the admin list of all errands, and listing, adding and editing predefined delivery locations.
 // Author review: <to be completed by author>
 
 import { request } from './client'
@@ -22,6 +22,8 @@ import type {
   ErrandPage,
   ErrandQuery,
   ErrandTab,
+  LocationPayload,
+  LocationQuery,
 } from '../types/order'
 
 // Relative, so it's same-origin behind the gateway; the Vite dev server proxies it (see vite.config.ts)
@@ -42,6 +44,40 @@ export function listPredefinedLocations(q: string, signal?: AbortSignal) {
   return request<Page<DeliveryLocation>>(
     `${ORDER_API_URL}/delivery-locations?${params}`,
     { signal },
+  )
+}
+
+// Admin: the predefined list only, active or deactivated
+export function listLocations(query: LocationQuery, signal?: AbortSignal) {
+  const params = new URLSearchParams({
+    predefined: 'true',
+    active: String(query.active),
+    page: String(query.page),
+    pageSize: String(query.pageSize),
+  })
+  if (query.q.trim()) params.set('q', query.q.trim())
+  return request<Page<DeliveryLocation>>(
+    `${ORDER_API_URL}/delivery-locations?${params}`,
+    { signal },
+  )
+}
+
+// Admin: adds to the shared campus list
+export function createLocation(payload: LocationPayload) {
+  return request<DeliveryLocation>(`${ORDER_API_URL}/delivery-locations`, {
+    method: 'POST',
+    body: JSON.stringify({ ...payload, predefined: true }),
+  })
+}
+
+// Only the fields sent change; { active } deactivates or reactivates
+export function updateLocation(
+  id: number,
+  changes: Partial<LocationPayload> & { active?: boolean },
+) {
+  return request<DeliveryLocation>(
+    `${ORDER_API_URL}/delivery-locations/${id}`,
+    { method: 'PATCH', body: JSON.stringify(changes) },
   )
 }
 

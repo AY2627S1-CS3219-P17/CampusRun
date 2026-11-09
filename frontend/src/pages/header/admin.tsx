@@ -2,7 +2,8 @@
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 // Scope: AI-generated the admin page: a banner like the Suppliers page and one tab per admin area, kept in the URL
 //        (?tab=). Starts with the Users tab (docs/admin-dashboard-plan.md, Task 2);
-//        AI-added the Errands tab and opening one user's errands from the Users tab, kept in the URL (2026-11-10).
+//        AI-added the Errands tab and opening one user's errands from the Users tab, kept in the URL, and the
+//        Delivery locations tab (2026-11-10).
 // Author review: <to be completed by author>
 
 import { Link, useSearchParams } from 'react-router'
@@ -12,6 +13,7 @@ import { ArrowLeft } from 'lucide-react'
 import AdminErrands, {
   type ErrandUserFilter,
 } from '../../components/admin/admin-errands'
+import AdminLocations from '../../components/admin/admin-locations'
 import AdminUsers from '../../components/admin/admin-users'
 import './suppliers.css'
 import './admin.css'
@@ -19,6 +21,7 @@ import './admin.css'
 const TABS = [
   { value: 'errands', label: 'Errands' },
   { value: 'users', label: 'Users' },
+  { value: 'locations', label: 'Delivery locations' },
 ] as const
 type AdminTab = (typeof TABS)[number]['value']
 
@@ -92,6 +95,7 @@ export default function AdminPage() {
                 }
               />
             )}
+            {tab === 'locations' && <AdminLocations />}
           </div>
         </main>
       </div>

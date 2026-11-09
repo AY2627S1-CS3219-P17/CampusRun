@@ -7,7 +7,7 @@
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-20
 // Scope: AI-added the delivery location type and the predefined-location option on create and edit.
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-10
-// Scope: AI-added the admin errand list query.
+// Scope: AI-added the admin errand list query, and the admin delivery location list query and form payload.
 // Tool: OpenAI Codex (GPT-6), date: 2026-10-20
 // Scope: Typed the matched predefined delivery location in autofill suggestions.
 // Author review: <to be completed by author>
@@ -115,7 +115,6 @@ export type ErrandQuery = {
   pageSize: number
 }
 
-// As returned by GET /delivery-locations
 // GET /admin/errands: every errand, optionally one user's or in one state
 export type AdminErrandQuery = ErrandQuery & {
   state: ErrandState | null
@@ -123,6 +122,7 @@ export type AdminErrandQuery = ErrandQuery & {
   courierId: number | null
 }
 
+// As returned by GET /delivery-locations
 export type DeliveryLocation = {
   id: number
   name: string
@@ -130,7 +130,25 @@ export type DeliveryLocation = {
   description: string | null
   latitude: number
   longitude: number
+  active: boolean
   predefined: boolean
+}
+
+// The admin page's Delivery locations tab: predefined locations only
+export type LocationQuery = {
+  q: string
+  active: boolean
+  page: number
+  pageSize: number
+}
+
+// POST /delivery-locations with predefined: true, and PATCH /delivery-locations/{id}
+export type LocationPayload = {
+  name: string
+  floor: string | null
+  description: string | null
+  latitude: number
+  longitude: number
 }
 
 // A saved location, such as one of the predefined campus spots

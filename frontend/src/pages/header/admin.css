@@ -2,7 +2,8 @@
  * Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
  * Scope: AI-generated styles for the admin page: section tabs, user cards, role badges and the confirmation
  *        dialog. The banner, list, empty state and toast come from suppliers.css. AI-added the errands tab's
- *        user filter chip (2026-11-10).
+ *        user filter chip, and the delivery location cards and the form's
+ *        deactivate button (2026-11-10).
  * Author review: <to be completed by author>
  */
 
@@ -183,6 +184,25 @@
 }
 .admin-errands {
   margin-top: 14px;
+}
+
+.admin-location-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.admin-location-line svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+/* The location form's footer: deactivate or reactivate sits on the left, apart from Cancel and Save */
+.supplier-dialog-footer .admin-location-toggle {
+  margin-right: auto;
+  color: #176849;
+}
+.supplier-dialog-footer .admin-location-toggle.is-danger {
+  border-color: #f0b4ad;
+  color: #b42318;
 }
 
 .admin-notice {

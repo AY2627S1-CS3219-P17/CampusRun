@@ -8,7 +8,7 @@ Author review: <to be completed by author>
 
 # Admin Dashboard Plan
 
-Last updated: 2026-11-09 (approved; Tasks 1 to 3 done)
+Last updated: 2026-11-10 (approved; Tasks 1 to 4 done)
 
 > **How this plan is carried out:** one task at a time. **After every task, stop for a manual review.** Write the
 > detailed code for a task only when that task starts.

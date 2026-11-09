@@ -7,6 +7,8 @@
 #        AI-added the OpenWallet outbox message on registration and the outbox relay in the lifespan (Claude, claude.ai, 2026-10-17).
 #        AI-added GET /internal/usernames for the Order Service (Claude Code, 2026-10-19).
 #        AI-added the start-up check for JWT_PRIVATE_KEY (Claude Code, 2026-11-09).
+#        AI-added refresh sessions: login starts one, POST /auth/refresh and /auth/logout, and a password change ends
+#        every session (Claude Code, 2026-11-09).
 # Author review: reviewed by Nathan
 
 import asyncio
@@ -14,6 +16,7 @@ import contextlib
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import timedelta
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
@@ -32,15 +35,17 @@ from user_service.auth import CurrentUser, credentials_error
 from user_service.config import Settings, get_settings
 from user_service.db import Connection, create_engine, get_engine
 from user_service.outbox import OutboxRelay, RabbitPublisher, enqueue_open_wallet
+from user_service.sessions import Refused, end_all_sessions, end_session, rotate, start_session
 from user_service.schemas import (
     PASSWORD_MAX_LENGTH,
+    RefreshTokenRequest,
     RegisterRequest,
     TokenResponse,
     UpdateUserRequest,
     UsernameResponse,
     UserResponse,
 )
-from user_service.security import DUMMY_HASH, create_access_token, password_hash
+from user_service.security import DUMMY_HASH, Role, create_access_token, password_hash
 from user_service.tables import users
 
 
@@ -170,7 +175,45 @@ async def login(form: LoginForm, conn: Connection, settings: SettingsDep) -> Tok
     valid = await check_password(form.password, row.password_hash if row else None)
     if row is None or not valid:
         raise login_failed()
-    return TokenResponse(access_token=create_access_token(row.id, row.role, settings))
+    refresh_token = await start_session(conn, row.id, timedelta(minutes=settings.jwt_refresh_token_ttl))
+    return token_response(row.id, row.role, refresh_token, settings)
+
+
+def token_response(account_id: int, role: Role, refresh_token: str, settings: Settings) -> TokenResponse:
+    return TokenResponse(
+        access_token=create_access_token(account_id, role, settings),
+        expires_in=settings.jwt_access_token_ttl * 60,
+        refresh_token=refresh_token,
+    )
+
+
+SESSION_ENDED = "Your session has ended. Sign in again."
+
+
+# Needs no access token: the client calls it when its access token is about to expire, or already has
+@app.post("/auth/refresh", response_model=TokenResponse)
+async def refresh(body: RefreshTokenRequest, conn: Connection, settings: SettingsDep) -> TokenResponse | JSONResponse:
+    result = await rotate(conn, body.refresh_token.get_secret_value())
+    if result is Refused.REUSED:
+        # Returned, not raised: raising would roll back the transaction, and with it the revocation
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": SESSION_ENDED},
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if result is Refused.INVALID:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=SESSION_ENDED,
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return token_response(result.user_id, result.role, result.refresh_token, settings)
+
+
+# Ends this tab's session only. Needs no access token, so a tab whose access token has run out can still log out.
+@app.post("/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(body: RefreshTokenRequest, conn: Connection) -> None:
+    await end_session(conn, body.refresh_token.get_secret_value())
 
 # Useing the CurrentUser type annotation for the endpoint parameter makes FastAPI run require_user first, which returns 401/403 before the endpoint runs; the parameter name doesn't matter.
 @app.get("/users/me")
@@ -208,8 +251,10 @@ async def update_current_user(body: UpdateUserRequest, account: CurrentUser, con
         current_password = body.current_password.get_secret_value() if body.current_password else ""
         if not await check_password(current_password, stored_hash):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
-        # Tokens issued before the change stay valid until they expire; see "Revoking sessions" in docs/auth-plan.md
         changes["password_hash"] = await run_in_threadpool(password_hash.hash, body.new_password.get_secret_value())
+        # Every session ends, this one included, so a stolen session can't outlive the password. Access tokens already
+        # issued still work until they expire (at most JWT_ACCESS_TOKEN_TTL minutes).
+        await end_all_sessions(conn, account.id)
 
     columns = (users.c.id, users.c.email, users.c.username, users.c.email_verified_at, users.c.role, users.c.created_at)
     if changes:

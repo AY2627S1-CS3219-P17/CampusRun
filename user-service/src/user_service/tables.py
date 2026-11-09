@@ -2,7 +2,8 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
 # Scope: AI-generated SQLAlchemy Core MetaData naming convention and users/admins table definitions;
 #        AI-added USERNAME_MAX_LENGTH constant; AI-replaced the admins table with a role column on users (Claude Code, 2026-09-28);
-#        AI-added the outbox table for messages to RabbitMQ (Claude, claude.ai, 2026-10-17).
+#        AI-added the outbox table for messages to RabbitMQ (Claude, claude.ai, 2026-10-17);
+#        AI-added the refresh_sessions table to the team's schema (Claude Code, 2026-11-09).
 # Author review: Reviewed and added email_verified_at
 
 from sqlalchemy import (
@@ -10,9 +11,11 @@ from sqlalchemy import (
     CheckConstraint,
     Column,
     DateTime,
+    ForeignKey,
     Identity,
     Index,
     Integer,
+    LargeBinary,
     MetaData,
     String,
     Table,
@@ -101,3 +104,27 @@ outbox = Table(
 Index("uq_outbox_message_id", outbox.c.message_id, unique=True)
 # The relay only ever looks for unpublished rows, which stay few
 Index("ix_outbox_unpublished", outbox.c.id, postgresql_where=outbox.c.published_at.is_(None))
+
+
+# One row per signed-in tab. The refresh token itself is never stored, only its SHA-256: the token is 256 random bits,
+# so a fast hash is enough, and a leaked table holds no usable tokens. Each refresh replaces token_hash, and keeps the
+# old one in previous_hash, so a stolen token used after the real one has moved on revokes the session.
+refresh_sessions = Table(
+    "refresh_sessions",
+    metadata,
+    Column("id", UUID(as_uuid=False), primary_key=True, server_default=text("gen_random_uuid()")),
+    Column("user_id", Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+    Column("token_hash", LargeBinary, nullable=False),
+    Column("previous_hash", LargeBinary, nullable=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("last_used_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    # Fixed at sign-in: refreshing never extends a session
+    Column("expires_at", DateTime(timezone=True), nullable=False),
+    # Set by logout, a password change or reuse detection
+    Column("revoked_at", DateTime(timezone=True), nullable=True),
+)
+
+Index("uq_refresh_sessions_token_hash", refresh_sessions.c.token_hash, unique=True)
+Index("ix_refresh_sessions_previous_hash", refresh_sessions.c.previous_hash)
+# Revoking every session of an account (password change)
+Index("ix_refresh_sessions_user_id", refresh_sessions.c.user_id)

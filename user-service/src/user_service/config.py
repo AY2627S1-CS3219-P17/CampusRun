@@ -2,14 +2,15 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
 # Scope: AI-generated pydantic-settings Settings class reading DATABASE_URL and ENABLE_DOCS; AI-added Pyright ignore on Settings();
 #        AI-added INITIAL_ADMIN_EMAIL (Claude Code, 2026-09-28); AI-added RABBITMQ_URL and OUTBOX_POLL_SECONDS (Claude, claude.ai, 2026-10-17);
-#        AI-replaced JWT_SECRET with the RS256 private key JWT_PRIVATE_KEY (Claude Code, 2026-11-09).
+#        AI-replaced JWT_SECRET with the RS256 private key JWT_PRIVATE_KEY (Claude Code, 2026-11-09);
+#        AI-shortened the access token to 5 minutes and added JWT_REFRESH_TOKEN_TTL (Claude Code, 2026-11-09).
 # Author review: reviewed by Nathan
 
 from functools import lru_cache
 
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
-from pydantic import SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,8 +24,11 @@ class Settings(BaseSettings):
     # RSA private key (PEM) that signs access tokens. Only this service has it; the others verify with the public
     # key. Optional so Alembic and the create-initial-admin script run without it; main.py refuses to start without it.
     jwt_private_key: SecretStr | None = None
-    # Minutes an access token stays valid
-    jwt_access_token_ttl: int = 60
+    # Minutes an access token stays valid. Also the longest a revoked session keeps working, since services check
+    # access tokens without asking this service; the web client refreshes before it runs out.
+    jwt_access_token_ttl: int = Field(default=5, ge=1)
+    # Minutes a refresh session lasts from sign-in (7 days). Refreshing never extends it.
+    jwt_refresh_token_ttl: int = Field(default=7 * 24 * 60, ge=1)
 
     # Only read by the create-initial-admin script; the server runs without them
     initial_admin_email: str | None = None

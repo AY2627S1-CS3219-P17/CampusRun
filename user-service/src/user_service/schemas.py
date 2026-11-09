@@ -5,7 +5,8 @@
 #        AI-limited emails to @u.nus.edu, added role to UserResponse and removed AdminResponse (2026-09-28);
 #        AI-made the profile update request reject unknown fields (2026-09-28);
 #        AI-changed the password fields to SecretStr so they're masked if a request model is logged (2026-09-29);
-#        AI-added UsernameResponse for the internal username lookup (2026-10-19).
+#        AI-added UsernameResponse for the internal username lookup (2026-10-19);
+#        AI-added the refresh token to TokenResponse and the refresh/logout request model (2026-11-09).
 # Author review: reviewed by Nathan
 
 import re
@@ -152,4 +153,15 @@ class TokenResponse(BaseModel):
     # Field names are fixed by the OAuth2 spec; Swagger's Authorize button reads them
     access_token: str
     token_type: Literal["bearer"] = "bearer"
+    # Seconds until the access token expires, so the client can refresh before then
+    expires_in: int
+    # Single use: POST /auth/refresh returns a new one each time
+    refresh_token: str
+
+
+class RefreshTokenRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    # SecretStr so it's masked if the request model is logged; 43 characters when issued
+    refresh_token: SecretStr = Field(max_length=128)
     

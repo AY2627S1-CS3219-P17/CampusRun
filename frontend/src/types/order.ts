@@ -6,6 +6,8 @@
 //        edit and action request types.
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-20
 // Scope: AI-added the delivery location type and the predefined-location option on create and edit.
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-10
+// Scope: AI-added the admin errand list query.
 // Tool: OpenAI Codex (GPT-6), date: 2026-10-20
 // Scope: Typed the matched predefined delivery location in autofill suggestions.
 // Author review: <to be completed by author>
@@ -114,6 +116,13 @@ export type ErrandQuery = {
 }
 
 // As returned by GET /delivery-locations
+// GET /admin/errands: every errand, optionally one user's or in one state
+export type AdminErrandQuery = ErrandQuery & {
+  state: ErrandState | null
+  requesterId: number | null
+  courierId: number | null
+}
+
 export type DeliveryLocation = {
   id: number
   name: string

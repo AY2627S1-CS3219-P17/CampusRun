@@ -5,11 +5,14 @@
 // Scope: AI-added the Explore, My Requests and My Tasks list calls, and create, edit and the errand actions.
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-20
 // Scope: AI-added the predefined delivery location search.
+// Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-10
+// Scope: AI-added the admin list of all errands.
 // Author review: <to be completed by author>
 
 import { request } from './client'
 import type { Page } from '../types/supplier'
 import type {
+  AdminErrandQuery,
   AutofillSuggestion,
   CreateErrandPayload,
   DeliveryLocation,
@@ -81,6 +84,17 @@ export function listMyTasks(
     `${ORDER_API_URL}/me/tasks?${listParams(query, tab)}`,
     { signal },
   )
+}
+
+// Admin only: every errand, optionally one requester's or courier's, or in one state
+export function listAllErrands(query: AdminErrandQuery, signal?: AbortSignal) {
+  const params = listParams(query)
+  if (query.state) params.set('state', query.state)
+  if (query.requesterId) params.set('requesterId', String(query.requesterId))
+  if (query.courierId) params.set('courierId', String(query.courierId))
+  return request<ErrandPage>(`${ORDER_API_URL}/admin/errands?${params}`, {
+    signal,
+  })
 }
 
 export function createErrand(payload: CreateErrandPayload) {

@@ -2,13 +2,14 @@
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 // Scope: AI-generated the admin page's Users tab: search and role filter, pages, promoting a student after a
 //        confirmation, and stepping down from your own admin role while another admin is left; AI-moved Step down
-//        into the toolbar row, greyed out while you're the only admin (2026-11-10).
+//        into the toolbar row, greyed out while you're the only admin (2026-11-10); AI-added the Errands menu that
+//        opens a user's errands as requester or courier (2026-11-10).
 // Author review: <to be completed by author>
 
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { AlertDialog } from 'radix-ui'
-import { ShieldCheck, ShieldMinus } from 'lucide-react'
+import { AlertDialog, DropdownMenu } from 'radix-ui'
+import { ChevronDown, ListChecks, ShieldCheck, ShieldMinus } from 'lucide-react'
 import Pagination from '../shared/pagination'
 import Toolbar from '../shared/toolbar'
 import { ApiError } from '../../api/client'
@@ -41,8 +42,10 @@ function messageOf(error: unknown) {
 
 export default function AdminUsers({
   onError,
+  onViewErrands,
 }: {
   onError: (message: string) => void
+  onViewErrands: (user: AdminUser, as: 'requester' | 'courier') => void
 }) {
   const session = useSession()
   const navigate = useNavigate()
@@ -216,6 +219,40 @@ export default function AdminUsers({
                   <span className={`admin-role admin-role-${user.role}`}>
                     {user.role === 'admin' ? 'Admin' : 'Student'}
                   </span>
+                  <DropdownMenu.Root modal={false}>
+                    <DropdownMenu.Trigger asChild>
+                      <button
+                        type="button"
+                        className="admin-action"
+                        aria-label={`${user.username}'s errands`}
+                      >
+                        <ListChecks size={16} aria-hidden="true" />
+                        Errands
+                        <ChevronDown size={14} aria-hidden="true" />
+                      </button>
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Portal>
+                      <DropdownMenu.Content
+                        className="toolbar-menu"
+                        align="end"
+                        sideOffset={6}
+                        collisionPadding={12}
+                      >
+                        <DropdownMenu.Item
+                          className="toolbar-option"
+                          onSelect={() => onViewErrands(user, 'requester')}
+                        >
+                          Requested by {user.username}
+                        </DropdownMenu.Item>
+                        <DropdownMenu.Item
+                          className="toolbar-option"
+                          onSelect={() => onViewErrands(user, 'courier')}
+                        >
+                          Delivered by {user.username}
+                        </DropdownMenu.Item>
+                      </DropdownMenu.Content>
+                    </DropdownMenu.Portal>
+                  </DropdownMenu.Root>
                   {user.role === 'student' && (
                     <button
                       type="button"

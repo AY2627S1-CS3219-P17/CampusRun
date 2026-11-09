@@ -1,18 +1,25 @@
 // AI Assistance Disclosure:
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 // Scope: AI-generated the admin page: a banner like the Suppliers page and one tab per admin area, kept in the URL
-//        (?tab=). Starts with the Users tab (docs/admin-dashboard-plan.md, Task 2).
+//        (?tab=). Starts with the Users tab (docs/admin-dashboard-plan.md, Task 2);
+//        AI-added the Errands tab and opening one user's errands from the Users tab, kept in the URL (2026-11-10).
 // Author review: <to be completed by author>
 
 import { Link, useSearchParams } from 'react-router'
 import { Toast } from 'radix-ui'
 import { useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
+import AdminErrands, {
+  type ErrandUserFilter,
+} from '../../components/admin/admin-errands'
 import AdminUsers from '../../components/admin/admin-users'
 import './suppliers.css'
 import './admin.css'
 
-const TABS = [{ value: 'users', label: 'Users' }] as const
+const TABS = [
+  { value: 'errands', label: 'Errands' },
+  { value: 'users', label: 'Users' },
+] as const
 type AdminTab = (typeof TABS)[number]['value']
 
 function isTab(value: string | null): value is AdminTab {
@@ -22,7 +29,14 @@ function isTab(value: string | null): value is AdminTab {
 export default function AdminPage() {
   const [params, setParams] = useSearchParams()
   const requested = params.get('tab')
-  const tab: AdminTab = isTab(requested) ? requested : 'users'
+  const tab: AdminTab = isTab(requested) ? requested : 'errands'
+  // ?userId=&username=&as=requester|courier, set by the Users tab's Errands menu
+  const userId = Number(params.get('userId'))
+  const as = params.get('as')
+  const userFilter: ErrandUserFilter | null =
+    userId > 0 && (as === 'requester' || as === 'courier')
+      ? { id: userId, username: params.get('username') ?? `#${userId}`, as }
+      : null
   // Errors from any tab, shown the same way as on the Suppliers page
   const [toast, setToast] = useState('')
 
@@ -59,7 +73,25 @@ export default function AdminPage() {
               ))}
             </nav>
 
-            {tab === 'users' && <AdminUsers onError={setToast} />}
+            {tab === 'errands' && (
+              <AdminErrands
+                userFilter={userFilter}
+                onClearUser={() => setParams({ tab: 'errands' })}
+              />
+            )}
+            {tab === 'users' && (
+              <AdminUsers
+                onError={setToast}
+                onViewErrands={(user, role) =>
+                  setParams({
+                    tab: 'errands',
+                    userId: String(user.id),
+                    username: user.username,
+                    as: role,
+                  })
+                }
+              />
+            )}
           </div>
         </main>
       </div>

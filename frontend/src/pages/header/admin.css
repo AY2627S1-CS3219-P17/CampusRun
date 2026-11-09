@@ -1,7 +1,8 @@
 /* AI Assistance Disclosure:
  * Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
  * Scope: AI-generated styles for the admin page: section tabs, user cards, role badges and the confirmation
- *        dialog. The banner, list, empty state and toast come from suppliers.css.
+ *        dialog. The banner, list, empty state and toast come from suppliers.css. AI-added the errands tab's
+ *        user filter chip (2026-11-10).
  * Author review: <to be completed by author>
  */
 
@@ -147,6 +148,41 @@
   background: #f3f6f5;
   color: #9aaeb2;
   cursor: not-allowed;
+}
+
+.admin-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 4px 4px 4px 12px;
+  border: 1px solid #cfe0d9;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 14px;
+}
+.admin-filter-chip button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #607a80;
+  cursor: pointer;
+}
+.admin-filter-chip button:hover {
+  background: #eef5f2;
+  color: #176849;
+}
+.admin-filter-chip button:focus-visible {
+  outline: 2px solid #176849;
+  outline-offset: 2px;
+}
+.admin-errands {
+  margin-top: 14px;
 }
 
 .admin-notice {

@@ -1,7 +1,8 @@
 // AI Assistance Disclosure:
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 // Scope: AI-generated mapper from an Order Service errand to the task card's props, and the due date format;
-//        AI-added who can do what (the action, edit, badges and notes on each card).
+//        AI-added who can do what (the action, edit, badges and notes on each card);
+//        AI-added the admin viewer: read-only, naming both the requester and the courier (2026-11-10).
 // Author review: <to be completed by author>
 
 import { runErrandAction } from '../api/order'
@@ -18,8 +19,9 @@ import type {
   ErrandState,
 } from '../types/order'
 
-// Whose list the card is in: Explore and My Tasks name the requester, My Requests names the courier
-export type ErrandViewer = 'explore' | 'requester' | 'courier'
+// Whose list the card is in: Explore and My Tasks name the requester, My Requests names the courier, and the
+// admin page names both
+export type ErrandViewer = 'explore' | 'requester' | 'courier' | 'admin'
 
 const CARD_TYPES: Record<ErrandState, TaskCardType> = {
   OPEN: 'open',
@@ -55,6 +57,13 @@ export function formatDue(iso: string) {
 }
 
 function otherParty(errand: Errand, viewer: ErrandViewer) {
+  if (viewer === 'admin') {
+    const courier =
+      errand.courierId === null
+        ? 'no courier yet'
+        : `delivered by ${errand.courierName ?? UNKNOWN_USER}`
+    return `Requested by ${errand.requesterName ?? UNKNOWN_USER}, ${courier}`
+  }
   if (viewer !== 'requester') return errand.requesterName ?? UNKNOWN_USER
   if (errand.courierId === null) return 'Waiting for a courier'
   return errand.courierName ?? UNKNOWN_USER
@@ -92,6 +101,8 @@ function allowedAction(
   userId: string | null,
   now: number,
 ): ErrandAction | null {
+  // Admins can only look: no admin action changes an errand (order-service plan, D1)
+  if (viewer === 'admin') return null
   const beforeDeadline = new Date(errand.deliverBy).getTime() > now
 
   if (viewer === 'explore') {

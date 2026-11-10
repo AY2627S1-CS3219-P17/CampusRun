@@ -3,7 +3,7 @@
 # Scope: AI-generated tests for the POST /auth/register endpoint; AI-added cases for the web client's username and
 #        password rules (2026-09-27); AI-added the student-email-only and role cases (2026-09-28);
 #        AI-added the cases for keeping passwords out of 422 responses and model reprs (2026-09-29).
-# Author review: reviewed by Nathan
+# Author review: <to be completed by author>
 
 import asyncio
 

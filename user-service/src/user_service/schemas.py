@@ -8,7 +8,7 @@
 #        AI-added UsernameResponse for the internal username lookup (2026-10-19);
 #        AI-added the refresh token to TokenResponse and the refresh/logout request model (2026-11-09);
 #        AI-added AdminUserResponse and AdminUserPage for the admin user list (2026-11-09).
-# Author review: reviewed by Nathan
+# Author review: <to be completed by author>
 
 import re
 from datetime import datetime

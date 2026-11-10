@@ -10,7 +10,7 @@
 #        AI-added refresh sessions: login starts one, POST /auth/refresh and /auth/logout, and a password change ends
 #        every session (Claude Code, 2026-11-09).
 #        AI-included the admin user management router (Claude Code, 2026-11-09).
-# Author review: reviewed by Nathan
+# Author review: <to be completed by author>
 
 import asyncio
 import contextlib

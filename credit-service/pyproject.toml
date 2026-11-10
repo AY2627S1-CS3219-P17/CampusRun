@@ -2,6 +2,7 @@
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: AI-generated project definition, dependency list and command-line entry points for the credit service,
 #        following supplier-service/pyproject.toml.
+#        Claude Code (model: Claude Opus 5.5) changed pyjwt to pyjwt[crypto] for RS256 tokens (via 'uv add', 2026-11-09).
 # Author review: <to be completed by author>
 
 [project]

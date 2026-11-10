@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated tests for the create-initial-admin script; AI-rewrote them for admins as users with the
 #        admin role, and added the --skip-if-unset cases (2026-09-28).
-# Author review: reviewed by Nathan
+# Author review: <to be completed by author>
 
 import asyncio
 

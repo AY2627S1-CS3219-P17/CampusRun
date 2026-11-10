@@ -1,3 +1,12 @@
+<!--
+AI Assistance Disclosure:
+Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25; 2026-09-28; 2026-11-09
+Scope: AI-drafted setup plan for the user service (Docker/Compose, environment variables, tables, Alembic, FastAPI
+       wiring, endpoints and tests) from the team's decisions; AI-updated for the admin role (2026-09-28) and for
+       admin promotion and step-down (2026-11-09).
+Author review: <to be completed by author>
+-->
+
 # User Service Setup Plan
 
 Last updated: 2026-09-28

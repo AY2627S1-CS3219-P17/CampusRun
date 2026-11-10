@@ -4,7 +4,7 @@
 #        AI-changed it to create a user with the admin role, validated like a registration, and added --skip-if-unset
 #        for the Compose seeding service (2026-09-28); AI-unwrapped the now-SecretStr password before hashing (2026-09-29).
 #        for the Compose seeding service (2026-09-28); AI-added the OpenWallet outbox message (Claude, claude.ai, 2026-10-17).
-# Author review: reviewed by Nathan
+# Author review: <to be completed by author>
 
 import argparse
 import asyncio

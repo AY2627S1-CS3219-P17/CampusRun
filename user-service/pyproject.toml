@@ -3,7 +3,8 @@
 # Scope: AI added the pydantic-settings and pwdlib[argon2] dependencies and pytest/testcontainers dev dependencies
 #        (via 'uv add'), the create-initial-admin project script and the pytest config; rest of file authored by the team.
 #        Claude (claude.ai, model: Claude Opus 5.5) added aio-pika and the resync-wallets script (2026-10-17).
-# Author review: reviewed by Nathan
+#        Claude Code (model: Claude Opus 5.5) changed pyjwt to pyjwt[crypto] for RS256 tokens (via 'uv add', 2026-11-09).
+# Author review: <to be completed by author>
 
 [project]
 name = "user-service"

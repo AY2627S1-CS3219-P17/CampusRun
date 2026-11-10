@@ -15,7 +15,7 @@
 # Scope: AI-generated local development Compose setup for the user service, its Postgres database and its one-off migration step.
 #        AI-added the gateway, the supplier-service ROOT_PATH/ENABLE_DOCS settings and the frontend service (2026-09-27);
 #        AI-added the user-seed-admin one-off service (2026-09-28).
-# Author review: reviewed by Nathan
+# Author review: <to be completed by author>
 
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26

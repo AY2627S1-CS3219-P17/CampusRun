@@ -1,3 +1,12 @@
+<!--
+AI Assistance Disclosure:
+Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
+Scope: AI-written "Gateway and Service Conventions" section, at the team's request. The Required AI Attribution
+       section is taken from the course's AI usage policy. The "Messaging Conventions" section was added with the
+       credit-service work (2026-10-18); its author is to confirm whether AI wrote it.
+Author review: <to be completed by author>
+-->
+
 # Project Overview
 This project is CampusRun, a peer-to-peer campus errand platform localised to the National University of Singapore (NUS). It allows students to request items to be collected from predefined campus suppliers, and for other students fulfill those requests for platform credits.
 

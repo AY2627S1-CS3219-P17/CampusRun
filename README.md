@@ -1,22 +1,24 @@
 <!--
 AI Assistance Disclosure:
-Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
+Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27; 2026-10-19; 2026-11-09; 2026-11-10
 Tool: OpenAI Codex (GPT-6), date: 2026-10-16; 2026-10-17; 2026-10-20
 Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 Scope: AI-written "Gateway, root paths and API docs" section and AI Use Summary bullets, including the frontend AI entry view disclosure,
        the credit-service routing note, the Credit Service AI Use Summary, frontend list/navigation fixes,
        and predefined delivery-location autofill; the rest was written by the team.
+       Claude Code wrote the Order Service, Session Management and Admin Dashboard summaries (2026-10-19, 2026-11-09),
+       and on 2026-11-10 fixed garbled characters and added the tools list and usage-log pointer to the AI Use Summary.
 Author review: <to be completed by author>
 -->
 
-# CS3219 â€” Software Design and Architecture (AY2627 Sem 1)
+# CS3219 - Software Design and Architecture (AY2627 Sem 1)
 
 ## CampusRun
 
 **CampusRun** is a peer-to-peer campus errand platform where
 students can request items to be collected from stores or facilities on
 campus, and other students can fulfil (and deliver) those requests. The
-platform runs on a closed credit economy â€” credits cannot be bought,
+platform runs on a closed credit economy — credits cannot be bought,
 withdrawn, or exchanged for money, and only circulate within the platform.
 
 ---
@@ -63,12 +65,12 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 
 ```text
 .
-â”œâ”€â”€ user-service/
-â”œâ”€â”€ supplier-service/
-â”œâ”€â”€ order-service/
-â”œâ”€â”€ credit-service/
-â”œâ”€â”€ <n2h-service>/
-â””â”€â”€ README.md
+├── user-service/
+├── supplier-service/
+├── order-service/
+├── credit-service/
+├── <n2h-service>/
+└── README.md
 ```
 
 - Any **nice-to-have (N2H)** feature that warrants its own service should
@@ -82,12 +84,18 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 
 ## AI Use Summary
 
+**Tools (whole project):** Claude Code (model: Claude Opus 5.5), Claude (claude.ai chat, model: Claude Opus 5.5), OpenAI Codex (GPT-5 and GPT-6). Each section below names the tool used for that part.
+
+**Prompts and key exchanges:** see [`ai/usage-log.md`](ai/usage-log.md).
+
+### User Service and Gateway (Nathan)
+
 **Tools:** Claude Code (model: Claude Opus 5.5)
 
 **Decisions made by the team before AI assistance:** FastAPI with SQLAlchemy Core for the user service; a `users` table with an auto-increment integer id; a separate admin table (later replaced by an admin role on `users`, see below).
 
 **Used for:**
-- **Explaining** implementation order (tables â†’ Alembic â†’ FastAPI), Docker Compose networking and service-name DNS, environment variable handling (`pydantic-settings` precedence, root vs. service `.env`), Docker layer caching with uv, and how a Compose setup differs from a Google Cloud Run deployment.
+- **Explaining** implementation order (tables → Alembic → FastAPI), Docker Compose networking and service-name DNS, environment variable handling (`pydantic-settings` precedence, root vs. service `.env`), Docker layer caching with uv, and how a Compose setup differs from a Google Cloud Run deployment.
 - **Suggesting** separate admin accounts (their own credentials, not a foreign key to `users`), which the team adopted, plus case-insensitive unique indexes on email and username.
 - **Suggesting** a local Compose layout (separate `user-db`, `user-migrate` and `user-service` containers). This was an AI suggestion; the AI retracted its initial claim that a separate migration service is "standard practice" after being asked for documentation.
 - **Generating** boilerplate for the user service: root `compose.yaml` and `.env.example` entries, `user-service/Dockerfile`, `user-service/.dockerignore`, `user-service/.env.example`, `src/user_service/{config,db,main}.py` (settings, database engine and `GET /health`), and `src/user_service/tables.py` (the `users` and `admins` table definitions, to the team's column spec). The AI also added the `pydantic-settings` dependency to `user-service/pyproject.toml`.
@@ -154,14 +162,14 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 
 ### Frontend UI Extensions
 
-**Tool and mode:** OpenAI Codex (GPT-5), UI generation, refactoring, and debugging (2026-10-15â€“16).
+**Tool and mode:** OpenAI Codex (GPT-5), UI generation, refactoring, and debugging (2026-10-15–16).
 
 **Prompts and key results:**
 
-- â€œokay now abstract the section out as a component, put under components/credit-banner, then import into explore, my-tasks and my-requests conciselyâ€ â†’ A shared credit banner on all three pages; credit amounts are placeholders.
-- â€œokay finally, lets extend the shared-toolbar abstraction, to allow for no tabs, and instead the replacement being a subheader text option, which explore will call and put "Available Tasks"â€ â†’ One configurable Toolbar serves Explore, My Tasks, My Requests, and Suppliers.
-- â€œokay, now within supplier-details, lets also import the interactive-map abstraction but lets tweak it minimally, so that its read only (normal/fullscreen, still with teh read boundary)â€ â†’ Shared React-Leaflet map for request and supplier editing, plus read-only supplier details. It marks the rectangular served-area boundary and shades the outside red; fullscreen editing saves on explicit close.
-- â€œ1) Building, floor, description is set by user, remove the dependence to supplier 2) Rename "your pickup location" as just Location 3) Remove the extra info, make Deliver By and Credits into two separate linesâ€ â†’ The create-request dialog has supplier search, user-defined delivery details, map location, delivery time (default: 30 minutes ahead), credits, and client-side validation. Submission remains UI-only until the Order Service is connected.
+- “okay now abstract the section out as a component, put under components/credit-banner, then import into explore, my-tasks and my-requests concisely” → A shared credit banner on all three pages; credit amounts are placeholders.
+- “okay finally, lets extend the shared-toolbar abstraction, to allow for no tabs, and instead the replacement being a subheader text option, which explore will call and put "Available Tasks"” → One configurable Toolbar serves Explore, My Tasks, My Requests, and Suppliers.
+- “okay, now within supplier-details, lets also import the interactive-map abstraction but lets tweak it minimally, so that its read only (normal/fullscreen, still with teh read boundary)” → Shared React-Leaflet map for request and supplier editing, plus read-only supplier details. It marks the rectangular served-area boundary and shades the outside red; fullscreen editing saves on explicit close.
+- “1) Building, floor, description is set by user, remove the dependence to supplier 2) Rename "your pickup location" as just Location 3) Remove the extra info, make Deliver By and Credits into two separate lines” → The create-request dialog has supplier search, user-defined delivery details, map location, delivery time (default: 30 minutes ahead), credits, and client-side validation. Submission remains UI-only until the Order Service is connected.
 
 **Verification:** `npm run build` and lint passed; nginx configuration was validated with `nginx -t`. <!-- TODO(author): describe your own review and testing -->
 
@@ -216,7 +224,7 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 
 **Verification:** 256 order-service tests pass, including concurrent accepts, accept against cancel, complete sent twice, the deadline guards and two sweepers at once; the race tests passed on six repeated runs. Task 1 also passed `docker compose config`, `nginx -t` and the image build. The demo script ran end to end against the full Compose stack, and the credit audit afterwards reported no problems. <!-- TODO(author): describe your own review and testing -->
 
-**Files affected:** Each changed source and configuration file carries an AI Assistance Disclosure header. The generated `order-service/uv.lock` also identifies AI assistance.
+**Files affected:** Each changed source and configuration file carries an AI Assistance Disclosure header. Generated files that can't hold a comment are listed here instead: `order-service/uv.lock` (changed by AI through `uv add`) and `order-service/seed/delivery-locations.csv` (copied by AI from supplier-service's seed).
 
 ### Session Management and Token Signing (Nathan)
 
@@ -229,7 +237,7 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 
 **Verification:** a script signed tokens with User Service's code and checked them in all four services, rejecting a token signed with another key and an HS256 token keyed with the public key. The key script's output was parsed by `docker compose config` and python-dotenv. All four test suites collect, and the new database-free order and credit auth tests pass. The full suites were **not** run, because the session's sandbox had no Docker access for the test databases. <!-- TODO(author): run the test suites and describe your own review -->
 
-**Files affected:** each carries an "AI Assistance Disclosure" header comment.
+**Files affected:** each carries an "AI Assistance Disclosure" header comment, except the four `uv.lock` files, which uv regenerates; the AI changed them through `uv add "pyjwt[crypto]"`.
 
 **Prompts and key exchanges:** see [`ai/usage-log.md`](ai/usage-log.md).
 

@@ -104,6 +104,18 @@ The `create-initial-admin` command creates the first admin (a user with the `adm
   docker compose run --rm user-seed-admin
   ```
 
+## Making a test token
+
+To call another service's API (in Swagger or curl) without signing in, print an access token signed with
+`JWT_PRIVATE_KEY` from `user-service/.env`:
+
+```sh
+uv run python scripts/make_token.py --role admin                      # or --role student
+uv run python scripts/make_token.py --role student --sub 7 --minutes 30
+```
+
+It works on every service that checks User Service tokens. It is for development only; the user doesn't need to exist.
+
 ## Managing admins
 
 Admin-only endpoints for the web app's admin page (`src/user_service/admin.py`):

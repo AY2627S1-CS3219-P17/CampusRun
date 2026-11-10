@@ -43,7 +43,7 @@ http://localhost:8080/api/suppliers, with docs at http://localhost:8080/api/supp
 ## Signing in
 Every endpoint except `/health` needs `Authorization: Bearer <token>`: a JWT from the User Service with `sub`,
 `role` (`student` or `admin`) and `exp`. Sign in through the User Service (`POST /api/users/auth/login`), or make
-one here without it:
+one without it using the User Service's script, from `user-service/`:
 
 ```
 uv run python scripts/make_token.py --role admin      # or --role student

@@ -3,6 +3,8 @@
 # Scope: AI-generated development-only script that signs a test access token; AI-renamed its claim to "type" (Claude Code, 2026-09-27), then to "role" (2026-09-28).
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 # Scope: AI-changed the script to sign with the User Service's RS256 private key instead of JWT_SECRET.
+# Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-10
+# Scope: AI-moved the script from supplier-service to user-service, which already holds the signing key.
 # Author review: <to be completed by author>
 
 """Print an access token for local testing, signed the same way the User Service signs them.
@@ -10,9 +12,9 @@
     uv run python scripts/make_token.py --role admin
     uv run python scripts/make_token.py --role student --sub 7 --minutes 30
 
-Needs JWT_PRIVATE_KEY, the User Service's signing key from the root .env, in the environment or supplier-service/.env.
-The supplier service itself never uses that key. For development only: when the User Service is running, you can
-sign in there and use the token it returns instead.
+Run it from user-service/. It reads JWT_PRIVATE_KEY from the environment or user-service/.env. The token works on
+every service that checks User Service tokens (suppliers, orders, credits). For development only: when the User
+Service is running, you can sign in there and use the token it returns instead.
 """
 
 import argparse

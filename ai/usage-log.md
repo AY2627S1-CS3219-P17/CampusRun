@@ -3,6 +3,9 @@ AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-5), date: 2026-10-16
 Scope: Added a concise log of frontend UI refactoring and request/map work.
 Author review: I reviewed the code changes this log summarises and checked it against the commit history.
+Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-10
+Scope: AI-backfilled Sessions 13 to 24 from the Claude Code transcripts, with credentials, tokens, emails and document links redacted.
+Author review: <to be completed by author>
 -->
 
 # AI Usage Log
@@ -1561,3 +1564,842 @@ update ai logs, commit task 11 and start task 12
 **Key response:** Committed Task 11 and started Task 12.
 
 ---
+
+## Session 13 — 2026-10-18 to 2026-10-19 — side sessions during the order-service build
+
+- **Tool:** Claude Code (model: Claude Opus 5.5)
+- **Author:** nathantew14
+- **Modes:** explain, review, generate
+- **Timestamps:** prompt times are from the Claude Code transcripts, in UTC. These ran in separate chat windows alongside Session 12; the Task 7 to 9 handoff from the parallel window is summarised in Session 12, entry 29.
+
+### 1. Cancellation rules implied by the frontend (explain) — 2026-10-18 14:10
+
+```text
+check in @frontend/. is there anything UI set up for order cancellation? what kind of rules are implied? who can cancel, and does it require mutual agreement?
+```
+
+**Key response:** The frontend had one Cancel button, not wired up, shown only to the requester on an OPEN errand in My Requests; couriers had no cancel option. So the UI implied that only the requester can cancel, only before a courier accepts, and that no mutual agreement is needed. These became decision (a) in Session 12, entry 2.
+
+### 2. Task 9 questions in the parallel window (explain, generate) — 2026-10-19
+
+```text
+what do you mean "faster sweeps for a demo"
+```
+
+```text
+what do you mean "expiresAt was 5 minutes late."
+```
+
+```text
+who would call the /stuck api endpoint? admins?
+```
+
+**Key response:** Explained the `SWEEP_SECONDS` and `RECONCILE_AFTER_MINUTES` settings that can be shortened for a live demo. `expiresAt` had added the 5-minute grace period to every errand, but only DELIVERED errands get it. `GET /admin/stuck` is admin-only, and the Task 9 tests check that others get 403.
+
+```text
+@order-service/src/order_service/sweeper.py """"The negation of the transitions' own time guards, so an errand expires exactly when its actions stop."""" this doesn't make any sense
+```
+
+```text
+still makes no sense. tell me what the function does: Checks whether...
+```
+
+**Key response:** Replaced the docstring with a plain description: "SQL condition that checks whether an errand should expire now: an OPEN, ACCEPTED or PICKED_UP errand past deliver_by, or a DELIVERED errand past deliver_by plus the grace period."
+
+```text
+can i rephrase this as: "Takes a pending credit record and figures out what command should be taken next"
+```
+
+**Key response:** Pointed out that the input is an errand, not a credit record, and that the command is one already sent that is being resent, not the next step. Suggested "Takes an errand whose credits are stuck PENDING and works out which credit command to send again.", which the author accepted (`yes`).
+
+```text
+does it check if there is somehow still an unexecuted message in the queue before re-sending? what if the queue is just really congested or the queue service is down?
+```
+
+**Key response:** The reconciler skips errands whose command is still unpublished in the outbox, so nothing is resent while RabbitMQ is down. It can't see inside the credit service's queue, so a congested or stopped `credit-worker` leads to a duplicate every 5 minutes. That's safe because the credit service applies each command at most once and the order service ignores replies once the credits are no longer PENDING.
+
+```text
+update @CS3219-Milestone-D3.docx to document this decision to resend, and why it's safe, then commit task 9
+```
+
+**Key response:** Added highlighted bullets under Part 3 §3 of the D3 document (what the reconciler does, the broker-down and worker-down cases, why duplicates are safe, and the cost), and committed Task 9 as `4156a78` after all 256 order-service tests passed.
+
+```text
+summarise the progress on task 8 and 9 so far and key decisions made for the original chat instance to continue off of
+```
+
+**Key response:** Wrote the handoff summary pasted into Session 12, entry 29.
+
+### 3. Code reviews of the order-service branch (review) — 2026-10-19 09:44 and 10:22
+
+```text
+review the code on this branch no
+```
+
+**Key response:** Ran a background review, which in practice covered only the uncommitted Task 9 changes. It found nine issues, the most serious being that each resend reset `updated_at`, so `GET /admin/stuck` was nearly always empty and `updatedAt` changed when nothing had; and that the API and worker used different `RECONCILE_AFTER_MINUTES` values.
+
+```text
+review the commited tasks 1-8 and summarise the most important breaking issues only
+```
+
+**Key response:** No bugs that gave wrong balances or lost data. Five breaking issues:
+1. at the committed HEAD the worker never published commands or applied replies (fixed by Task 9);
+2. `accept` returned state-specific 409s for errands the caller couldn't see, revealing that they existed;
+3. `accept` returned 404 instead of a retryable 409 right after a reward change;
+4. `expiresAt` was 5 minutes late for errands not yet delivered;
+5. a delivery location being deactivated at the same moment could still be saved on an errand, because its active check didn't lock the row.
+
+---
+
+## Session 14 — 2026-10-19 — Task 12: connecting the frontend to the order service
+
+- **Tool:** Claude Code (model: Claude Opus 5.5)
+- **Author:** nathantew14
+- **Modes:** generate, debug, explain
+- **Timestamps:** prompt times are from the Claude Code transcripts, in UTC.
+- **Decisions made before the session (by the team, not AI):** the rules in the Task 12 handoff (who can accept, pick up, deliver, confirm, cancel and edit; no pending tab; "credits processing" as a badge; credit status name HELD).
+
+### 1. Pausing Task 12 for a separate branch (explain) — 12:10
+
+```text
+pause first, i want to do this frontend integration on a separate branch
+```
+
+**Key response:** Paused with no Task 12 changes made; Task 11 was committed as `59ae617`. Reported that query strings reach order-service through both `/api/orders?…` and `/api/orders/?…`, and set out the plan: three review stops (read-only lists; actions and the "credits processing" badge; the create and edit dialog) and the request-body rules (no empty floor, full `deliverBy` timestamps, edits sending only changed fields).
+
+### 2. Restoring the D3 document (generate) — 12:13
+
+```text
+help me restore your last remembered version of the D3 doc
+```
+
+**Key response:** The untracked `CS3219-Milestone-D3.docx` had disappeared from the repository root. Restored the last version the AI had saved (with all of Task 11's answers), warned that the author's later edits weren't in it, and advised copying it somewhere permanent because the backups were in a system temp folder.
+
+### 3. A brief for the next chat (generate) — 12:19
+
+```text
+condense this chat into a brief for a next chat instance to do task 12
+```
+
+**Key response:** Wrote a handoff covering the repo layout, the working agreement (one review stop at a time, no dev servers, AI disclosure headers, D3 document handling), the UI rules from the plan, and the open questions.
+
+### 4. Stop 1: the three list pages (generate) — 12:24
+
+(The prompt was the brief from entry 3, pasted into a new chat.)
+
+**Key response:** Connected Explore, My Requests and My Tasks to the order service, read-only:
+- new `utils/errand.ts` (maps an errand to a task card), `utils/use-errand-list.ts` (search delay, paging, polling every 2 s while any errand is PENDING) and `components/shared/errand-list.tsx`;
+- removed the Pending tab and the sample cards.
+
+`npm run build` and `npm run lint` passed.
+
+### 5. 502 from the gateway and the ports (debug, explain) — 13:06 to 13:08
+
+The author ran `curl 'localhost:8080/api/users/health'` and `docker compose ps user-service` through the `!` prefix and got a 502.
+
+**Key response:** The recreated `user-service` had a new IP, but nginx had looked the name up once at startup, so it was still sending to the old address. Restarting the gateway fixed it. Offered a permanent fix (an upstream variable so nginx looks the name up again), which was done later in Session 19.
+
+```text
+clarify again the difference between 8080 and 8000? the logs from docker says 8000, but i seem to be reaching the backend docs on 8080
+```
+
+**Key response:** 8000 is the port each service listens on inside the Compose network; 8080 is the gateway, the only port published to the host. The gateway strips `/api/<service>` and forwards, and `ROOT_PATH` makes the docs work through it.
+
+```text
+does `docker compose up -d --build` not rebuild everything? frontend still says order service not connected
+```
+
+**Key response:** The rebuild had worked; the message was hard-coded in the create form's stub `handleSubmit`, which stop 3 replaces.
+
+### 6. Stops 2 and 3 together (generate) — 13:39
+
+```text
+just do all the stops now
+```
+
+**Key response:** Connected the action buttons and the create and edit form. Build and lint passed, and the request bodies the form builds were sent through the gateway with curl (create with and without a floor, title-only edit, a too-late `deliverBy` giving a 422, a second cancel giving a 409). Listed the UI calls the AI had made for the author to veto, such as the "Credits processing" and "Supplier unavailable" badges, cancel without a confirmation step, and going to My Requests after creating. Gave a click-through checklist with two users.
+
+---
+
+## Session 15 — 2026-10-20 — create-errand form: predefined locations and map zoom
+
+- **Tool:** Claude Code (model: Claude Opus 5.5)
+- **Author:** nathantew14
+- **Modes:** generate
+- **Timestamps:** prompt time is from the Claude Code transcript, in UTC.
+
+### 1. Form headers, predefined locations and default zoom (generate) — 01:56
+
+```text
+1. for the create errand form, add simple headers for "Select pickup" and "Select dropoff"
+2. Also, add a dropdown to pick from predefined delivery locations. 
+3. when a predefined location is picked, the map should auto zoom to the predefined location and show a red pin. 
+4. the default zoom level of the map should also show about 80% of the NUS area, it is currently zoomed in too far by default
+```
+
+**Key response:** Added the two section headers; a searchable picker of the 100 predefined locations that fills Building, Floor and Description and saves the errand against that location (editing a field or moving the pin switches back to a custom location); flying to a picked location at zoom 17 with a red pin; and a default view of the middle 80% of the served area, which needed fractional zoom and a minimum zoom of 13. Typecheck and lint passed; not tried in a browser.
+
+---
+
+## Session 16 — 2026-10-20 — the outbox and the D3 wording
+
+- **Tool:** Claude Code (model: Claude Opus 5.5)
+- **Author:** nathantew14
+- **Modes:** explain
+- **Timestamps:** prompt times are from the Claude Code transcript, in UTC.
+
+### 1. What the outbox is (explain) — 05:10 to 05:29
+
+```text
+in the order service, is the outbox a separate postgres table that's used to supplement the rabbitmq, or a part of the rabbitmq?
+```
+
+**Key response:** A separate Postgres table in the order service's database, written in the same transaction as the errand change and published later by the relay in `order-worker`, because Postgres and RabbitMQ can't share a transaction.
+
+```text
+is this outbox mechanism also used for the credit service?
+```
+
+**Key response:** No. The credit service only publishes replies while handling a command, and acknowledges the command only after the reply is confirmed, so an unacknowledged command plays the outbox's role.
+
+```text
+1. are outbox messages deleted when the corresponding reply is received? 
+2. am i right to say that the message queue is only accessible to the order and credit service, so it's safe from external interference?
+```
+
+**Key response:** Outbox rows are never deleted; replies update the errand, not the outbox. Three services can reach the broker (user, order and credit), each with its own login and permissions, and the broker's ports are bound to localhost.
+
+```text
+would the accumulated outbox messages be a concern? or would it be ideal to keep them to keep a record for backtracking if ever required?
+```
+
+**Key response:** About 2 million small rows a year at peak load, which Postgres handles easily, and the relay's partial index keeps it fast. Recommended keeping published rows for a limited window, since the credit service's `ledger_entries` is the long-term record.
+
+### 2. A phrase in the D3 document (explain) — 06:32
+
+```text
+what does "both are updates needing open" mean?
+```
+
+**Key response:** "OPEN" is the errand state: accept and cancel are both conditional `UPDATE`s that require the errand to be OPEN. Walked through what happens when they collide: the second waits for the row lock, re-checks, matches nothing and gets 409, and its outbox row is rolled back with it.
+
+---
+
+## Session 17 — 2026-10-20 — state diagram, Postman collection and questions about the code
+
+- **Tool:** Claude Code (model: Claude Opus 5.5)
+- **Author:** nathantew14
+- **Modes:** generate, explain
+- **Timestamps:** prompt times are from the Claude Code transcript, in UTC.
+
+### 1. UML state diagram (generate, explain) — 06:00 to 06:03
+
+```text
+using the state transition table in @CS3219-Milestone-D3.docx, draw a flow diagram using uml
+```
+
+**Key response:** Drew a UML state machine with PlantUML (`docs/errand-state-machine.puml`, `.png` and `.svg`) covering every row of the table, with `trigger [guard] / action` labels. Editing was drawn as an internal transition inside OPEN rather than a looping arrow.
+
+```text
+should the table and diagram include the sub-states for pending -> held/transferred/released credits?
+```
+
+**Key response:** No: credit status is a separate value that changes after the errand has moved on (for example COMPLETED with credits still PENDING), so sub-states would be wrong UML. Suggested keeping the table's credit column and, if wanted, a second small state machine for credit status.
+
+### 2. Postman collection (generate) — 06:19 to 06:39
+
+```text
+can you see the campusrun/order service folder through my postman mcp
+```
+
+```text
+go ahead, and also create a sub-folder corresponding to the @scripts/demo.sh demo
+```
+
+**Key response:** Filled the empty Order Service folder with 17 requests covering the D3 endpoint table, using `{{baseUrl}}` and a blank `{{token}}` so no real tokens went to Postman. Added a "D3 demo" sub-folder of 25 requests following `demo.sh`, with polling requests in place of the script's wait loops.
+
+```text
+do i need to manually set the token? also, does the register endpoint also login? can you create endpoint to log in with the existing users:
+
+[two test accounts' emails and passwords redacted]
+```
+
+**Key response:** Added an Auth folder with a login request per account that stores the returned token. Register doesn't log in. Kept the passwords out of the collection, because it's stored on Postman's servers: the author enters them as local Current values.
+
+### 3. Manual demo instructions (generate) — 06:51
+
+```text
+run the demo script once through and output plain text step by step instructions to reproduce it manually, with the jwts already in place. this is all testing data so the jwts in plain text are fine
+```
+
+**Key response:** Ran `demo.sh` once (all 9 steps passed, credit audit `ok: true`) and wrote curl steps reusing the three demo users. The tokens and demo user details in that reply are not reproduced here.
+
+### 4. Questions about the code (explain) — 07:07 to 07:37
+
+```text
+what are the default admin credentials
+```
+
+**Key response:** There's no default admin; only `create-initial-admin` creates one, from `INITIAL_ADMIN_*` in `.env`. The database stores only a hash, so the password can't be recovered.
+
+```text
+where are the definitions for the rabbitmq messages
+```
+
+**Key response:** `credit-service/src/credit_service/commands.py` holds the five command models, the `COMMANDS` table (routing key, allowed sender, whether it gets a reply) and `ReservationResult`. The other services build their messages by hand to match it.
+
+```text
+where is the credit amount
+```
+
+**Key response:** The 100 starting credits come from the credit service's `INITIAL_CREDITS` setting, not from `OpenWallet`. An errand's reward travels in `ReserveCredits.amount` and `AdjustReservation.amount`; transfer and release carry no amount.
+
+```text
+what are the volumes in the compose.yaml
+```
+
+**Key response:** Five named volumes (four Postgres databases and RabbitMQ) that survive `docker compose down`, and three read-only bind mounts (the RabbitMQ provisioning script and definitions, and the gateway's `nginx.conf`).
+
+---
+
+## Session 18 — 2026-11-09 — session security: RS256, rate limits and refresh tokens
+
+- **Tool:** Claude Code (model: Claude Opus 5.5)
+- **Author:** nathantew14
+- **Modes:** explain, generate, review
+- **Timestamps:** prompt times are from the Claude Code transcripts, in UTC. Part of this session was summarised by Claude Code when it ran out of context; the prompts below are the ones still in the transcript.
+- **Decisions made by the author during the session:** RS256 with keys in `.env`; refresh tokens kept in `sessionStorage`, rotated with reuse detection; 5-minute access tokens and 7-day sessions; a password change revokes every session.
+
+### 1. Reviewing session management (explain) — 06:26
+
+```text
+what's the current session management mechanism, and is it good enough?
+```
+
+**Key response:** Stateless HS256 JWTs lasting 60 minutes, checked locally by every service with a shared secret, with no refresh and no server-side revocation. Gaps: sessions can't be ended early, every service could forge tokens, and sign-in had no rate limit. Suggested refresh tokens, asymmetric signing and a login rate limit.
+
+### 2. RS256 and the D4 document (generate) — 06:41
+
+```text
+let's go with the refresh token and asymmetric signing. do 2 first, since it's shorter. 
+
+also, start working on @docs/D4-presentation.md, which will be meant to hold design choices for our final presentation. fill it with what we just dicussed about refresh tokens, session management, asymmetric signing, rate limits etc. include consideration about being signed out mid-task and tokens not being able to be invalidated; and the trade-off to avoid having all services talk to User Service to authorise requests.
+```
+
+**Key response:** Only user-service holds `JWT_PRIVATE_KEY`; the others get `JWT_PUBLIC_KEY`. Every service accepts only RS256, which blocks an HS256 token keyed with the public key, with a test for it in each service. Services refuse to start with a missing or weak key, and `scripts/generate-jwt-keys.sh` prints both `.env` lines. Drafted `docs/D4-presentation.md` with the decisions and trade-offs.
+
+### 3. Rate limits at the gateway (generate, explain) — 07:20 to 08:10
+
+```text
+why is rate limiting not chosen? i think we can use that too
+```
+
+**Key response:** Added a per-IP limit of 10 a minute (burst 20) on login and register, with a 429 and `Retry-After`. Per IP rather than per account, so nobody can lock someone else out.
+
+```text
+are all the rate limiting changes in @gateway/nginx.conf ? if so i would want to commit that first
+```
+
+**Key response:** Committed on a new branch, `feat/session-security`.
+
+```text
+should we also just add an overall rate limit to all endpoints while we're at it
+```
+
+```text
+go ahead
+```
+
+**Key response:** Recommended a loose flood guard (30 a second, burst 60) because many students share campus IPs and the lists poll, plus a tight limit on AI autofill (6 a minute) to protect the Groq quota. Committed both.
+
+```text
+what does the zone=api and zone=auth do
+```
+
+**Key response:** A zone is a named set of per-IP counters in shared memory; `limit_req_zone` defines it and `limit_req` applies it. Explained `rate`, `burst` and `nodelay`.
+
+### 4. Compose environment variables (explain, generate) — 08:35 to 10:21
+
+```text
+explain this line in compose.yaml (before you changed it): JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+```
+
+```text
+add the table for the syntax at the selected lines, and also add the explanation for volumes
+```
+
+**Key response:** Explained `${VAR:?message}` and the other interpolation forms, then added the syntax table and an explanation of named volumes and bind mounts to the D4 document.
+
+```text
+why did some services in compose.yaml lose the key env var entirely? did they never need it? (e.g. user-migrate)
+```
+
+**Key response:** They never needed it; the old settings made the secret required, so the migrate and admin-seed containers failed validation without it. The key is now optional in the settings and required only where the API starts.
+
+```text
+commit the current change, then also make supplier's key optional and align it to the others in another commit
+```
+
+**Key response:** Committed the RS256 switch and, separately, made supplier-service's key optional like order and credit.
+
+```text
+am i right to say the root .env is for compose.yaml, where the service-specified .env won't be used; the service-specific .env files are for running each service independently
+```
+
+```text
+this jwt ttl still in effect?
+```
+
+**Key response:** Confirmed both, adding that service `.env` files are excluded from images and are used for anything run on the host from that folder.
+
+### 5. Refresh tokens (generate, review) — 10:21 to 14:14
+
+```text
+now let's do the refresh tokens
+```
+
+**Key response:** Built the user-service side: a `refresh_sessions` table (migration `3f9a2c71d4e8`) storing only a SHA-256 of each 256-bit token; rotation with reuse detection; `POST /auth/refresh` and `POST /auth/logout`; a password change ending every session. All suites passed (user 140, order 264, supplier 62, credit 63) against temporary databases.
+
+```text
+commit it, then do the frontend
+```
+
+**Key response:** Committed the backend. In the frontend, `utils/session.ts` refreshes before the access token expires, allows one refresh at a time per tab, and keeps the session while the User Service is unreachable; `api/client.ts` refreshes and retries once on a 401; duplicated tabs don't share a refresh token.
+
+```text
+first, output the @../docs/D4-presentation.md to a word doc. then, test what we have so far. docker is already running.
+```
+
+**Key response:** Converted the D4 document to `docs/D4-presentation.docx` with pandoc. Rebuilt the stack and checked through the gateway: RS256 tokens accepted by every service, a forged HS256 admin token refused, refresh, reuse detection, logout and password change all behaving as designed.
+
+```text
+are these negative numbers?
+```
+
+```text
+can the ttl take seconds instead, or would it be a significant change?
+```
+
+```text
+currently, how often does the frontend refresh its token? is it the same as the TTL set on the access token?
+```
+
+**Key response:** `:-` is Compose's default syntax, not a minus sign. Switching to seconds was about 10 lines, with the variables renamed to `JWT_ACCESS_TOKEN_TTL_SECONDS` and `JWT_REFRESH_TOKEN_TTL_SECONDS` so an old value can't be misread; this was committed as `b882f70`. The frontend refreshes `min(60 s, TTL/2)` before expiry, so every 4 minutes with the 5-minute default.
+
+```text
+commit the frontend
+```
+
+**Key response:** Committed the six frontend files.
+
+### 6. Branch clean-up and the D4 documents (generate) — 14:16 to 14:33
+
+```text
+rebase the current branch onto main, but exclude @docs/D4-presentation.md
+```
+
+**Key response:** Rewrote the RS256 commit without the file and replayed the other commits; kept a backup branch and left the file untracked on disk.
+
+```text
+update @docs/D4-presentation.docx instead, and also fill in the open questions: "
+
+General
+all the key patterns from the lectures
+database choice
+User service
+Tables and Schema
+add the session stuff
+
+"
+
+also, add table borders on all the tables
+```
+
+**Key response:** Filled in the key-patterns table, the database choice and the User Service schema tables; updated the auth sections now that refresh tokens were built; added borders to every table.
+
+```text
+can you edit google docs directly
+```
+
+```text
+i've connected google docs. for the most recent edits (tables, filled in sections, new trade off etc), add them to this google doc: [team D4 Google Doc link]
+```
+
+**Key response:** Copied the new sections, tables and trade-offs into the team's Google Doc, added an AI disclosure paragraph at its top, and read it back to check the tables and borders.
+
+---
+
+## Session 19 — 2026-11-09 — admin dashboard
+
+- **Tool:** Claude Code (model: Claude Opus 5.5)
+- **Author:** nathantew14
+- **Modes:** generate, debug, explain
+- **Timestamps:** prompt times are from the Claude Code transcript, in UTC. Part of this session was summarised by Claude Code when it ran out of context.
+- **Decisions made by the author:** the dashboard's scope (all-errands view, predefined delivery locations, promoting students, stepping down while another admin is left), the endpoint shapes, and including both safeguards.
+
+### 1. Plan and Task 1: user-service admin endpoints (generate) — 14:53 to 15:39
+
+```text
+we need a simple interface to cover the rest of the admin-only actions. so far, creating, editing and deactivating suppliers are already done. add the rest to both front and backend
+```
+
+**Key response:** Wrote `docs/admin-dashboard-plan.md` and waited for the author to approve the endpoint shapes: `GET /admin/users`, `POST /admin/users/{id}/promote` and `POST /admin/me/step-down`. Proposed two safeguards: role changes run one at a time, and the caller's role is re-checked in the database.
+
+```text
+go ahead, with the safeguards included. also add the safeguards to the google doc under design/archi choices > user service > user/admin management
+```
+
+```text
+google doc link, forgot to send it: [team D4 Google Doc link]
+```
+
+**Key response:** Built the endpoints in `user-service/src/user_service/admin.py`, with a Postgres advisory lock and a database re-check of the caller's role; 156 user-service tests passed, including a race test that fails without the lock. Added a "User/admin management" section to the Google Doc.
+
+### 2. Task 2: the admin page and Users tab (generate) — 15:45 to 16:11
+
+```text
+looks good. commit and start on Task 2
+```
+
+**Key response:** Committed Task 1 (`1f08ef6`). Added the `/admin` page with tabs kept in the URL, an admin-only route guard and header link, and a Users tab with search, role filter, paging and Make admin.
+
+```text
+add the step down button to the top of the admin page, in the same row as the "All", "Students", "Admins" selector. have it be greyed out when the user is the only admin.
+```
+
+```text
+i want it on the left of the search bar, so that it doesn't stack into 3 rows in mobile view, but stays in the same row as the all,student,admin selectors
+```
+
+**Key response:** Added an optional `actions` slot to the shared Toolbar. Step down sits between the tabs and the search on wide screens and on the tabs' row on narrow ones, icon-only at 420 px and below, and is greyed out with `aria-disabled` and a tooltip when you're the only admin.
+
+```text
+looks good. commit first, then after that, change the access token ttl to use seconds instead
+```
+
+**Key response:** The code already used seconds since `b882f70`; the author's local `.env` still had the old variable names. Renamed and converted those two lines.
+
+### 3. Tasks 3 and 4: Errands and Delivery locations tabs (generate) — 16:12 to 17:19
+
+```text
+start task 3
+```
+
+```text
+commit and start task 4
+```
+
+**Key response:** Task 3 added a read-only Errands tab over `GET /api/orders/admin/errands`, with an `admin` viewer in the card mapper that never offers actions, and a per-user "Errands" menu that filters the tab. Task 4 added a Delivery locations tab and form (add, edit, deactivate and reactivate) over the existing order-service endpoints. No backend changes were needed.
+
+### 4. Stuck "session expired" page and the nginx re-lookup (debug, generate, explain) — 17:50 to 19:20
+
+```text
+when i click the session has expired button, it just re-renders without letting me re-login.
+```
+
+**Key response:** The gateway was again sending to a recreated user-service's old IP, so every refresh got a 502. The frontend kept the session (by design, for a brief outage), sent the expired token, got 401 "session expired", and Try again looped. Changed `api/client.ts` to say the service is unreachable in that case.
+
+```text
+commit first, then add the nginx re-lookup
+```
+
+**Key response:** Put user-service, supplier-service and the frontend behind variables in `gateway/nginx.conf`, so nginx looks their addresses up again through Docker's resolver, with a `rewrite` to strip each prefix. Checked the syntax with `nginx -t`.
+
+```text
+explain how this works
+```
+
+```text
+who's mapping user-service to the right ip? is it set automatically when we ran docker compose?
+```
+
+```text
+add the explanation for this in the google doc under "gateway/routing"
+```
+
+```text
+explain this: who hits 5432, what's the other port number, and is the ip just an internal ip, i.e. localhost for the Docker's internal network
+```
+
+**Key response:** Explained that nginx resolves a plain host name once but a variable on every request (cached 10 s); that Docker's name server at `127.0.0.11` keeps each service name pointing at its container's current IP; and that `"127.0.0.1:5435:5432"` publishes Postgres's 5432 on the host's localhost port 5435 for tools on the Mac, while services use 5432 inside the network. Added the gateway explanation to the Google Doc.
+
+---
+
+## Session 20 — 2026-11-10 — preparing the D4 presentation
+
+- **Tool:** Claude Code (model: Claude Opus 5.5)
+- **Author:** nathantew14
+- **Modes:** review, explain
+- **Timestamps:** prompt times are from the Claude Code transcript, in UTC.
+
+### 1. Structure of the reference document (review) — 10:15 to 10:17
+
+```text
+can you see the tabs in this google doc [team D4 Google Doc link]
+```
+
+```text
+using the isntructions tab, can you evaluate the structure of the our content tab for the purposes of the presentation? it's not meant to be a script we will read out, but rather reference material to use during the presentation and (more importantly) the QnA
+```
+
+**Key response:** The decision write-ups (problem, options, choice, trade-off) and the key-patterns table work well. But about half the tab covered the User Service and auth, which staff said matters least, while the D3 feedback questions about the order and credit services, async messaging and deployment had no section. Suggested reorganising by the questions likely to be asked.
+
+### 2. Docker networking and deployment (explain) — 10:54 to 11:44
+
+```text
+would it be right to say that the services and databases are held inside a docker private network
+```
+
+```text
+what's the most accurate technical term for private docker network?
+```
+
+```text
+what does bridge network mean
+```
+
+```text
+do services communicate via the gateway? how do they find each other?
+```
+
+```text
+can i say that docker compose starts/runs all the servcies, databases, migrations, as well as any one-off scripts like populating admin data; it also provides each service with their environment variables. it then puts the gateway, services, databases and the RabbitMQ into the private network, and exposes the gateway via port 8080. the databases also get exposed via ports for direct access via psql, but that won't be the case in actual production
+
+in production, the entire container can niavely be run in the cloud, and the gateway port exposed the same way to allow access from outside; but realistically we'd use some orchestration and load balancer with each service in its own container, so that they can scale independently.
+```
+
+```text
+is the gateway part of the private network
+```
+
+```text
+would the orchestrator in the hypothetical cloud deployment handle multiple instances of each image?
+```
+
+**Key response:** Mostly right, with corrections: the databases and RabbitMQ also publish ports, but only on localhost; it's one flat user-defined bridge network, with separate database logins (not the network) keeping services apart; services call each other directly by name, not through the gateway; there are already about 15 containers, not one; the gateway is on the network and is the one container published outside. An orchestrator would run and replace replicas, and the APIs, workers and relays are already safe to replicate (`SKIP LOCKED`, idempotent handlers).
+
+### 3. Key decisions from earlier milestones (review) — 12:09 to 12:55
+
+```text
+can you access [D2 presentation Google Slides link]
+```
+
+```text
+read those slides, as well as our D3 document: [D3 Google Doc link]
+
+then, summarise the most important key decisions and patterns used
+```
+
+```text
+'[local path]/CS3219-Instructions-MilestoneD3.pdf'
+
+'[local path]/CS3219-Instructions-MilestoneD2.pdf'
+
+do the milestone requirements docs change your recommendation of what key decisions we should focus on?
+```
+
+```text
+just give me a revised list of key decisions to cover
+```
+
+**Key response:** Listed the D2 slides now out of date (auth, role design and role lifecycle). Summarised 12 key decisions and patterns, then revised the list against the milestone briefs: both briefs ask for an updated role table and a nice-to-have ownership table at the final presentation. Gave a final list grouped under the D4 spec's four categories.
+
+### 4. Tokens (explain) — 12:15 to 12:22
+
+```text
+am i right:
+
+access tokens provide access to endpoints, but expire in 5 mins. refresh tokens last for 7 days, and are used to request for new access tokens
+```
+
+```text
+why does the refresh token not need to be a jwt
+```
+
+```text
+can i say that the main reason why access tokens can't just be random strings is because we don't want the other services to have to check with the user service to figure out who the random string access token belongs to
+```
+
+```text
+is 5 minutes actually reasonable? what's the industry standard
+```
+
+**Key response:** Confirmed, adding that each refresh token works once and the 7 days is a hard cap. A refresh token only goes back to the User Service, which looks it up anyway, so it needn't be self-verifying. Access tokens are JWTs so services can check them without a lookup in a central store, which is also why they can't be revoked early. 5 minutes is at the short end of the usual 5 to 60 minutes; the AI noted that its provider defaults were from memory and should be checked before quoting.
+
+### 5. Credits, the state machine and messaging (explain) — 13:00 to 14:49
+
+```text
+is the concept of a reserved balanced executed through the MQ for credit transactions?
+```
+
+```text
+how's my high level explanation of the errand state machine:
+
+errand state is tracked by a combination of state and errand_status fields in the errands table. conditional updates with database locks ensure that state transitions are valid, e.g. without skipping steps
+```
+
+```text
+is it actually accurate to call this a state machine
+```
+
+```text
+how many message queues are there actually
+```
+
+```text
+verify:
+
+one for commands (wallet open, credit reservation, rewards, refunds of reservation)
+one for replies (from credit service to order service, to update the errand state)
+one for dead msgs
+```
+
+```text
+what are reaons we can use to justify our choice of async-ising the credit transaction workflow? so far i have:
+
+Not crucial to user interaction flow: can be deferred while user continues. E.g. initial credit balance or processing of reward (vs e.g. creation of errands)
+Required by multiple actions: user registration, credit reservation, reservation edit, reward
+```
+
+```text
+is the saga flow here
+```
+
+```text
+are we using both saga pattern and Transactional Outbox Pattern
+```
+
+```text
+is there only one saga flow, for undoing errand creation if the reservation fails?
+```
+
+```text
+what does the background sweeper do
+```
+
+```text
+how are credit commands idempotent? are they keyed by errand id?
+```
+
+```text
+what considerations are there for our async workflow apart from messages over events (due to single recipient and requiring replies)
+```
+
+```text
+are our messages kept forever
+```
+
+```text
+verify: Ledger: credit changes are stored for auditing in a separate table
+```
+
+**Key response:** Corrected and sharpened each statement for Q&A:
+- The queue only carries the command; the reserved balance lives in the credit service's database.
+- The second field is `credit_status`; transitions also check who and when.
+- It's a guarded finite state machine.
+- There are three queues: `credit-service.commands`, `order-service.credit-replies` and the dead-letter queue. There are five commands, including `AdjustReservation`, and replies update `credit_status`, not `state`.
+- The strongest reason for async is that no transaction spans both databases.
+- There's one orchestrated saga per errand, with compensations for a refused reserve or adjust, and it relies on the outbox.
+- The sweeper expires overdue errands and resends stuck commands.
+- Commands are idempotent by user id or errand id (plus a revision for adjustments).
+- Acknowledged queue messages are deleted, while dead-lettered messages, outbox rows and ledger entries are kept.
+- The ledger is append-only in code but not enforced by the database.
+
+---
+
+## Session 21 — 2026-11-10 — moving make_token.py
+
+- **Tool:** Claude Code (model: Claude Opus 5.5)
+- **Author:** nathantew14
+- **Modes:** explain, refactor
+- **Timestamps:** prompt times are from the Claude Code transcript, in UTC.
+
+### 1. Moving the test-token script (explain, refactor) — 12:03 to 12:04
+
+```text
+@supplier-service/scripts/make_token.py is this supplier service-specific or is it just a general utility script? what is it used for?
+```
+
+```text
+move the script. how do i run it?
+```
+
+**Key response:** It's a general tool that signs a test access token with the User Service's private key, for Swagger or curl; it lived in supplier-service only by history. Moved it to `user-service/scripts/make_token.py` with `git mv`, ran it there (without printing the token), and updated both READMEs.
+
+---
+
+## Session 22 — 2026-11-10 — checking the AI disclosures
+
+- **Tool:** Claude Code (model: Claude Opus 5.5)
+- **Author:** nathantew14
+- **Modes:** review, generate
+- **Timestamps:** prompt time is from the Claude Code transcript, in UTC.
+
+### 1. Disclosure check against the course policy (review, generate) — 12:07
+
+```text
+using the instructions in @docs/D4-presentation.docx , do a once-over over the entire repo and make sure all ai usage disclosures are in place
+```
+
+**Key response:** Checked against the AI policy appendix. Fixed garbled characters in the README, made its AI Use Summary name every tool and link to this log, and corrected its note about `uv.lock`. Added missing headers to `user-service/mise.toml`, both `alembic.ini` files, `docs/user-service-setup-plan.md` and the root `AGENTS.md`. Reported that this log stopped at Task 12. Flagged for the team: README entries where AI proposed schema, rate-limit and safeguard designs (prohibited uses under the policy), the unfilled author reviews, and the missing README link on the slide deck.
+
+---
+
+## Session 23 — 2026-11-10 — schema slides for the D4 deck
+
+- **Tool:** Claude Code (model: Claude Opus 5.5)
+- **Author:** nathantew14
+- **Modes:** generate, explain
+- **Timestamps:** prompt times are from the Claude Code transcript, in UTC.
+
+### 1. Table and message schemas in the slides (generate) — 13:06 to 13:09
+
+```text
+[D4 Google Slides link]
+
+there are some half done table schemas in slides 23 and 24. Can you help me add table schemas for every single table in this project into the slides, in this order: User, Suppler, Order, Credit, [anything else]. include other schemas and shapes like the messages in the MQ
+```
+
+```text
+connector added, please proceed
+```
+
+**Key response:** Added 18 appendix slides from each service's `tables.py`, `rabbitmq/definitions.json` and `commands.py`: the user, supplier, order and credit tables, the RabbitMQ topology, the message envelope, the five commands, the reply, the rejection codes and the access token's claims. Checked a thumbnail of each slide and fixed overflows. Couldn't delete the two half-done slides, one of which named the table `refresh_tokens` instead of `refresh_sessions`, so the author is to delete them.
+
+### 2. RabbitMQ's protocol (explain) — 15:33
+
+```text
+does rabbitmq use http
+```
+
+**Key response:** No: messages use AMQP on 5672 over a long-lived TCP connection. HTTP on 15672 is only the management UI and API.
+
+---
+
+## Session 24 — 2026-11-10 — author reviews and backfilling this log
+
+- **Tool:** Claude Code (model: Claude Opus 5.5)
+- **Author:** nathantew14
+- **Modes:** generate
+- **Timestamps:** prompt times are from the Claude Code transcript, in UTC.
+
+### 1. Filling in the author reviews (generate) — 15:52
+
+```text
+for all the ai disclosure "Author review: <to be completed by author>", fill in with one of these options, whichever is most appropriate; add some detail and variation where possible
+
+I reviewed the code
+I tested the behaviour 
+I ran the tests
+I verified the UI
+```
+
+**Key response:** Filled 210 placeholders across 200 files, choosing the phrase by file type (tests, UI, behaviour, or code review) and adding a detail from each block's Scope line. Left the example template in `AGENTS.md` alone. Noted that the details were inferred from the Scope text and asked the author to check none claims more than was done.
+
+### 2. Backfilling this log (generate) — 15:56
+
+```text
+backfill @ai/usage-log.md based on all the chat history in this folder
+```
+
+**Key response:** Read the Claude Code transcripts for this project and added Sessions 13 to 24. Passwords, tokens, email addresses, Google Docs links and local paths in prompts were replaced with bracketed placeholders.

@@ -5,7 +5,7 @@
  * Scope: Styled the AI prompt counter, validation feedback, and blocking loading overlay.
  * Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-20
  * Scope: AI-added the section headings.
- * Author review: <to be completed by author>
+ * Author review: I verified the UI; the section headings display in the request form.
  */
 .request-dialog-overlay {
   position: fixed;

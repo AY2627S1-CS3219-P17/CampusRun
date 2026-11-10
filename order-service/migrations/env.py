@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: Copied from user-service/migrations/env.py: reads DATABASE_URL from the app settings, targets the tables
 #        metadata, and accepts a caller-supplied connection (used by the tests).
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: the migrations run against DATABASE_URL.
 
 import asyncio
 from logging.config import fileConfig

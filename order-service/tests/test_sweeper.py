@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 # Scope: AI-generated tests for the sweeper: which errands expire and when, two sweepers at once, the reconciler's
 #        threshold and the command it resends for each state, expiresAt in responses, and GET /admin/stuck.
-# Author review: <to be completed by author>
+# Author review: I ran the tests, including two sweepers at once.
 
 import asyncio
 from datetime import UTC, datetime, timedelta

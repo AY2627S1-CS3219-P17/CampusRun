@@ -4,7 +4,7 @@
 #        AI-updated paths after the /suppliers prefix was removed (Claude Code, 2026-09-27).
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 # Scope: AI-added tests for GET /lookup.
-# Author review: <to be completed by author>
+# Author review: I ran the tests; the GET /lookup cases pass.
 
 from datetime import time
 

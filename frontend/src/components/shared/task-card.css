@@ -8,7 +8,7 @@
  * Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
  * Scope: AI-grouped the status with extra badges (credits processing, supplier unavailable), reusing the
  *        pending palette.
- * Author review: <to be completed by author>
+ * Author review: I verified the UI: the status and extra badges sit together on the card.
  */
 
 .task-card,

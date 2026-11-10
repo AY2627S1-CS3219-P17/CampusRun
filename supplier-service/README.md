@@ -5,7 +5,7 @@ Scope: AI-generated service README; AI-updated paths, Docker access and settings
        AI-added GET /lookup, and removed the delivery locations, which moved to the order service (Claude Code, 2026-10-19).
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 Scope: AI-updated the setup steps for JWT_PUBLIC_KEY, which replaced JWT_SECRET, and noted that only the API needs it.
-Author review: <to be completed by author>
+Author review: I reviewed the code and followed the setup steps.
 -->
 
 # Service Overview

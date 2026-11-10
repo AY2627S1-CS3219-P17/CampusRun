@@ -7,7 +7,7 @@
 //        keep every student capability (2026-09-28).
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 // Scope: AI-changed Logout to end the session on the server too (signOut); AI-added the Admin link for admins.
-// Author review: <to be completed by author>
+// Author review: I tested the behaviour: Logout ends the session on the server and the Admin link shows only for admins.
 // Tool: Codex (OpenAI), date: 2026-10-15
 // Scope: Wired the create-request header action to the shared request editor dialog.
 // Tool: Codex (OpenAI), date: 2026-10-17
@@ -16,7 +16,7 @@
 // Scope: AI-added opening My Requests after a request is created.
 // Tool: OpenAI Codex (GPT-6), date: 2026-10-20
 // Scope: Derived the active navigation link from the route in the persistent main layout.
-// Author review: <to be completed by author>
+// Author review: I verified the UI: the right nav link is highlighted on each route.
 
 import { useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'

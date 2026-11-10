@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: Alembic env pointed at the credit service settings and tables.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: alembic upgrade head creates the credit tables.
 
 import asyncio
 from logging.config import fileConfig

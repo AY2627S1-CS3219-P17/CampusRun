@@ -7,7 +7,7 @@
 // Scope: Kept a cached errand count visible while the list refreshes.
 // Scope: Kept the visible empty message and Clear search control during a new search.
 // Scope: Delayed the loading label so fast empty-list responses do not flash it.
-// Author review: <to be completed by author>
+// Author review: I verified the UI: the loading label no longer flashes on fast empty lists.
 
 import { useEffect, useRef, useState } from 'react'
 import TaskCard from './task-card'

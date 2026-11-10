@@ -4,7 +4,7 @@
 #        move (wrong state, wrong party, past the deadline), the D3 races (couriers accepting at once, accept vs
 #        cancel, double completion), the grace period, the supplier check on accept, edits and reward changes, and
 #        the lock that keeps a delivery location from changing under an accept.
-# Author review: <to be completed by author>
+# Author review: I ran the tests; the full lifecycle and the refused transitions pass.
 
 import asyncio
 from datetime import UTC, datetime, timedelta

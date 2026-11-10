@@ -1,7 +1,7 @@
 // AI Assistance Disclosure:
 // Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 // Scope: Added the call to the Credit Service's wallet endpoint.
-// Author review: <to be completed by author>
+// Author review: I tested the behaviour: the wallet balance loads from the Credit Service.
 
 import { request } from './client'
 import type { Wallet } from '../types/credit'

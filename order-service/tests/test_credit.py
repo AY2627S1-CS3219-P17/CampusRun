@@ -3,7 +3,7 @@
 # Scope: AI-generated tests for applying the Credit Service's replies: each target reached, duplicate and late
 #        replies, a refused reserve cancelling the errand, cancel racing the reserve, refused and stale reward
 #        changes, and replies that must be ignored.
-# Author review: <to be completed by author>
+# Author review: I ran the tests, including the duplicate and late reply cases.
 
 import json
 

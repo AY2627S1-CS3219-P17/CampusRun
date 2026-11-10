@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: Engine factory and per-request transaction copied from supplier-service/db.py.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; it matches the supplier-service version it was copied from.
 
 from collections.abc import AsyncIterator
 from typing import Annotated

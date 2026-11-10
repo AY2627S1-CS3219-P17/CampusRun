@@ -3,7 +3,7 @@
 # Scope: AI-generated admin user management: search users, promote a student to admin, and step down from your own
 #        admin role while another admin is left; role changes are serialized and re-check the caller's role in the
 #        database (docs/admin-dashboard-plan.md).
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: searching, promoting and stepping down work, and the last admin can't step down.
 
 """Admin user management. Role changes reach a user's next access token on refresh (at most
 JWT_ACCESS_TOKEN_TTL_SECONDS later), since /auth/refresh reads the role from this table."""

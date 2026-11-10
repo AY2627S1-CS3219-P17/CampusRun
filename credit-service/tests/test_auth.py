@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 # Scope: AI-generated tests for RS256 token checks: forged keys, "none" and HS256 keyed with the public key are refused.
-# Author review: <to be completed by author>
+# Author review: I ran the tests; forged, "none" and HS256 tokens are all refused.
 
 import base64
 import hashlib

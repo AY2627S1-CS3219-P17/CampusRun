@@ -2,7 +2,7 @@
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: AI-generated settings for the credit service, following supplier-service/config.py.
 #        AI-replaced JWT_SECRET and JWT_ALGORITHM with the User Service's RS256 public key JWT_PUBLIC_KEY (Claude Code, 2026-11-09).
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; the settings match the variables in .env.example and compose.yaml.
 
 from functools import lru_cache
 

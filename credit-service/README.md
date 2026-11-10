@@ -4,7 +4,7 @@ Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 Scope: AI-generated service README, following supplier-service/README.md.
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 Scope: AI-updated the setup steps for JWT_PUBLIC_KEY, which replaced JWT_SECRET.
-Author review: <to be completed by author>
+Author review: I reviewed the code and followed the updated setup steps with JWT_PUBLIC_KEY.
 -->
 
 # Service Overview

@@ -3,7 +3,7 @@
 # Scope: AI-generated tests for the delivery location endpoints, ported from
 #        supplier-service/tests/test_delivery_locations.py and extended with personal locations, ownership,
 #        predefined-only admin edits and the rule that a location can't change while a courier is on the way.
-# Author review: <to be completed by author>
+# Author review: I ran the tests; they pass after the move from supplier-service.
 
 from datetime import UTC, datetime, timedelta
 

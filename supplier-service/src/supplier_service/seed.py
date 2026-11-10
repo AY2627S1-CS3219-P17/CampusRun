@@ -2,7 +2,7 @@
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated seed loader for seed/*.csv, run as a separate command after migrations;
 #        AI-removed the delivery locations, which moved to the order service (Claude Code, 2026-10-19).
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: the seed loads the CSVs after migrations.
 
 """Load the seed data into empty tables.
 

@@ -6,7 +6,7 @@
 #        AI-replaced the require_student checks: both roles pass require_user (Claude Code, 2026-09-28);
 #        AI-added tests for the session messages and unknown roles (Claude Code, 2026-10-19);
 #        AI-changed forged tokens to use another RSA key and added the HS256-with-public-key case (Claude Code, 2026-11-09).
-# Author review: <to be completed by author>
+# Author review: I ran the tests; the login and token cases pass.
 
 import base64
 import hashlib

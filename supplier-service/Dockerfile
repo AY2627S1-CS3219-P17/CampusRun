@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 # Scope: Dockerfile copied from user-service/Dockerfile with supplier-service paths.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: the image builds and the service starts in Compose.
 
 FROM python:3.14.7-slim
 

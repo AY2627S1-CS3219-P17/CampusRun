@@ -4,7 +4,7 @@
 #        AI-added ROOT_PATH and ENABLE_DOCS support and the router order for the gateway (Claude Code, 2026-09-27);
 #        AI-removed the delivery location routes, which moved to the order service (Claude Code, 2026-10-19);
 #        AI-added the start-up check for JWT_PUBLIC_KEY, following credit-service/main.py (Claude Code, 2026-11-09).
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: the app starts and the health check responds.
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager

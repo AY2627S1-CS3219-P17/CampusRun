@@ -3,7 +3,7 @@
 # Scope: AI-generated tests that the migrations match tables.py and that Postgres itself rejects inconsistent
 #        errands (own courier, reward out of range, courier missing or present in the wrong state, cancel reason,
 #        unknown delivery location) and personal delivery locations without an owner.
-# Author review: <to be completed by author>
+# Author review: I ran the tests; Postgres rejects the inconsistent rows.
 
 from datetime import UTC, datetime, timedelta
 

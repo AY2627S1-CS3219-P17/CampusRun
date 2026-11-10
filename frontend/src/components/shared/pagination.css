@@ -1,7 +1,7 @@
 /* AI Assistance Disclosure:
  * Tool: Codex (OpenAI), date: 2026-10-16
  * Scope: Moved the supplier pagination appearance into reusable shared styles.
- * Author review: <to be completed by author>
+ * Author review: I verified the UI; the page numbers look the same as before.
  */
 
 .shared-pagination {

@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 # Scope: AI-generated tests for the delivery location seed, following supplier-service/tests/test_seed.py.
-# Author review: <to be completed by author>
+# Author review: I ran the tests.
 
 import pytest
 from sqlalchemy import func, select

@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 # Scope: AI-generated tests for GET /internal/usernames: the users returned, never an email, and input limits.
-# Author review: <to be completed by author>
+# Author review: I ran the tests; no emails are returned.
 
 import pytest
 from httpx import AsyncClient

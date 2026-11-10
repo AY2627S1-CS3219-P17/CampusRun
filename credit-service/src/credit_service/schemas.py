@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: AI-assisted review and debugging for HTTP response models for wallets, ledger entries and reservations.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; the response models match what the frontend reads.
 
 from datetime import datetime
 from enum import StrEnum

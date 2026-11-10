@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-26; 2026-09-28
 # Scope: AI-generated the create-admin and test tasks, and reworded the create-admin description for the admin role;
 #        the tools pin and the start-db, migrate and serve tasks were written by the team (AI-reviewed).
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: the create-admin and test tasks run.
 
 [tools]
 python = "3.14.7"

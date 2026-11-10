@@ -2,7 +2,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 # Scope: AI-generated script that makes the RSA key pair for RS256 access tokens.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: it writes a working key pair for RS256 tokens.
 #
 # Prints JWT_PRIVATE_KEY and JWT_PUBLIC_KEY lines for the root .env, each PEM on one line with \n escapes:
 #

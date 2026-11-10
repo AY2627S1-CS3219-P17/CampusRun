@@ -3,7 +3,7 @@
 # Scope: AI-generated suppliers and delivery_locations tables, indexes and constraints,
 #        following the conventions in user-service/tables.py; AI-removed delivery_locations, which moved to the
 #        order service (Claude Code, 2026-10-19).
-# Author review: <to be completed by author>
+# Author review: I reviewed the code, including the indexes and constraints.
 
 """Database schema (SQLAlchemy Core).
 

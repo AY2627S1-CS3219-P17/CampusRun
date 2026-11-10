@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 # Scope: AI-generated in-memory stand-ins for the Supplier, User and Credit Services, served through a fake HTTP
 #        transport so the errand endpoints can be tested without the other services running.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; the fakes respond like the real services.
 
 from collections.abc import Callable
 from urllib.parse import parse_qs

@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
 # Scope: AI-generated ignore list to keep local dependencies, build output and .env files out of the image.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; node_modules, build output and .env files stay out of the image.
 
 node_modules
 dist

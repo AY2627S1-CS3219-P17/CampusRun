@@ -3,7 +3,7 @@
 // Scope: AI-generated shared NUS map geometry and coordinate validation.
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-20
 // Scope: AI-added the default view, the middle 80% of the served area.
-// Author review: <to be completed by author>
+// Author review: I reviewed the code; the default view stays within the served area.
 
 import type { LatLngExpression } from 'leaflet'
 

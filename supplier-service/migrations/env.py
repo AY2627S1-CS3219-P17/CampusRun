@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 # Scope: Alembic env copied from user-service/migrations/env.py, pointed at the supplier service settings and tables.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: the migrations run against the supplier database.
 
 import asyncio
 from logging.config import fileConfig

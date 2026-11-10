@@ -2,7 +2,7 @@
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: AI-assisted review and debugging for RabbitMQ consumer that validates each command's sender and body, applies it in one database
 #        transaction with retries, replies, then acknowledges; malformed or unauthorised messages are dead-lettered.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; the worker checks each sender and acknowledges only after the commit.
 
 """credit-worker: applies every balance change, one RabbitMQ message at a time.
 

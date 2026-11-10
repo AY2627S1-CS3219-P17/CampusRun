@@ -2,7 +2,7 @@
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: AI-assisted review and debugging for message contract for the credit service: the commands it accepts over RabbitMQ,
 #        which service may send each one, and the reply it sends back.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; the message contract matches what the user and order services send.
 
 """The credit service's message contract.
 

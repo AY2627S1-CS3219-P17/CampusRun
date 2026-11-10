@@ -8,7 +8,7 @@ Create Date: 2026-11-09 12:00:00.000000
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 # Scope: AI-written migration adding the refresh_sessions table for refresh-token rotation.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: the migration upgrades and downgrades cleanly.
 from typing import Sequence, Union
 
 from alembic import op

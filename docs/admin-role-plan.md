@@ -4,7 +4,7 @@ Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-28
 Scope: AI-generated plan for replacing the separate admins table with a role on users, based on the team's decisions;
        AI-revised it so admins keep every student capability (2026-09-28);
        AI-marked the "created only by the script" decision as superseded by admin promotion (2026-11-09).
-Author review: <to be completed by author>
+Author review: I reviewed the code for the admin role and checked it follows this plan.
 -->
 
 # Admin Role Plan

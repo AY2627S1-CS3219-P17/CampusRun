@@ -4,7 +4,7 @@
 #        with Groq and the Supplier Service replaced by a fake HTTP transport.
 # Tool: OpenAI Codex (GPT-6), date: 2026-10-20
 # Scope: Tested predefined delivery-location matching and custom-field fallback.
-# Author review: <to be completed by author>
+# Author review: I ran the tests; matching and the custom-field fallback pass.
 
 import json
 from datetime import datetime, timedelta

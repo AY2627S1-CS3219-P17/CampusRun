@@ -3,7 +3,7 @@
 // Scope: AI-generated mapper from an Order Service errand to the task card's props, and the due date format;
 //        AI-added who can do what (the action, edit, badges and notes on each card);
 //        AI-added the admin viewer: read-only, naming both the requester and the courier (2026-11-10).
-// Author review: <to be completed by author>
+// Author review: I reviewed the code; the mapping covers every errand state.
 
 import { runErrandAction } from '../api/order'
 import type {

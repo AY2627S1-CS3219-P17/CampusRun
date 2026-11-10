@@ -3,7 +3,7 @@
 # Scope: AI-generated errand state transitions (accept, pick up, deliver, complete, cancel, edit): each one
 #        conditional UPDATE with its credit command in the same transaction, and a clear 404/403/409 when refused;
 #        AI-added a log line for every transition (Task 9).
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; every transition checks the actor and the current state.
 
 """Every change to an errand's state (docs/order-service-plan.md, section 5).
 

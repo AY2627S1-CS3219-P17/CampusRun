@@ -14,7 +14,7 @@
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 // Scope: AI-added showing only the dropoff pin when there's no pickup position; AI-wired the header action with
 //        busy and error states, the edit button, badges and notes, and the errands-changed event.
-// Author review: <to be completed by author>
+// Author review: I verified the UI: only the dropoff pin shows when there's no pickup position.
 
 import { useRef, useState } from 'react'
 import { Dialog } from 'radix-ui'

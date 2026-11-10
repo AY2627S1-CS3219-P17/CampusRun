@@ -2,7 +2,7 @@
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: AI-assisted review and debugging for consistency audit: re-derives balances from the ledger, checks conservation of credits
 #        and lists holds that have waited too long for a transfer or release.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; the audit re-derives balances from the ledger as intended.
 
 """Checks the invariants of the credit economy. Run with `credit-audit`, or GET /admin/audit as an admin.
 

@@ -6,7 +6,7 @@
 // Scope: Kept the main navigation header mounted across the three errand routes.
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 // Scope: AI-added the admin page and AdminRoute, which sends non-admins to Explore.
-// Author review: <to be completed by author>
+// Author review: I tested the behaviour: non-admins visiting the admin page are sent to Explore.
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'

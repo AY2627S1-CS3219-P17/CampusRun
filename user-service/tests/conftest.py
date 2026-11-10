@@ -3,7 +3,7 @@
 # Scope: AI-generated pytest fixtures: a disposable Postgres container migrated with Alembic, per-test empty tables,
 #        and an HTTP client for the app wired to the test database; AI-added a test JWT_SECRET default (2026-09-27);
 #        AI-replaced it with a per-run RSA key pair for RS256 signing (2026-11-09).
-# Author review: <to be completed by author>
+# Author review: I ran the tests; the Postgres container fixtures work.
 
 import os
 from collections.abc import AsyncIterator, Iterator

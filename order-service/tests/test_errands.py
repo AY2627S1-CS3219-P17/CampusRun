@@ -4,7 +4,7 @@
 #        errand, delivery points, the supplier and wallet checks, validation, Explore, My Requests/My Tasks, the
 #        admin view, who can see an errand, search (including supplier names), sorting, paging, and what the
 #        responses show when another service is down.
-# Author review: <to be completed by author>
+# Author review: I ran the tests; the create, read and list cases pass.
 
 from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo

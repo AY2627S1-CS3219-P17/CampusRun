@@ -2,7 +2,7 @@
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: Dockerfile copied from supplier-service/Dockerfile with credit-service paths. One image serves the API,
 #        the RabbitMQ worker and the one-off commands; Compose picks which one each container runs.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: the one image runs the API, the worker and the one-off commands in Compose.
 
 FROM python:3.14.7-slim
 

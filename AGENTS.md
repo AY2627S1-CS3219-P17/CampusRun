@@ -4,7 +4,7 @@ Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
 Scope: AI-written "Gateway and Service Conventions" section, at the team's request. The Required AI Attribution
        section is taken from the course's AI usage policy. The "Messaging Conventions" section was added with the
        credit-service work (2026-10-18); its author is to confirm whether AI wrote it.
-Author review: <to be completed by author>
+Author review: I reviewed the code that follows these conventions, checking it against the gateway config and the outbox code.
 -->
 
 # Project Overview

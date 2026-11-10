@@ -3,7 +3,7 @@
 # Scope: AI-generated refresh-session functions (start, rotate with reuse detection, revoke), following the team's
 #        choices: rotation on every refresh, 7-day sessions fixed at sign-in, and revoking every session on a
 #        password change.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code, focusing on rotation and reuse detection.
 
 """Refresh sessions: how a signed-in tab gets new access tokens without the password.
 

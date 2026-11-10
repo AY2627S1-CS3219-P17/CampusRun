@@ -4,7 +4,7 @@
 #        so wallet routes accept any signed-in user (docs/admin-role-plan.md).
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 # Scope: AI-switched token verification from HS256 with JWT_SECRET to RS256 with JWT_PUBLIC_KEY.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; tokens are verified with RS256 and the public key only.
 
 """Identity and role checks.
 

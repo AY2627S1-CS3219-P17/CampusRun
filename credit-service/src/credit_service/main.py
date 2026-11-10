@@ -3,7 +3,7 @@
 # Scope: AI-assisted review and debugging for FastAPI app, lifespan and health check, following supplier-service/main.py.
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 # Scope: AI-changed the start-up check from JWT_SECRET to JWT_PUBLIC_KEY.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: the service refuses to start without JWT_PUBLIC_KEY.
 
 """The credit service's HTTP API: read-only views of wallets, reservations and the audit.
 

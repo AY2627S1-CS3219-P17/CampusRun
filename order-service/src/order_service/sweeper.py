@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 # Scope: AI-generated sweeper for order-worker: expiring errands past their deadline with ReleaseCredits, and the
 #        reconciler that resends the credit command for errands whose credits have been PENDING too long.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; expired errands release their credits once.
 
 """The background sweeper (docs/order-service-plan.md, section 6). Not a cronjob: an asyncio loop in order-worker.
 

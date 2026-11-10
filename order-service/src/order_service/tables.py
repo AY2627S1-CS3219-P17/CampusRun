@@ -3,7 +3,7 @@
 # Scope: AI-generated errands and outbox tables with the constraints that keep each errand's state, courier and
 #        credit status consistent; the outbox table copied from user-service/tables.py; the delivery_locations table
 #        copied from supplier-service/tables.py, then extended with floor, predefined and integer user ids.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code, including the constraints on state, courier and timestamps.
 
 """Database schema (SQLAlchemy Core).
 

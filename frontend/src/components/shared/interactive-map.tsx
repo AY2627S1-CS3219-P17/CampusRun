@@ -5,7 +5,7 @@
 // Scope: Removed redundant usage comments from the typed single- and two-pin map modes.
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-20
 // Scope: AI-added the wider default view, flying to a chosen position, and the red pin option.
-// Author review: <to be completed by author>
+// Author review: I verified the UI: the map opens wider, flies to a chosen position and shows the red pin.
 
 import { useEffect, useRef, useState } from 'react'
 import {

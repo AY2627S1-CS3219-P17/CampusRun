@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 # Scope: AI-generated mirror of the Credit Service's ReservationResult reply and the rule that applies a reply to its
 #        errand (docs/order-service-plan.md, section 6), idempotent and never moving credits backwards.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; the reply model matches the Credit Service's ReservationResult.
 
 """Applying the Credit Service's replies to errands.
 

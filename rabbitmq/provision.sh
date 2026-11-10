@@ -3,7 +3,7 @@
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: AI-generated broker start-up wrapper that creates one RabbitMQ user per service from .env
 #        and loads the queues, exchanges and permissions in definitions.json.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: each service logs in with its own user and the queues load from definitions.json.
 
 # Entrypoint for the rabbitmq container (official image, unchanged). It starts the broker as usual,
 # then, in the background, creates or updates one user per service and loads definitions.json.

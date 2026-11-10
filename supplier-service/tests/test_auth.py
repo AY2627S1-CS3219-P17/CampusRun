@@ -7,7 +7,7 @@
 # Scope: AI-removed the delivery location parts, which moved to the order service.
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 # Scope: AI-changed the forged-token cases from HS256 with a shared secret to RS256 and added the HS256-with-public-key case.
-# Author review: <to be completed by author>
+# Author review: I ran the tests; the forged RS256 and HS256 tokens are refused.
 
 import base64
 import hashlib

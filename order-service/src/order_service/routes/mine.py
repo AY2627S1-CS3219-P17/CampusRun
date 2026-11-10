@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 # Scope: AI-generated My Requests and My Tasks endpoints: the signed-in user's errands as requester or courier,
 #        by tab, with search, sorting and paging.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: My Requests and My Tasks return only the signed-in user's errands.
 
 """The signed-in user's own errands. The same student can be a requester on some errands and a courier on others."""
 

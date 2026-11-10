@@ -4,7 +4,7 @@
 //        confirmation, and stepping down from your own admin role while another admin is left; AI-moved Step down
 //        into the toolbar row, greyed out while you're the only admin (2026-11-10); AI-added the Errands menu that
 //        opens a user's errands as requester or courier (2026-11-10).
-// Author review: <to be completed by author>
+// Author review: I verified the UI: searching, filtering by role and promoting a student work on the Users tab.
 
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'

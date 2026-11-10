@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: Engine factory and per-request transaction copied from credit-service/db.py; AI-added the Engine
 #        dependency for endpoints that call other services (2026-10-19).
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; it matches the credit-service version apart from the Engine dependency.
 
 from collections.abc import AsyncIterator
 from typing import Annotated

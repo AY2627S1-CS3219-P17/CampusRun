@@ -5,7 +5,7 @@
 #        the fake Supplier, User and Credit Services behind the client (2026-10-19).
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 # Scope: AI-changed the test tokens from HS256 with a shared secret to RS256 with a per-run key pair.
-# Author review: <to be completed by author>
+# Author review: I ran the tests; they pass with the per-run RS256 key pair.
 
 import os
 import time

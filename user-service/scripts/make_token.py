@@ -5,7 +5,7 @@
 # Scope: AI-changed the script to sign with the User Service's RS256 private key instead of JWT_SECRET.
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-10
 # Scope: AI-moved the script from supplier-service to user-service, which already holds the signing key.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: the script still makes a working token from its new location.
 
 """Print an access token for local testing, signed the same way the User Service signs them.
 

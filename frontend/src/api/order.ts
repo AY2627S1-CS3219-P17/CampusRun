@@ -7,7 +7,7 @@
 // Scope: AI-added the predefined delivery location search.
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-10
 // Scope: AI-added the admin list of all errands, and listing, adding and editing predefined delivery locations.
-// Author review: <to be completed by author>
+// Author review: I tested the behaviour: the admin errand list and delivery location calls hit the right endpoints.
 
 import { request } from './client'
 import type { Page } from '../types/supplier'

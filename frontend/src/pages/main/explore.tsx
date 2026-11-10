@@ -15,7 +15,7 @@
 // Scope: AI-moved the card actions into the shared errand mapper.
 // Tool: OpenAI Codex (GPT-6), date: 2026-10-20
 // Scope: Moved the shared header into the persistent main-route layout.
-// Author review: <to be completed by author>
+// Author review: I verified the UI: the header stays in place when moving between main pages.
 
 import { useState } from 'react'
 import CreditBanner from '../../components/shared/credit-banner'

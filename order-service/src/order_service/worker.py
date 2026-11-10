@@ -3,7 +3,7 @@
 # Scope: AI-generated order-worker entry point, following credit-service/worker.py: connects to the database and
 #        RabbitMQ, checks the reply queue is reachable, and stops cleanly on SIGTERM; AI-added the outbox relay,
 #        the reply consumer and the sweeper loops (2026-10-19).
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: order-worker starts, consumes replies and runs the sweeper.
 
 """order-worker: the order service's background process. It runs three loops side by side:
 

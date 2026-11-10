@@ -4,7 +4,7 @@
 #        as the order-service user, waits for the replies and prints balances before and after.
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 # Scope: AI-changed the demo to sign its tokens with the User Service's RS256 private key instead of JWT_SECRET.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: the demo runs end to end with tokens signed by the RS256 private key.
 
 """credit-demo: drive the credit service the way the Order Service will, and watch the balances.
 

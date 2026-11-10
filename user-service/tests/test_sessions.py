@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 # Scope: AI-generated tests for refresh sessions: rotation, reuse detection, logout, expiry, password change, role
 #        changes reaching the next access token, and concurrent refreshes with one token.
-# Author review: <to be completed by author>
+# Author review: I ran the tests; rotation, reuse detection and expiry pass.
 
 import asyncio
 from datetime import UTC, datetime, timedelta

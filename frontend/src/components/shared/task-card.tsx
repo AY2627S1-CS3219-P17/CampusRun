@@ -16,7 +16,7 @@
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 // Scope: AI-replaced the action label and edit flag with a runnable action and the errand to edit; AI-added
 //        badges (e.g. credits processing), details notes, and opening the edit dialog from the details.
-// Author review: <to be completed by author>
+// Author review: I tested the behaviour: each card's action runs and editing opens the right errand.
 
 import { useRef, useState } from 'react'
 import { CalendarDays, CircleDollarSign, MapPin } from 'lucide-react'

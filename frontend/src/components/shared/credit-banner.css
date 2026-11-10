@@ -3,7 +3,7 @@
  * Scope: Added styles for the reusable responsive credit banner component.
  * Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
  * Scope: Added the pending pill, the pending note and the error line.
- * Author review: <to be completed by author>
+ * Author review: I verified the UI: the pending pill, note and error line display correctly.
  */
 
 .credit-banner {

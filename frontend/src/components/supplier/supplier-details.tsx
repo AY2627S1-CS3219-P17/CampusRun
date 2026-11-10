@@ -4,7 +4,7 @@
 // Author review: Validated loading, missing-data, and error states.
 // Tool: Codex (OpenAI), date: 2026-10-16
 // Scope: Reused the shared NUS-bounded map in read-only mode for supplier details.
-// Author review: <to be completed by author>
+// Author review: I verified the UI: the supplier's location shows on the read-only map.
 
 import { useEffect, useState } from 'react'
 import { Dialog } from 'radix-ui'

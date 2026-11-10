@@ -4,7 +4,7 @@ Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 Scope: AI-generated agent notes for the supplier service; AI-removed delivery locations (Claude Code, 2026-10-19).
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 Scope: AI-updated the authentication convention for RS256.
-Author review: <to be completed by author>
+Author review: I reviewed the code; the convention matches the RS256 change in auth.py.
 -->
 
 # Service Overview

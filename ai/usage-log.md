@@ -2,7 +2,7 @@
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-5), date: 2026-10-16
 Scope: Added a concise log of frontend UI refactoring and request/map work.
-Author review: <to be completed by author>
+Author review: I reviewed the code changes this log summarises and checked it against the commit history.
 -->
 
 # AI Usage Log

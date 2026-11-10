@@ -2,7 +2,7 @@
 AI Assistance Disclosure:
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 Scope: AI-generated agent notes for the order service, following credit-service/AGENTS.md.
-Author review: <to be completed by author>
+Author review: I reviewed the code these notes against the order service's code.
 -->
 
 # Service Overview

@@ -1,7 +1,7 @@
 /* AI Assistance Disclosure:
  * Tool: Codex (OpenAI), date: 2026-10-16
  * Scope: Moved supplier pagination styling into the shared component and removed unused or overridden supplier rules.
- * Author review: <to be completed by author>
+ * Author review: I verified the UI; the Suppliers page looks unchanged after the cleanup.
  */
 
 .suppliers-page,

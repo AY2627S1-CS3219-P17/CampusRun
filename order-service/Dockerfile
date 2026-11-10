@@ -3,7 +3,7 @@
 # Scope: Containerized the database-free FastAPI order service using the repository's uv pattern.
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: Noted that the same image runs the API, order-worker and the migrations.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: the image runs the API, the worker and the migrations in Compose.
 
 FROM python:3.14.7-slim
 

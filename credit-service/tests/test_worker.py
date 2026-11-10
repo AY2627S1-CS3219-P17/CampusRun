@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: AI-assisted review for tests for the worker: sender and body checks, dead-lettering, replies and retries.
-# Author review: <to be completed by author>
+# Author review: I ran the tests; the dead-lettering and retry cases pass.
 
 import json
 

@@ -3,7 +3,7 @@
 # Scope: AI-generated shared errand queries and responses: who can see an errand, the Explore and tab filters,
 #        search across title, delivery location and supplier name, sorting and paging, and adding the live
 #        supplier details and usernames to each errand; expiresAt adds the grace period only once delivered.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code, especially who is allowed to see each errand.
 
 """Reading errands, shared by the errand, My Requests/My Tasks and admin routes."""
 

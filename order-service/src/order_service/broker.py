@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: RabbitMQ connection helper copied from credit-service/broker.py.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; it matches the credit-service helper.
 
 import asyncio
 import logging

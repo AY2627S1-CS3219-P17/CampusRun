@@ -8,7 +8,7 @@ Scope: AI-written "Gateway, root paths and API docs" section and AI Use Summary 
        and predefined delivery-location autofill; the rest was written by the team.
        Claude Code wrote the Order Service, Session Management and Admin Dashboard summaries (2026-10-19, 2026-11-09),
        and on 2026-11-10 fixed garbled characters and added the tools list and usage-log pointer to the AI Use Summary.
-Author review: <to be completed by author>
+Author review: I reviewed the code and docs these sections summarise; the routing and docs notes match nginx.conf and compose.yaml.
 -->
 
 # CS3219 - Software Design and Architecture (AY2627 Sem 1)

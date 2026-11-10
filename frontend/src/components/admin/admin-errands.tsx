@@ -2,7 +2,7 @@
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-10
 // Scope: AI-generated the admin page's Errands tab: every errand, read-only, with search, a state filter, sorting,
 //        pages, and a filter for one user's errands as requester or courier (opened from the Users tab).
-// Author review: <to be completed by author>
+// Author review: I verified the UI: search, the state filter and paging work on the Errands tab.
 
 import { useEffect, useMemo, useState } from 'react'
 import { X } from 'lucide-react'

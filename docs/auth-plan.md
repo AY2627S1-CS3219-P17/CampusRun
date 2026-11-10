@@ -6,7 +6,7 @@ Scope: AI-generated step-by-step guide for the nginx gateway and JWT authenticat
        renamed the user token type to "student" (2026-09-27);
        AI-updated for admins as users with the admin role and the "role" claim (2026-09-28);
        AI-added the note on the switch to RS256 (2026-11-09).
-Author review: <to be completed by author>
+Author review: I reviewed the code for the gateway and JWT authentication against this guide.
 -->
 
 # Gateway + Auth Implementation Guide

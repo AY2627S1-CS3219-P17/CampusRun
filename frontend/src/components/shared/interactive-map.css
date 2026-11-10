@@ -3,7 +3,7 @@
  * Scope: AI-generated shared interactive-map sizing, supplier-style pins, optional two-pin legend, and fullscreen save control.
  * Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-20
  * Scope: AI-added the red pin.
- * Author review: <to be completed by author>
+ * Author review: I verified the UI; the red pin displays on the map.
  */
 .interactive-map,
 .interactive-map .leaflet-container {

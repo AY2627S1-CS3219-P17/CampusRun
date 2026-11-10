@@ -3,7 +3,7 @@
  * Scope: Added shared-map hint alignment and adjusted the type chevron position in the supplier editor.
  * Tool: Codex (OpenAI), date: 2026-10-17
  * Scope: Removed unused supplier editor danger and code styles.
- * Author review: <to be completed by author>
+ * Author review: I reviewed the code; the removed styles weren't referenced.
  */
 .supplier-dialog-overlay {
   position: fixed;

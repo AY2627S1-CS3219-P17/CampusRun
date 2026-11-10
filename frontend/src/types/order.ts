@@ -10,7 +10,7 @@
 // Scope: AI-added the admin errand list query, and the admin delivery location list query and form payload.
 // Tool: OpenAI Codex (GPT-6), date: 2026-10-20
 // Scope: Typed the matched predefined delivery location in autofill suggestions.
-// Author review: <to be completed by author>
+// Author review: I reviewed the code; the type matches the autofill response.
 
 export type AutofillSuggestion = {
   title: string | null

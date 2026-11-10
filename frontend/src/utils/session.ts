@@ -7,7 +7,7 @@
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 // Scope: AI-added refresh tokens: one refresh at a time per tab, refreshing before the access token runs out,
 //        logging out on the server, and signing out a duplicated tab so it can't trip reuse detection.
-// Author review: <to be completed by author>
+// Author review: I tested the behaviour: the access token refreshes before it expires and a failed refresh logs out.
 
 import { useSyncExternalStore } from 'react'
 import type { Role } from '../types/user'

@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 # Scope: AI-generated read-only admin view of all errands, filtered by requester, courier and state; AI-added the
 #        list of errands whose credits are stuck PENDING (Task 9).
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: admins can filter all errands and students are refused.
 
 """Admin views. Read-only: admins can't change errands (only the requester cancels, D1)."""
 

@@ -4,7 +4,7 @@
 #        client's username and password rules; AI-changed the admin test for admins as users (2026-09-28);
 #        AI-added the test that protected and unknown fields are rejected (2026-09-28);
 #        AI-added the check that a 422 does not echo the current password (2026-09-29).
-# Author review: <to be completed by author>
+# Author review: I ran the tests; the username and password change cases pass.
 
 import pytest
 from httpx import AsyncClient

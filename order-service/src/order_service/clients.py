@@ -3,7 +3,7 @@
 # Scope: AI-generated HTTP clients for the Supplier, User and Credit Services: supplier details and search,
 #        usernames, and the advisory wallet check, each degrading cleanly when the other service is down; supplier
 #        details and usernames are fetched in batches of up to 100 ids per request.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code, including how each client handles a service that is down.
 
 """Reads from the other services, made as the signed-in user (their access token is forwarded).
 

@@ -4,7 +4,7 @@
  *        dialog. The banner, list, empty state and toast come from suppliers.css. AI-added the errands tab's
  *        user filter chip, and the delivery location cards and the form's
  *        deactivate button (2026-11-10).
- * Author review: <to be completed by author>
+ * Author review: I verified the UI: the tabs, user cards, role badges and dialog look right.
  */
 
 .admin-body {

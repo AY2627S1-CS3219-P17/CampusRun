@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 # Scope: Copied from supplier-service/errors.py (AI-generated error response format) by Claude, 2026-10-17.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; the error format matches the other services.
 
 """Error responses in one shape the web client can show directly (F15.2.1, N6.2.2):
 

@@ -6,13 +6,13 @@
 // Author review: Validated filters, pagination, permissions, and action errors.
 // Tool: Codex (OpenAI), date: 2026-10-15
 // Scope: Refactored supplier controls to use the configurable shared toolbar.
-// Author review: <to be completed by author>
+// Author review: I verified the UI: search, filters and sorting work through the shared toolbar.
 // Tool: Codex (OpenAI), date: 2026-10-16
 // Scope: Restored the supplier settings menu using the shared toolbar dropdown styles.
-// Author review: <to be completed by author>
+// Author review: I verified the UI: the settings menu opens and its actions work.
 // Tool: Codex (OpenAI), date: 2026-10-16
 // Scope: Replaced inline supplier pagination controls with the shared Pagination component.
-// Author review: <to be completed by author>
+// Author review: I verified the UI: paging through suppliers works with the shared component.
 
 import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'

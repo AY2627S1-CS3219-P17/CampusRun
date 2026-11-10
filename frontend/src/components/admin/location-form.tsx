@@ -3,7 +3,7 @@
 // Scope: AI-generated the admin form to add or edit a predefined delivery location (name, floor, description and a
 //        map position) and to deactivate or reactivate it, showing the Order Service's 409 and 422 errors. Adapted
 //        from components/supplier/update-supplier.tsx and reuses its styles.
-// Author review: <to be completed by author>
+// Author review: I verified the UI: adding and editing a location saves and shows field errors.
 
 import { useState, type InputHTMLAttributes, type SubmitEvent } from 'react'
 import { Dialog } from 'radix-ui'

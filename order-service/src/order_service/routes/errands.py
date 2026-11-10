@@ -3,7 +3,7 @@
 # Scope: AI-generated errand endpoints: create (supplier and wallet checks, a new personal delivery location if
 #        needed, and the ReserveCredits command in the same transaction), Explore, and one errand by id. Calls to
 #        other services happen outside the database transaction; AI-added editing an OPEN errand and a log line on create.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: creating an errand checks the supplier and wallet, and listing returns open errands.
 
 """Errands at the service root: POST / creates one, GET / is Explore, GET /{id} is one errand.
 

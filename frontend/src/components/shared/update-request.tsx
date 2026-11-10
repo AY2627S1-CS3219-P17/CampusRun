@@ -12,7 +12,7 @@
 // Tool: OpenAI Codex (GPT-6), date: 2026-10-20
 // Scope: Applied matched autofill locations as predefined choices with their saved coordinates and cleared
 //        stale map coordinates when autofill suggests an unmatched location.
-// Author review: <to be completed by author>
+// Author review: I tested the behaviour: matched autofill locations fill in as predefined choices with their coordinates.
 
 import { useEffect, useRef, useState, type SubmitEvent } from 'react'
 import { Dialog, DropdownMenu } from 'radix-ui'

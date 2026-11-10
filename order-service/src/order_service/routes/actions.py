@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 # Scope: AI-generated errand action endpoints (accept, pick up, deliver, complete, cancel), each one short transaction
 #        around a transition, with the supplier check before an accept.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: each action works for the right user and refuses the wrong state.
 
 """POST /{id}/accept | pickup | deliver | complete | cancel. Each returns the updated errand.
 

@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated engine factory and per-request transaction, following user-service/db.py.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; it matches the user-service version.
 
 from collections.abc import AsyncIterator
 from typing import Annotated

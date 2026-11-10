@@ -6,7 +6,7 @@
 // Author review: Validated form validation, API errors, and input boundaries.
 // Tool: Codex (OpenAI), date: 2026-10-16
 // Scope: Replaced manual latitude/longitude fields with the shared bounded map picker and aligned the type chevron.
-// Author review: <to be completed by author>
+// Author review: I verified the UI: picking a location on the map saves the right coordinates.
 
 import {
   useState,

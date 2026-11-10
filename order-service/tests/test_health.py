@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: AI-generated tests for the health check.
-# Author review: <to be completed by author>
+# Author review: I ran the tests.
 
 import pytest
 from httpx import ASGITransport, AsyncClient

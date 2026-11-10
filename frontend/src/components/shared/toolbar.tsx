@@ -1,12 +1,12 @@
 // AI Assistance Disclosure:
 // Tool: Codex (OpenAI), date: 2026-10-15
 // Scope: Added the reusable configurable toolbar used by supplier and errand pages.
-// Author review: <to be completed by author>
+// Author review: I verified the UI: the toolbar works on the supplier and errand pages.
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 // Scope: AI-made the sort menu optional, for lists with a fixed order (the admin user list), and added an
 //        actions slot (the admin page's Step down button): left of the search on wide screens, and on the tabs'
 //        row on narrow ones (2026-11-10).
-// Author review: <to be completed by author>
+// Author review: I verified the UI: the admin user list shows no sort menu.
 
 import type { MouseEventHandler, ReactNode } from 'react'
 import { DropdownMenu } from 'radix-ui'

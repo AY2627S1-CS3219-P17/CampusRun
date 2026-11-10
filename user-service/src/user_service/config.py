@@ -5,7 +5,7 @@
 #        AI-replaced JWT_SECRET with the RS256 private key JWT_PRIVATE_KEY (Claude Code, 2026-11-09);
 #        AI-shortened the access token to 5 minutes and added JWT_REFRESH_TOKEN_TTL (Claude Code, 2026-11-09);
 #        AI-switched both lifetimes to seconds, renamed with a _SECONDS suffix (Claude Code, 2026-11-09).
-# Author review: <to be completed by author>
+# Author review: I reviewed the code.
 
 from functools import lru_cache
 

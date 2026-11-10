@@ -7,7 +7,7 @@
 # Scope: AI-added the camelCase base models, the paged list shape and the delivery location models, copied from
 #        supplier-service/schemas.py, with optional floor and description; the supplier summary and the errand
 #        request, response and list models, and the errand edit model (2026-10-19).
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; the models use camelCase as the frontend expects.
 
 """Request and response models. Every value from a client is checked here.
 

@@ -9,24 +9,24 @@
 #        AI-removed the key from supplier-migrate, which doesn't check tokens (2026-11-09);
 #        AI-set the 5-minute access token and passed JWT_REFRESH_TOKEN_TTL to user-service (2026-11-09);
 #        AI-switched both token lifetimes to seconds (2026-11-09).
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: order-migrate seeds the delivery locations and order-worker starts after the broker.
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-25
 # Scope: AI-generated local development Compose setup for the user service, its Postgres database and its one-off migration step.
 #        AI-added the gateway, the supplier-service ROOT_PATH/ENABLE_DOCS settings and the frontend service (2026-09-27);
 #        AI-added the user-seed-admin one-off service (2026-09-28).
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: the user service, its database and the migration step come up with docker compose up.
 
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated local development Compose setup for the supplier service, its Postgres database and its one-off migration and seed step.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: supplier-migrate runs the migrations and seed before the supplier service starts.
 
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: AI-added the RabbitMQ broker, the credit-service containers (database, migrations, API, worker and the
 #        on-demand demo), the gateway dependency, and RABBITMQ_URL for user-service's outbox relay.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: the broker, credit-service API and worker start and the gateway routes to them.
 
 # Local development / demo only; cloud deployments are configured separately.
 # Values in ${...} are read from the root .env file.

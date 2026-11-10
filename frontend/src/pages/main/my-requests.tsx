@@ -17,7 +17,7 @@
 // Scope: Moved the shared header into the persistent main-route layout.
 // Tool: OpenAI Codex (GPT-6), date: 2026-10-20
 // Scope: Matched the list label and empty message to the result visible during subtab changes.
-// Author review: <to be completed by author>
+// Author review: I verified the UI: the label and empty message match the list when switching subtabs.
 
 import { useState } from 'react'
 import CreditBanner from '../../components/shared/credit-banner'

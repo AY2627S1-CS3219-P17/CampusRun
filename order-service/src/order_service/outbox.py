@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: Transactional outbox generalised from user-service/outbox.py: enqueueing the four credit commands with the
 #        change that causes them, and the relay that publishes them to RabbitMQ with publisher confirms.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; each credit command is written in the same transaction as its errand change.
 
 """Credit commands from this service to the Credit Service, sent reliably.
 

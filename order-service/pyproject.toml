@@ -5,7 +5,7 @@
 # Scope: AI-added the database, Alembic and RabbitMQ dependencies (via 'uv add'), the order-worker script,
 #        and the pytest-cov/testcontainers dev dependencies.
 #        Claude Code (model: Claude Opus 5.5) changed pyjwt to pyjwt[crypto] for RS256 tokens (via 'uv add', 2026-11-09).
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; the dependencies and the order-worker script install with uv.
 
 [project]
 name = "order-service"

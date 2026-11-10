@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: AI-assisted review and debugging for read-only endpoint for an errand's reservation and the admin consistency audit.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: an errand's reservation is returned only to the right users.
 
 from typing import Annotated
 

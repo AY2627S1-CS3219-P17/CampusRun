@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: AI-generated errand states, credit statuses, cancel reasons and the rule for where an errand's credits
 #        should end up (docs/order-service-plan.md, sections 5 and 6).
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; the state rules match the errand states in the glossary.
 
 """An errand is described by two values:
 

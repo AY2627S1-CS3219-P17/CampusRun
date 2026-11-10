@@ -4,7 +4,7 @@
 #        endpoint (OpenAI Codex, 2026-10-17) now lives in routes/autofill.py; AI-added the delivery location routes
 #        the shared service clients and the errand, My Requests/My Tasks, admin and action routes (2026-10-19);
 #        AI-changed the start-up check from JWT_SECRET to JWT_PUBLIC_KEY (2026-11-09).
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: the app starts and the health check responds.
 
 """The order service's HTTP API.
 

@@ -2,7 +2,7 @@
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: AI-assisted review and debugging for wallets, reservations and ledger_entries tables with the constraints that keep the
 #        credit economy consistent, following the conventions in supplier-service/tables.py.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code, including the constraints that keep balances from going negative.
 
 """Database schema (SQLAlchemy Core).
 

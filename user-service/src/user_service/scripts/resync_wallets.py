@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: AI-generated reconciliation command that asks the credit service to open a wallet for every user.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; it only asks for wallets for users that need one.
 
 """resync-wallets: queue an OpenWallet message for every user.
 

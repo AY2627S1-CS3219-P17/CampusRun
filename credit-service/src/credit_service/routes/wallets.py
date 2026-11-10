@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: AI-assisted review and debugging for read-only endpoints for the signed-in user's wallet and credit history.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: the wallet and ledger endpoints return the signed-in user's data.
 
 """The signed-in user's own wallet (F14.2). Read-only: no HTTP request can change a balance (F14.1.1)."""
 

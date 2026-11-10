@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27
 # Scope: AI-generated two-stage Dockerfile: builds the Vite app with Node, then serves the static files with nginx.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: the image builds and serves the app through the gateway.
 
 # ---- Build: compile the app into static files in /app/dist ----
 # Matches the Node version pinned in mise.toml

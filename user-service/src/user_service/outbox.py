@@ -2,7 +2,7 @@
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: AI-generated transactional outbox: enqueueing the OpenWallet command with a registration, and the relay
 #        that publishes queued messages to RabbitMQ with publisher confirms.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; the OpenWallet message is written in the registration transaction.
 
 """Messages from this service to others, sent reliably.
 

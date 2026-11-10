@@ -1,10 +1,10 @@
 /* AI Assistance Disclosure:
  * Tool: Codex (OpenAI), date: 2026-10-15
  * Scope: Styled the reusable responsive supplier and errand toolbar.
- * Author review: <to be completed by author>
+ * Author review: I verified the UI on wide and narrow screens.
  * Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-10
  * Scope: AI-added the actions slot's layout: left of the search on wide screens, on the tabs' row on narrow ones.
- * Author review: <to be completed by author>
+ * Author review: I verified the UI: the actions sit left of the search on wide screens and on the tabs' row on narrow ones.
  */
 
 .toolbar {

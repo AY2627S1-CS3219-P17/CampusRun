@@ -4,7 +4,7 @@
 #        AI-added ENABLE_DOCS and ROOT_PATH (Claude Code, 2026-09-27).
 #        AI-replaced JWT_SECRET and JWT_ALGORITHM with the User Service's RS256 public key JWT_PUBLIC_KEY (Claude Code, 2026-11-09),
 #        and made it optional like order and credit, so migrations and seeding run without it (2026-11-09).
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; the settings match compose.yaml.
 
 from functools import lru_cache
 from pathlib import Path

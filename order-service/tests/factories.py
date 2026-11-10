@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 # Scope: AI-generated helpers that write delivery locations and errands straight to the test database, and read the
 #        outbox, shared by the errand tests.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; the helpers write valid rows.
 
 from datetime import UTC, datetime, timedelta
 

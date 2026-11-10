@@ -3,7 +3,7 @@
 # Scope: AI-assisted review for tests for the seed loader and the seed data.
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 # Scope: AI-removed the delivery location parts, which moved to the order service.
-# Author review: <to be completed by author>
+# Author review: I ran the tests.
 
 from datetime import time
 from pathlib import Path

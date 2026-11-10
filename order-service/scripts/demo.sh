@@ -4,7 +4,7 @@
 # Scope: AI-generated D3 demo of the errand lifecycle and its credit operations through the gateway: registration
 #        and wallets, reserve, racing accepts, transfer, a repeated completion, the credit worker stopped and
 #        restarted, expiry and release, and the credit audit.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: the demo walks an errand through its lifecycle with the expected credit changes.
 #
 # Runs against the full stack (docker compose up --build), from the repository root:
 #

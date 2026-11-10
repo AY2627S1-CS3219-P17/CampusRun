@@ -8,7 +8,7 @@
 #        and the user and credit service URLs, the expiry grace period and campus time zone (2026-10-19);
 #        AI-added the sweeper and reply consumer settings (2026-10-19).
 #        AI-replaced JWT_SECRET and JWT_ALGORITHM with the User Service's RS256 public key JWT_PUBLIC_KEY (Claude Code, 2026-11-09).
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; the settings match compose.yaml.
 
 from functools import lru_cache
 from pathlib import Path

@@ -9,7 +9,7 @@
  * Scope: Styled the header CTA beside Close and removed unused settings-menu styles.
  * Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
  * Scope: AI-added the action error, the busy CTA, wrapping badges and the notes list.
- * Author review: <to be completed by author>
+ * Author review: I verified the UI: the action error, busy button, badges and notes display correctly.
  */
 
 .task-details-overlay {

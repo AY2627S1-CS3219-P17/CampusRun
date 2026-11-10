@@ -3,7 +3,7 @@
 # Scope: AI-generated shared Argon2 password hasher (pwdlib); AI-renamed the user token type from "user" to "student" (Claude Code, 2026-09-27);
 #        AI-renamed the "type" claim to "role" (Claude Code, 2026-09-28);
 #        AI-switched token signing from HS256 with a shared secret to RS256 with JWT_PRIVATE_KEY (Claude Code, 2026-11-09).
-# Author review: <to be completed by author>
+# Author review: I reviewed the code.
 
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache

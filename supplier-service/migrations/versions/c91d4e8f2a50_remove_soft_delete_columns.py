@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Codex (model: GPT-5), date: 2026-09-27
 # Scope: AI-generated forward migration removing obsolete soft-delete columns and partial unique indexes.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: the migration upgrades an existing database cleanly.
 
 """remove soft-delete columns
 

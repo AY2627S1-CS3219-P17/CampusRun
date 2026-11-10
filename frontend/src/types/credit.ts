@@ -1,7 +1,7 @@
 // AI Assistance Disclosure:
 // Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 // Scope: AI-added the wallet type returned by the Credit Service's GET /wallets/me.
-// Author review: <to be completed by author>
+// Author review: I reviewed the code; the type matches the GET /wallets/me response.
 
 // PENDING: registered, but the credit service hasn't opened the wallet yet (its OpenWallet message is in flight)
 export type WalletStatus = 'ACTIVE' | 'PENDING'

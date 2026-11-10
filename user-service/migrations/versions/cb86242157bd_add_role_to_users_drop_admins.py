@@ -8,7 +8,7 @@ Create Date: 2026-09-28 12:00:00.000000
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-28
 # Scope: AI-written migration replacing the separate admins table with a role column on users.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: existing admins keep admin access after the migration.
 from typing import Sequence, Union
 
 from alembic import op

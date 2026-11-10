@@ -3,7 +3,7 @@ AI Assistance Disclosure:
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 Scope: AI-drafted plan for the admin dashboard, from the team's chosen scope (all errands view, predefined delivery
        locations, promoting users, giving up your own admin role).
-Author review: <to be completed by author>
+Author review: I reviewed the code that followed this plan and checked the plan matches the team's chosen scope.
 -->
 
 # Admin Dashboard Plan

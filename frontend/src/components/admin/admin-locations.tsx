@@ -2,7 +2,7 @@
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-10
 // Scope: AI-generated the admin page's Delivery locations tab: the predefined locations, active or deactivated, with
 //        search and pages, and opening the form to add or edit one.
-// Author review: <to be completed by author>
+// Author review: I verified the UI: the Delivery locations tab lists active and inactive locations and opens the form.
 
 import { useEffect, useMemo, useState } from 'react'
 import { MapPin, Pencil } from 'lucide-react'

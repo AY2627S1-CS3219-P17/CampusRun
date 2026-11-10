@@ -2,7 +2,7 @@
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: AI-assisted review for tests for wallet operations: atomicity, idempotency, ordering, concurrency and the
 #        database constraints behind them.
-# Author review: <to be completed by author>
+# Author review: I ran the tests, including the concurrency cases, and they pass.
 
 import asyncio
 

@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: AI-assisted review for tests for the read-only HTTP API and the migrations-match-tables check.
-# Author review: <to be completed by author>
+# Author review: I ran the tests; the API and migrations checks pass.
 
 import pytest
 from alembic import command

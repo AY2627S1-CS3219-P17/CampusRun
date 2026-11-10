@@ -9,7 +9,7 @@
 // Scope: Kept empty messages and Clear search consistent with those visible results.
 // Scope: Preserved the previous subtab result until its replacement loads.
 // Scope: Cached first pages so returning through the top navigation does not blank the list.
-// Author review: <to be completed by author>
+// Author review: I verified the UI: lists no longer go blank when returning through the top navigation.
 
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError } from '../api/client'

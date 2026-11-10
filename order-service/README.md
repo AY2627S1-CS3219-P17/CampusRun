@@ -7,7 +7,7 @@ Scope: Documented predefined delivery-location matching in autofill.
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 Scope: Documented the database, the order-worker process, the local development commands and delivery locations;
        AI-updated the overview and added the demo section (2026-10-19); AI-replaced JWT_SECRET with JWT_PUBLIC_KEY (2026-11-09).
-Author review: <to be completed by author>
+Author review: I reviewed the code and followed the local development commands.
 -->
 
 # Order service

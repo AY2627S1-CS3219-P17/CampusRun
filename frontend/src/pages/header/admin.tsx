@@ -4,7 +4,7 @@
 //        (?tab=). Starts with the Users tab (docs/admin-dashboard-plan.md, Task 2);
 //        AI-added the Errands tab and opening one user's errands from the Users tab, kept in the URL, and the
 //        Delivery locations tab (2026-11-10).
-// Author review: <to be completed by author>
+// Author review: I verified the UI: switching tabs updates the URL and reloading keeps the tab.
 
 import { Link, useSearchParams } from 'react-router'
 import { Toast } from 'radix-ui'

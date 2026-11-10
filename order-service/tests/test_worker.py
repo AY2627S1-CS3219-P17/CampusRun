@@ -3,7 +3,7 @@
 # Scope: AI-generated tests for order-worker's reply consumer: replies from the wrong sender, of the wrong type or
 #        with a bad body are dropped; a valid one is acknowledged only after its transaction commits; database
 #        errors keep it unacknowledged and retried; repeated unexpected errors drop it.
-# Author review: <to be completed by author>
+# Author review: I ran the tests; bad replies are rejected and good ones applied once.
 
 import asyncio
 import json

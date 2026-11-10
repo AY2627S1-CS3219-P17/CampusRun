@@ -4,7 +4,7 @@
 #        and supplier types follow frontend/src/types/supplier.ts.
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 # Scope: AI-removed the delivery location models, which moved to the order service.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; nothing still uses the removed models.
 
 """Request and response models. Every value from a client is checked here (N8.2.1).
 

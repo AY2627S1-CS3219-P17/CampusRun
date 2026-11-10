@@ -4,7 +4,7 @@
 #        AI-merged the admin login into the user one and switched to the "role" claim (Claude Code, 2026-09-28);
 #        AI-removed require_student, since admins keep every student capability (Claude Code, 2026-09-28);
 #        AI-aligned the error messages and role check with the other services' auth.py (Claude Code, 2026-10-19).
-# Author review: <to be completed by author>
+# Author review: I reviewed the code against docs/auth-plan.md.
 
 from dataclasses import dataclass
 from typing import Annotated, get_args

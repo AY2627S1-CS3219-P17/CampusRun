@@ -8,7 +8,7 @@ Create Date: 2026-10-17 12:00:00.000000
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: AI-written migration adding the outbox table and an OpenWallet message for each user registered before it.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: existing users get an OpenWallet message when the migration runs.
 from typing import Sequence, Union
 
 from alembic import op

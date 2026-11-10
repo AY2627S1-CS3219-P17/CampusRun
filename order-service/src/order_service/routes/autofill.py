@@ -5,7 +5,7 @@
 # Scope: Moved unchanged from main.py into a router; the token now comes from AnyUser.
 # Tool: OpenAI Codex (GPT-6), date: 2026-10-20
 # Scope: Matched extracted delivery places to active predefined locations and returned saved values.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: places matching a predefined location return its saved values.
 
 import json
 import re

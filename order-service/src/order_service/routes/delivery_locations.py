@@ -3,7 +3,7 @@
 # Scope: Delivery location endpoints copied from supplier-service/routes/delivery_locations.py (AI-assisted, Claude,
 #        claude.ai chat, 2026-09-26), changed so students can add their own locations, only the owner (or an admin,
 #        for predefined ones) can edit, and nothing can be edited while a courier is on the way to it.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: listing, adding and editing locations work, admin-only for changes.
 
 """Delivery locations: where errands are delivered.
 

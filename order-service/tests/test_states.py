@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: AI-generated tests for the rule that maps an errand's state to where its credits should end up.
-# Author review: <to be completed by author>
+# Author review: I ran the tests; every state maps to the expected credit outcome.
 
 import pytest
 

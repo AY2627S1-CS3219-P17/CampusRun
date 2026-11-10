@@ -3,7 +3,7 @@
 # Scope: Excluded local environments, secrets, and caches from the order-service image.
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: Also excluded test coverage output, as in credit-service/.dockerignore.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code.
 
 .venv
 __pycache__

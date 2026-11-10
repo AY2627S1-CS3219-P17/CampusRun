@@ -4,7 +4,7 @@
 #        edit (including activate/deactivate);
 #        AI-removed the /suppliers prefix and made Location include ROOT_PATH (Claude Code, 2026-09-27);
 #        AI-added GET /lookup for several suppliers by id (Claude Code, 2026-10-19).
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: listing, searching, filtering and admin edits work.
 
 from datetime import datetime, time
 from math import ceil

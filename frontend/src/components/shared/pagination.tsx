@@ -1,7 +1,7 @@
 // AI Assistance Disclosure:
 // Tool: Codex (OpenAI), date: 2026-10-16
 // Scope: Extracted the supplier page-number navigation into a reusable pagination component.
-// Author review: <to be completed by author>
+// Author review: I verified the UI: page navigation works on the Suppliers page.
 
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import './pagination.css'

@@ -6,7 +6,7 @@
 #        CurrentUser so calls to other services can be made as the signed-in user.
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 # Scope: AI-switched token verification from HS256 with JWT_SECRET to RS256 with JWT_PUBLIC_KEY.
-# Author review: <to be completed by author>
+# Author review: I reviewed the code; only RS256 tokens signed with the user service's key are accepted.
 
 """Identity and role checks.
 

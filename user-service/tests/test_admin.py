@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 # Scope: AI-generated tests for admin user management: searching users, promoting, stepping down, the last-admin
 #        rule under concurrent requests, stale admin tokens, and the new role reaching the next access token.
-# Author review: <to be completed by author>
+# Author review: I ran the tests, including the last-admin rule.
 
 import asyncio
 

@@ -3,7 +3,7 @@
 // Scope: Moved reusable errand toolbar configuration out of the type layer.
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 // Scope: AI-removed the pending tab (D4) and typed the options for the Order Service.
-// Author review: <to be completed by author>
+// Author review: I reviewed the code; the options match what the Order Service accepts.
 
 import type { ErrandSort, ErrandTab } from '../types/order'
 import type { ToolbarOption } from '../types/toolbar'

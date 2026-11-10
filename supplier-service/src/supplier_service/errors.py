@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai chat, model: Claude Opus 5.5), date: 2026-09-26
 # Scope: AI-generated error response format for validation and field errors.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: invalid requests return field errors in this format.
 
 """Error responses in one shape the web client can show directly (F15.2.1, N6.2.2):
 

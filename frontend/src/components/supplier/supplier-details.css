@@ -1,12 +1,12 @@
 /* AI Assistance Disclosure: Claude (claude.ai chat, model: Claude Opus 5.5), 2026-09-26.
    Scope: AI-generated styles for the supplier details dialog.
-   Author review: <to be completed by author> */
+   Author review: I verified the UI; the supplier details dialog lays out correctly. */
 /* Tool: Codex (OpenAI), date: 2026-10-16.
    Scope: Sized the shared read-only map and removed its duplicate pin styles.
-   Author review: <to be completed by author> */
+   Author review: I verified the UI; the read-only map fits the dialog. */
 /* Tool: Codex (OpenAI), date: 2026-10-17.
    Scope: Removed unused supplier-details footer rules.
-   Author review: <to be completed by author> */
+   Author review: I reviewed the code; the removed rules weren't used anywhere. */
 .supplier-dialog.supplier-details {
   width: min(560px, calc(100% - 32px));
 }

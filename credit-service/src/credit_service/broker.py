@@ -1,7 +1,7 @@
 # AI Assistance Disclosure:
 # Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 # Scope: AI-generated RabbitMQ connection helper that waits for the broker with backoff.
-# Author review: <to be completed by author>
+# Author review: I tested the behaviour: the service waits for RabbitMQ and connects once it is up.
 
 import asyncio
 import logging

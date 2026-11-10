@@ -2,7 +2,7 @@
 # Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 # Scope: AI-generated tests for the transactional outbox, ported from user-service/tests/test_outbox.py: enqueueing
 #        credit commands, the relay's ordering and retries, two relays at once, and the publisher's AMQP properties.
-# Author review: <to be completed by author>
+# Author review: I ran the tests; the outbox and relay cases pass.
 
 import asyncio
 import json

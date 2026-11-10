@@ -8,7 +8,7 @@
 // Scope: AI-added reloading the wallet straight away when an errand changes.
 // Tool: OpenAI Codex (GPT-6), date: 2026-10-20
 // Scope: Kept the last wallet balance for the signed-in user across main-page navigation.
-// Author review: <to be completed by author>
+// Author review: I verified the UI: the balance stays in place when moving between main pages.
 
 import { useEffect, useState } from 'react'
 import { CircleDollarSign } from 'lucide-react'

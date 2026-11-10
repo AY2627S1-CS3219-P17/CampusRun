@@ -1,7 +1,7 @@
 // AI Assistance Disclosure:
 // Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 // Scope: AI-generated window event that tells the errand lists and the credit banner to reload after a change.
-// Author review: <to be completed by author>
+// Author review: I tested the behaviour: the lists and credit banner reload after an errand changes.
 
 const ERRANDS_CHANGED = 'campusrun:errands-changed'
 

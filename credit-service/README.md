@@ -4,6 +4,9 @@ Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 Scope: AI-generated service README, following supplier-service/README.md.
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 Scope: AI-updated the setup steps for JWT_PUBLIC_KEY, which replaced JWT_SECRET.
+Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-11
+Scope: AI-pointed the root .env step at the root README's setup guide, and updated the demo section now that the
+       Order Service handles errands (including stopping order-worker first).
 Author review: I reviewed the code and followed the updated setup steps with JWT_PUBLIC_KEY.
 -->
 
@@ -26,12 +29,11 @@ other services. The design, and the reasons for it, are in [docs/credit-service-
 # Getting started
 [Install uv](https://docs.astral.sh/uv/getting-started/installation/) and Docker Desktop first.
 
-1. In the repo root, copy `.env.example` to `.env` and fill in `CREDIT_DB_PASSWORD` and the four
-   `RABBITMQ_*_PASSWORD` values (any random strings, e.g. from
-   `uv run python -c "import secrets; print(secrets.token_urlsafe(24))"`), then add the token keys with
-   `sh scripts/generate-jwt-keys.sh >> .env`.
-2. In `credit-service`, copy `.env.example` to `.env` and put in the same passwords and the `JWT_PUBLIC_KEY` line.
-   `uv run credit-demo` also needs the `JWT_PRIVATE_KEY` line.
+1. Set up the root `.env` as in [step 2 of the root README](../README.md#2-create-the-root-env). Compose won't
+   start even the credit database until every required value there is set.
+2. In `credit-service`, copy `.env.example` to `.env` and replace each `<...>` placeholder with that value from the
+   root `.env` (`CREDIT_DB_PASSWORD`, `RABBITMQ_CREDIT_SERVICE_PASSWORD`, `RABBITMQ_ORDER_SERVICE_PASSWORD`). Copy
+   the `JWT_PUBLIC_KEY="..."` line too. `uv run credit-demo` also needs the `JWT_PRIVATE_KEY` line.
 3. Run these in `credit-service`:
 
 | With mise | Without mise | What it does |
@@ -47,12 +49,17 @@ To run everything in Docker instead, run `docker compose up --build` from the re
 through the gateway at http://localhost:8080/api/credits (docs at http://localhost:8080/api/credits/docs), and the
 RabbitMQ management UI at http://localhost:15672 (log in with `RABBITMQ_ADMIN_USER` / `RABBITMQ_ADMIN_PASSWORD`).
 
-## Demo before the Order Service creates errands
-The Order Service currently only does AI autofill, so `credit-demo` stands in for its errand flow: it connects to
-RabbitMQ as the `order-service` user, sends commands, waits for the replies and prints balances before and after.
+## Credit demo without the Order Service
+For the whole errand flow through the real Order Service, use
+[`order-service/scripts/demo.sh`](../order-service/README.md#demo) instead. `credit-demo` tests the Credit Service
+on its own: it stands in for the Order Service, connecting to RabbitMQ as the `order-service` user, sends commands,
+waits for the replies and prints balances before and after.
+
+It reads the same reply queue as `order-worker`, so stop that first, or the two split the replies between them.
 From the repo root:
 
 ```
+docker compose stop order-worker                             # first; `docker compose start order-worker` afterwards
 docker compose run --rm credit-demo register                 # two new students; watch PENDING turn into 100
 docker compose run --rm credit-demo scenario 2 3 --pause     # reserve, repeat, adjust, transfer, repeat, release, refusal
 docker compose run --rm credit-demo race 2 --count 50        # 50 reserves at once: never below zero

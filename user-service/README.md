@@ -8,6 +8,8 @@ Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-19
 Scope: AI-added the internal endpoints section and the 401 messages.
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 Scope: AI-added the managing admins section.
+Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-11
+Scope: AI-updated the environment variable steps (root .env link, JWT_PRIVATE_KEY, RABBITMQ_URL) and the Compose addresses, which go through the gateway.
 Author review: Originally written and then verified by Nathan
 -->
 
@@ -28,9 +30,14 @@ It uses FastAPI with SQLAlchemy Core to handle SQL queries with a Postgres 18 da
 Run all commands from the `user-service/` directory.
 
 ### 1. Set up environment variables
-Copy the project-level [.env.example](../.env.example) to `.env` and fill in `USER_DB_PASSWORD`. Compose reads this to create the database container.
+First, set up the root `.env` as in [step 2 of the root README](../README.md#2-create-the-root-env). Compose reads it to create the database container, and refuses to start even one container until every required value is set.
 
-Then copy the service-level [.env.example](.env.example) to `user-service/.env` and put the same password in `DATABASE_URL`. The server and Alembic read this when running on your machine.
+Then copy the service-level [.env.example](.env.example) to `user-service/.env` and fill it in from the root `.env`. The server and Alembic read this file when running on your machine:
+
+- `DATABASE_URL`: replace `<password>` with `USER_DB_PASSWORD`.
+- `JWT_PRIVATE_KEY`: copy the whole `JWT_PRIVATE_KEY="..."` line. Sign-in fails without it.
+- `RABBITMQ_URL`: replace `<password>` with `RABBITMQ_USER_SERVICE_PASSWORD`, and start the broker with `docker compose up -d rabbitmq`. Or delete the line to run without RabbitMQ: registration still works, and new users' wallets wait in the outbox (see [Opening the user's wallet](#opening-the-users-wallet)).
+- `INITIAL_ADMIN_*`: only needed for [Creating the initial admin](#creating-the-initial-admin).
 
 ### 2a. All-in-one mise script
 
@@ -74,17 +81,17 @@ The API is then served at http://localhost:8000, with interactive docs at http:/
 
 ### 1. Environment variables
 
-If you haven't already, copy the project-level [.env.example](../.env.example) to `.env` and fill in `USER_DB_PASSWORD`.
+If you haven't already, set up the root `.env` as in [step 2 of the root README](../README.md#2-create-the-root-env).
 
 ### 2. Build and run the full stack
 
-This builds the images and runs the database, migrations and server all in containers:
+From the repository root, this builds the images and runs every service, database and migration in containers:
 
 ```sh
 docker compose up --build
 ```
 
-The `--build` flag rebuilds the images so your latest code changes are included. The API is then served at http://localhost:8001, with interactive docs similarly at http://localhost:8001/docs.
+The `--build` flag rebuilds the images so your latest code changes are included. The user service isn't published on a host port: reach it through the gateway at http://localhost:8080/api/users, with interactive docs at http://localhost:8080/api/users/docs.
 
 ## Creating the initial admin
 
@@ -180,7 +187,7 @@ Or without mise, `uv run pytest`. The tests start a throwaway Postgres 18 contai
 
 ## Interactive API docs
 
-FastAPI generates live documentation from the code, so it always matches the running server. It's served on whichever port you're using (`8000` locally, `8001` with Compose) as long as `ENABLE_DOCS=true` is set. It's set in `.env.example` and `compose.yaml`, and off by default, so deployed environments don't publish the API schema:
+FastAPI generates live documentation from the code, so it always matches the running server. It's served at http://localhost:8000 when running on your machine, and at http://localhost:8080/api/users with Compose, as long as `ENABLE_DOCS=true` is set. It's set in `.env.example` and `compose.yaml`, and off by default, so deployed environments don't publish the API schema:
 
 - **`/docs`:** Swagger UI. Lists every endpoint with its parameters and response shapes. Use **Try it out** to send real requests to the running server, which is useful for testing endpoints without writing `curl` commands.
 - **`/redoc`:** the same information as read-only reference documentation.

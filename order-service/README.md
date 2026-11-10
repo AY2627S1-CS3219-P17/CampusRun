@@ -6,7 +6,9 @@ Tool: OpenAI Codex (GPT-6), date: 2026-10-20
 Scope: Documented predefined delivery-location matching in autofill.
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-10-18
 Scope: Documented the database, the order-worker process, the local development commands and delivery locations;
-       AI-updated the overview and added the demo section (2026-10-19); AI-replaced JWT_SECRET with JWT_PUBLIC_KEY (2026-11-09).
+       AI-updated the overview and added the demo section (2026-10-19); AI-replaced JWT_SECRET with JWT_PUBLIC_KEY (2026-11-09);
+       AI-pointed the setup steps at the root README's guide and listed the .env values, the Groq key link and the
+       demo's tools (2026-11-11).
 Author review: I reviewed the code and followed the local development commands.
 -->
 
@@ -25,18 +27,24 @@ It has two processes built from one image:
 
 ## Run locally with the full app
 
-In the root `.env`, set `ORDER_DB_PASSWORD` (any random string) and, for autofill, `GROQ_API_KEY`. Then run
-`docker compose up --build` from the repository root. The gateway exposes the service at
-`http://localhost:8080/api/orders`; local API docs are at `/api/orders/docs`. The service can start without the
-Groq key, but autofill returns 503 until it is configured.
+Follow [Running the project](../README.md#running-the-project) in the root README. For autofill, also set
+`GROQ_API_KEY` in the root `.env`; get a free key at [console.groq.com/keys](https://console.groq.com/keys). The
+gateway exposes the service at `http://localhost:8080/api/orders`; local API docs are at `/api/orders/docs`. The
+service can start without the Groq key, but autofill returns 503 until it is configured.
 
 `credit-demo` logs in to RabbitMQ as `order-service` and reads the same reply queue as `order-worker`. Run
 `docker compose stop order-worker` before using it, or the two split the replies between them.
 
 ## Run directly on your machine
 
-[Install uv](https://docs.astral.sh/uv/getting-started/installation/) and Docker Desktop. Copy `.env.example` to
-`.env` and fill in the passwords and `JWT_PUBLIC_KEY` to match the root `.env`. Then, in `order-service`:
+[Install uv](https://docs.astral.sh/uv/getting-started/installation/) and Docker Desktop, and set up the root `.env`
+as in [step 2 of the root README](../README.md#2-create-the-root-env). Compose won't start even the order database
+until every required value there is set.
+
+Copy `.env.example` to `.env` in `order-service` and fill it in from the root `.env`: replace `<ORDER_DB_PASSWORD>`
+and `<RABBITMQ_ORDER_SERVICE_PASSWORD>`, copy the `JWT_PUBLIC_KEY="..."` line, and add `GROQ_API_KEY` for autofill.
+The other services' URLs point at the gateway, so keep the full stack running (`docker compose up`) for supplier
+names, credit status and autofill's supplier matching. Then, in `order-service`:
 
 | With mise | Without mise | What it does |
 |---|---|---|
@@ -48,7 +56,8 @@ Groq key, but autofill returns 503 until it is configured.
 
 ## Demo
 
-With the full stack running, from the repository root:
+With the full stack running, from the repository root (it needs `bash`, `curl`, `jq` and `python3`; on macOS,
+`brew install jq`):
 
 ```
 order-service/scripts/demo.sh            # every step, without stopping

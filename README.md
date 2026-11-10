@@ -1,6 +1,6 @@
 <!--
 AI Assistance Disclosure:
-Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27; 2026-10-19; 2026-11-09; 2026-11-10
+Tool: Claude Code (model: Claude Opus 5.5), date: 2026-09-27; 2026-10-19; 2026-11-09; 2026-11-10; 2026-11-11
 Tool: OpenAI Codex (GPT-6), date: 2026-10-16; 2026-10-17; 2026-10-20
 Tool: Claude (claude.ai, model: Claude Opus 5.5), date: 2026-10-17
 Scope: AI-written "Gateway, root paths and API docs" section and AI Use Summary bullets, including the frontend AI entry view disclosure,
@@ -8,6 +8,7 @@ Scope: AI-written "Gateway, root paths and API docs" section and AI Use Summary 
        and predefined delivery-location autofill; the rest was written by the team.
        Claude Code wrote the Order Service, Session Management and Admin Dashboard summaries (2026-10-19, 2026-11-09),
        and on 2026-11-10 fixed garbled characters and added the tools list and usage-log pointer to the AI Use Summary.
+       Claude Code rewrote "Running the project" as a step-by-step setup guide, filled in the repository tree and wrote the Setup Documentation summary (2026-11-11).
 Author review: I reviewed the code and docs these sections summarise; the routing and docs notes match nginx.conf and compose.yaml.
 -->
 
@@ -25,15 +26,134 @@ withdrawn, or exchanged for money, and only circulate within the platform.
 
 ## Running the project
 
-Local service-specific development can be done with a service-level .env file, where environment variables like the local database URL is provided.
+These steps take a fresh clone to a running app at http://localhost:8080. Everything runs in Docker, so this is all
+you need to try the app. To work on one service with hot reload, finish these steps first, then follow
+[Developing one service on your machine](#developing-one-service-on-your-machine).
 
-The local database can be run using the service-specific database service in the project-level [`compose.yaml`](compose.yaml). For example, to run the user-service database: `docker compose up -d user-db`
+### 1. Prerequisites
 
-To run the entire project locally, use `docker compose up` with [`compose.yaml`](compose.yaml), where the env vars overwrite those in the service-level .env file.
+- [Docker Desktop](https://docs.docker.com/get-started/get-docker/) (or Docker Engine with the Compose plugin), running.
+- `openssl` and `sh`, for the key script (preinstalled on macOS and Linux; on Windows, use WSL or Git Bash).
+- Free host ports: `8080` (the app), `5433`–`5436` (the databases) and `5672` / `15672` (RabbitMQ).
 
-Before the first `docker compose up`, copy `.env.example` to `.env`, fill in the passwords, and add the access-token key pair with `sh scripts/generate-jwt-keys.sh >> .env`. User-service signs tokens with the private key (RS256); the other services only get the public key.
+### 2. Create the root `.env`
 
-For cloud deployments, separate configuration will be required.
+From the repository root:
+
+```sh
+cp .env.example .env
+sh scripts/generate-jwt-keys.sh >> .env
+```
+
+The second command appends the RS256 key pair that signs and checks access tokens. User-service signs tokens with
+the private key, and the other services only get the public key. The empty `JWT_PRIVATE_KEY=` and `JWT_PUBLIC_KEY=`
+lines from the example can stay, because the appended lines come later and win. You can also delete them.
+
+Then open `.env` and set these. Compose refuses to start **any** container, even a single database, until all of
+them have a value:
+
+| Variable | What to put |
+| --- | --- |
+| `USER_DB_PASSWORD`, `SUPPLIER_DB_PASSWORD`, `CREDIT_DB_PASSWORD`, `ORDER_DB_PASSWORD` | Any random strings |
+| `RABBITMQ_ADMIN_PASSWORD` | Any random string. It signs you in to the RabbitMQ management UI as `admin`. |
+| `RABBITMQ_USER_SERVICE_PASSWORD`, `RABBITMQ_CREDIT_SERVICE_PASSWORD`, `RABBITMQ_ORDER_SERVICE_PASSWORD` | Any random strings |
+
+One way to make a random string: `openssl rand -hex 24`.
+
+These are optional, but recommended:
+
+| Variable | Without it |
+| --- | --- |
+| `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_USERNAME`, `INITIAL_ADMIN_PASSWORD` | No admin account exists, so nobody can add suppliers, manage delivery locations or promote other admins. The email must end in `@u.nus.edu`, and the username and password follow the registration rules. |
+| `GROQ_API_KEY` | AI autofill on the create-errand form returns an error (503); everything else works. Get a free key at [console.groq.com/keys](https://console.groq.com/keys). |
+
+Leave the rest at their defaults.
+
+### 3. Start everything
+
+```sh
+docker compose up --build
+```
+
+The first build takes a few minutes. Compose starts the databases and RabbitMQ, and runs one-off containers that
+apply each database's migrations, load the seed data (suppliers and delivery locations) and create the first admin.
+Then it starts the services, the frontend and the gateway. Add `-d` to run it in the background.
+
+### 4. Check that it worked
+
+In another terminal:
+
+```sh
+docker compose ps -a
+```
+
+- The `*-migrate` containers and `user-seed-admin` should show `Exited (0)`. Everything else should be `Up`, with
+  the databases and `rabbitmq` marked `healthy`.
+- `docker compose logs user-seed-admin` says whether the first admin was created (or skipped, if
+  `INITIAL_ADMIN_*` is empty).
+
+Then open http://localhost:8080:
+
+1. Sign in with the initial admin, or register a new account. Registration needs an `@u.nus.edu` email.
+2. Your wallet shows as pending for a moment, then shows 100 credits. That means the user service, RabbitMQ and the
+   credit worker are talking to each other.
+3. The Suppliers page (in the header) lists the seeded suppliers.
+
+Other local addresses:
+
+| What | Where |
+| --- | --- |
+| Web app | http://localhost:8080 |
+| API docs for each service | http://localhost:8080/api/users/docs, `/api/suppliers/docs`, `/api/orders/docs`, `/api/credits/docs` |
+| RabbitMQ management UI | http://localhost:15672 (user `admin`, password `RABBITMQ_ADMIN_PASSWORD`) |
+| Databases (for tools such as `psql`) | `127.0.0.1` ports `5433` (user), `5434` (supplier), `5435` (credit), `5436` (order) |
+
+To see the whole errand lifecycle and its credit movements without clicking through the app, run
+`order-service/scripts/demo.sh` (it needs `curl`, `jq` and `python3`; see the
+[order-service README](order-service/README.md#demo)).
+
+### 5. Stop, restart and reset
+
+| Command | What it does |
+| --- | --- |
+| `docker compose stop` | Stops the containers and keeps the data |
+| `docker compose up --build` | Starts again, rebuilding any image whose code changed |
+| `docker compose down` | Removes the containers; the data stays in Docker volumes |
+| `docker compose down -v` | Removes the containers **and all data** (databases and queued messages). The next `up` starts from scratch. |
+
+### Troubleshooting
+
+- **`required variable ... is missing a value`**: a variable from the first table in step 2 is empty in the root `.env`.
+- **A database password changed in `.env` stopped working.** Postgres only reads its password when it first creates
+  the database. Either change it back, or run `docker compose down -v` to start over with empty databases.
+  RabbitMQ passwords are different: they're re-applied on every start, so a change works after
+  `docker compose up -d rabbitmq`.
+- **Everyone was signed out.** Generating a new key pair invalidates all existing tokens. Sign in again.
+- **`port is already allocated`**: another program (or another copy of this project) is using one of the ports from
+  step 1. Stop it, or change the host port in `compose.yaml`.
+- **A service keeps restarting or the gateway returns 502**: `docker compose logs <service>` shows why, e.g.
+  `docker compose logs user-service`.
+
+### Developing one service on your machine
+
+Each service can run outside Docker, with hot reload, while its database (and RabbitMQ, if it needs it) runs in
+Compose. The root `.env` from step 2 is still needed, because Compose reads it to start those containers. Each
+service then has its own `.env` for running on your machine. Follow the service's README:
+
+- [user-service](user-service/README.md)
+- [supplier-service](supplier-service/README.md)
+- [order-service](order-service/README.md)
+- [credit-service](credit-service/README.md)
+- [frontend](frontend/README.md) (the Vite dev server, which sends API calls to the gateway)
+
+The Python services use [uv](https://docs.astral.sh/uv/getting-started/installation/) and Python 3.14.7, and
+optionally [mise](https://mise.jdx.dev/installing-mise.html) for the Python version and task shortcuts. The frontend
+uses Node 24.18.0.
+
+### Cloud deployment
+
+`compose.yaml` is for local development and demos only. Deploying to the cloud needs separate configuration, which
+isn't in this repository yet.
 
 ### Gateway, root paths and API docs
 
@@ -65,11 +185,19 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 
 ```text
 .
-├── user-service/
-├── supplier-service/
-├── order-service/
-├── credit-service/
-├── <n2h-service>/
+├── user-service/       # accounts, sign-in, sessions, admin roles
+├── supplier-service/   # campus suppliers
+├── order-service/      # errands, delivery locations, AI autofill
+├── credit-service/     # wallets and credit ledger (API + RabbitMQ worker)
+├── frontend/           # React web app, served by nginx
+├── gateway/            # nginx gateway: the single entry point at :8080
+├── rabbitmq/           # broker start-up script and queue/permission definitions
+├── scripts/            # repo-wide scripts (e.g. generate-jwt-keys.sh)
+├── data/               # source data for seeds and images
+├── docs/               # design plans for each part of the system
+├── ai/                 # AI usage log
+├── compose.yaml        # the whole stack for local development
+├── .env.example        # template for the root .env
 └── README.md
 ```
 
@@ -254,3 +382,12 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 **Verification:** all 156 user-service tests pass. The concurrent step-down test was checked to fail with the lock removed (both requests succeeded, leaving no admin). <!-- TODO(author): describe your own review and testing -->
 
 **Files affected:** each carries an "AI Assistance Disclosure" header comment.
+
+### Setup Documentation (Nathan)
+
+**Tool:** Claude Code (Claude Opus 5.5), 2026-11-11.
+
+- **Reviewing** every README against `compose.yaml` and the `.env.example` files for gaps a new user would hit, and **rewriting** the root README's "Running the project" as a step-by-step guide: prerequisites, every required and optional root `.env` value, how to check the stack came up, stopping and resetting, and troubleshooting. The AI checked with `docker compose config` that Compose needs every required variable even to start one container, and that the duplicate `JWT_*` lines the key script appends are harmless.
+- **Updating** the service READMEs to match. Each now links to the root guide for the root `.env` and lists what goes in its own `.env`. Also fixed: user-service's Compose address (through the gateway, not `localhost:8001`), the user-service port in the credit and order `.env.example` files (8000, the `fastapi dev` default), credit-service's out-of-date demo section, and the frontend's missing `VITE_API_PROXY_TARGET` step, routes diagram and VS Code settings path.
+
+**Verification:** the setup steps were checked against `compose.yaml`, `rabbitmq/provision.sh` and the frontend's routes. The AI then followed the root guide on a fresh clone with new Docker volumes (2026-11-11): all 18 containers reached the described state, the first admin was created, signing in, a new student's wallet (pending, then 100 credits), the seeded supplier list, all four API docs pages and the RabbitMQ UI worked through the stated addresses, and `order-service/scripts/demo.sh` ran to a clean credit audit. The frontend dev server and running single services on the host were not tried. <!-- TODO(author): describe your own review -->

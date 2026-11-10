@@ -5,6 +5,8 @@ Scope: AI-generated service README; AI-updated paths, Docker access and settings
        AI-added GET /lookup, and removed the delivery locations, which moved to the order service (Claude Code, 2026-10-19).
 Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-09
 Scope: AI-updated the setup steps for JWT_PUBLIC_KEY, which replaced JWT_SECRET, and noted that only the API needs it.
+Tool: Claude Code (model: Claude Opus 5.5), date: 2026-11-11
+Scope: AI-pointed the root .env step at the root README's setup guide.
 Author review: I reviewed the code and followed the setup steps.
 -->
 
@@ -21,11 +23,10 @@ The design and the reasons for it are in [DESIGN.md](DESIGN.md).
 # Getting started
 [Install uv](https://docs.astral.sh/uv/getting-started/installation/) and Docker Desktop first.
 
-1. In the repo root, copy `.env.example` to `.env` and fill in:
-   - `SUPPLIER_DB_PASSWORD`: any password for the local database.
-   - `JWT_PRIVATE_KEY` and `JWT_PUBLIC_KEY`: run `sh scripts/generate-jwt-keys.sh >> .env` in the repo root.
-2. In `supplier-service`, copy `.env.example` to `.env`. Put the same password in `DATABASE_URL` and copy the
-   `JWT_PUBLIC_KEY` line from the root `.env`.
+1. Set up the root `.env` as in [step 2 of the root README](../README.md#2-create-the-root-env). Compose won't
+   start even the supplier database until every required value there is set.
+2. In `supplier-service`, copy `.env.example` to `.env`. Put `SUPPLIER_DB_PASSWORD` from the root `.env` in
+   `DATABASE_URL`, and copy the `JWT_PUBLIC_KEY="..."` line from the root `.env`.
 3. Run these in `supplier-service`:
 
 | With mise | Without mise | What it does |
